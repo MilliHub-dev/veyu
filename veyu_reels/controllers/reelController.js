@@ -61,7 +61,7 @@ export const addComment = async (req, res) => {
 
   const comment = {
     user: req.user.id,
-    username: req.user.username, // if included in JWT
+    username: req.user.username, // Assuming username is stored in user model
     text,
   };
 
