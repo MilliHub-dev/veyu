@@ -187,7 +187,7 @@ export default function MainPage() {
               </Heading>
               
               <Text mb={6}>
-                Explore a range of cars on Motaa, buy from verified car dealerships across the country.
+                Explore a range of cars on Veyu, buy from verified car dealerships across the Globe.
               </Text>
 
               <Button as={Link} to='/buy/' fontWeight={'600'} bg="tertiary" color="primary" w={{base: '100%', md: '250px'}} size="lg">
@@ -217,7 +217,7 @@ export default function MainPage() {
             <FeatureCard
               icon={<Icon as={Image} fontSize="25px" src="/assets/icons/FullCartIcon.svg" />}
               title="All in One Marketplace"
-              description="Motaa offers you the best experience by providing solutions to your car needs all in one place."
+              description="Veyu offers you the best experience by providing solutions to your vehicle needs all in one place."
             />
           </ScrollAnimation>
 
@@ -225,7 +225,7 @@ export default function MainPage() {
             <FeatureCard
               icon={<Icon as={Image} fontSize="25px" src="/assets/icons/TrustAndTransparencyIcon.svg" />}
               title="Trust & Transparency"
-              description="Have peace of mind when dealing on Motaa with our verified partners and secure payment solutions."
+              description="Have peace of mind when dealing on Veyu with our verified partners."
             />
           </ScrollAnimation>
 
@@ -233,7 +233,7 @@ export default function MainPage() {
             <FeatureCard
               icon={<Icon as={Image} fontSize="25px" src="/assets/icons/EaseOfUseIcon.svg" />}
               title="Ease of Use"
-              description="Motaa makes it easy for users to find verified dealers and mechanics with our intuitive interface."
+              description="Veyu makes it easy for users to find vehicle and mechanics with our platform."
             />
           </ScrollAnimation>
         </Flex>

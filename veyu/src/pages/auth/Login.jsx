@@ -29,7 +29,7 @@ export const LoginView = ({ ...props }) => {
     const {onAuthenticated, axios, notify,} = useContext(GlobalStore)
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [provider, setProvider] = useState('motaa');
+    const [provider, setProvider] = useState('Veyu');
     const [rememberMe, setRemeberMe] = useState(false);
     const redirect = useNavigate();
 
@@ -119,14 +119,14 @@ export const LoginView = ({ ...props }) => {
     function refresh(){
         setEmail('');
         setPassword('');
-        setProvider('motaa');
+        setProvider('Veyu');
         setRemeberMe(false);
     }
 
     return(
         <CenteredLayout py={'2rem'}>
             <Box as={motion.div} style={{ width: '90%', maxWidth: '600px', margin: 'auto', placeSelf: 'center', paddingTop: '3vh', paddingBottom: '5%'}} px={3}>
-                <Image src="/assets/images/motaa-logo-3.png" alt="Logo" mb={4} mx={'auto'} width="100px" />
+                <Image src="/assets/images/logo-main.png" alt="Logo" mb={4} mx={'auto'} width="150px" />
                 <Heading textAlign='center' my={4} className="subtitle"> Welcome back </Heading>
                 <Text textAlign='center' my={4} className="text"> Log back in to your account. </Text>
                 

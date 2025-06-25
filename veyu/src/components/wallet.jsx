@@ -84,7 +84,7 @@ export const PaystackPaymentModal = ({
 
 	          <Alert colorScheme="yellow" borderRadius="lg" my={3}>
 	          	{/*<AlertIcon as={<ZapIcon />} />*/}
-	          	<Text fontSize="sm"> Motaa does not handle any payment processing or save your card. <br />
+	          	<Text fontSize="sm"> Veyu does not handle any payment processing or save your card. <br />
 	          	All payments are done via Paystack
 	          	</Text>
 	          </Alert>
@@ -124,7 +124,7 @@ export const FlutterwavePaymentModal = ({
 		  name: `${first_name} ${last_name}`,
 		},
 		customizations: {
-		  title: "Motaa",
+		  title: "Payment for Veyu",
 		  description: description,
 		  logo: logo,
 		},
@@ -174,7 +174,7 @@ export const FlutterwavePaymentModal = ({
 
 	          <Alert colorScheme="yellow" borderRadius="lg" my={3}>
 	          	{/*<AlertIcon as={<ZapIcon />} />*/}
-	          	<Text fontSize="sm"> Motaa does not handle any payment processing or save your card. <br />
+	          	<Text fontSize="sm"> Veyu does not handle any payment processing or save your card. <br />
 	          	All payments are done via Flutterwave
 	          	</Text>
 	          </Alert>

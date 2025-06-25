@@ -212,7 +212,7 @@ export const UnauthenticatedNavbar = ({ props }) => {
             <RLink to={'/'}>
               <Image
                loading='eager'
-               src={'/assets/images/motaa-logo-2.png'}
+               src={'/assets/images/logo-main.png'}
                width={'100%'}
                className='navbar-brand'
               />
