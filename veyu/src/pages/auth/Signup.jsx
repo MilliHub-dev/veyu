@@ -182,7 +182,7 @@ export const SignupView = ({...props }) => {
         <SignupContext.Provider value={context}>
         <CenteredLayout>
             <Box as={motion.div} style={{ width: '90%', maxWidth: '600px', margin: 'auto', placeSelf: 'center', paddingTop: '3vh', paddingBottom: '5%'}} px={3}>
-                <Image src="/assets/images/logo-main.png" alt="Logo" mb={4} mx={'auto'} width="100px" />
+                <Image src="/assets/images/logo-main.png" alt="Logo" mb={4} mx={'auto'} width="150px" />
                 <Heading textAlign='center' my={4} className="subtitle"> {steps[step].title} </Heading>
                 <Text textAlign='center' my={4} className="text"> {steps[step].description} </Text>
                 
