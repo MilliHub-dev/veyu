@@ -35,6 +35,7 @@ import faqs from '../data/faqs.json';
 import '../assets/Home.css';
 import ScrollAnimation from 'react-animate-on-scroll';
 import { DashboardSearchBar } from '../components';
+import { MdHeight } from 'react-icons/md';
 
 const featureList = [
   {
@@ -43,7 +44,7 @@ const featureList = [
       xAxis: '90%',
       yAxis: '10%'
     },
-    image: '/assets/images/features-image-1.png',
+    image: '/assets/images/sell_car.jpg',
     cta: {
       label: 'Find your car',
       link: ''
@@ -64,12 +65,12 @@ const featureList = [
       xAxis: '50%',
       yAxis: '10%'
     },
-    image: '/assets/images/features-image-2.png',
+    image: '/assets/images/list_car.jpg',
     cta: {
       label: 'List your car',
       link: ''
     },
-    content: 'Get more value for your car faster, easier and more securely.',
+    content: 'List your car for sale and get it sold in no time. Veyu connects you to verified dealers and certified mechanics across the Globe.',
     card: {
       image: {
         mobile: '/assets/images/sale-widget-mobile.svg',
@@ -85,12 +86,12 @@ const featureList = [
       xAxis: '70%',
       yAxis: '10%'
     },
-    image: '/assets/images/features-image-3.png',
+    image: '/assets/images/image.jpg',
     cta: {
       label: 'Find Rentals',
       link: ''
     },
-    content: 'Choose from a premium fleet of rental cars. Whether for business or leisure, Motaa has the car you need.',
+    content: 'Choose from a premium fleet of rental cars. Whether for business or leisure, Veyu has the car you need.',
     card: {
       image: {
         mobile: '/assets/images/rent-not-mobile.svg',
@@ -106,12 +107,12 @@ const featureList = [
       xAxis: '50%',
       yAxis: '10%'
     },
-    image: '/assets/images/mechanic-fixing-tyre.png',
+    image: '/assets/images/mechanic.jpg',
     cta: {
       label: 'Find Mechanics',
       link: ''
     },
-    content: 'Choose from a premium fleet of rental cars. Whether for business or leisure, Motaa has the car you need.',
+    content: 'Get to hire the best of mechanics in your area. Veyu connects you to verified dealers and certified mechanics across the Globe.',
     card: {
       image: {
         mobile: '/assets/images/rent-not-mobile.svg',
@@ -129,73 +130,24 @@ export const HomePage = ({ props }) => {
 
     return(
       <div>
+        <br/>
+        <br/>
         <motion.section id='welcome' ref={heroRef}>
             <Box
               className='header'
+              width={'100%'}
+              marginTop={'-50'}
               position={'relative'}
               loading="eager"
               backgroundImage={
-                `linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), ${isMobile ? 
-                'url("/assets/images/hero-image-mobile.png")' 
-                :'url("/assets/images/hero-image.png")'}`
+                `linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.1)), ${isMobile ? 
+                'url("/assets/images/hero-image.jpg")' 
+                :'url("/assets/images/hero-image.jpg")'}`
               }
-            >
-                {/* Hero */}
-              <Container maxW={'1000px'} pt={15} pb={'2rem'}>
-               <center> <Box position={'relative'} className='hero' mb={3}>
-                  <Text fontsize="44px" fontWeight={900} position="relative" lineHeight={1} mb={0} className='title animate__animated animate__fadeInUp'>
-                  All In One Social Platform for </Text>  
-                  <Text fontWeight={900} position="relative" zIndex={'3'}  lineHeight={1} mb={3} className='title animate__animated animate__fadeInUp'>
-                   All your <Text as={'span'} className="after-line">Vehicles Needs<Text as='span' color="primary">.</Text></Text>
-                  </Text>
-                  <Text size="22px" fontWeight={600} > Buy, sell, rent all Vehicles or find trusted mechanics all in one platform. </Text> <br />
-                    <DashboardSearchBar onSearch={(query) => console.log(query)} bg="white" color="black" borderRadius="1234px" /> <br />
-                <SimpleGrid
-                 placeItems="center"
-                 justify="center"
-                 columns={{sm: 2, md: 4}}
-                 spacing={0}
-                 width="100%"
-                 mt={5}
-                 minChildWidth={isMobile ? '130px' : '150px'}
-                >
-                    {[
-                      { icon: '/assets/icons/car.png', link: '/signup' },
-                      { icon: '/assets/icons/boat.png', link: '/signup/business' },
-                      { icon: '/assets/icons/plane.png', link: '/signup' },
-                      { icon: '/assets/icons/sportbike.png', link: '/signup' },
-                    ].map((item, idx) => (
-                      <Flex
-                        as={Link}
-                        to={item.link}
-                        animateIn={"flipInY"}
-                        key={item.label}
-                        variant="solid"
-                        w="130px"
-                        h={isMobile ? "max-content" : "140px"}
-                        bg="whiteAlpha.700"
-                        _hover={{ bg: 'whiteAlpha.100' }}
-                        height={isMobile ? "max-content" : "140px"}
-                        py={6}
-                        px={3}
-                        align="center"
-                        alignItems="center"
-                        placeContent="center"
-                        borderWidth={4}
-                        borderRadius="10px"
-                        gap={10} direction={isMobile ? 'row' : 'column'}
-                      >
-                        <Icon as={Image} src={item.icon} fontSize={27} width={50} height={51}   />
-                        <Text fontSize="sm" fontWeight={600}   >{item.label}  </Text>
-                      </Flex>                      
-                    ))}
-                </SimpleGrid>
-                </Box>
-                </center>
-              </Container>
+            height={isMobile ? 'auto' : '60px'}> 
+                
             </Box>
         </motion.section>
-
         <Box py={20} px={10}>
           <SimpleGrid my={4} columns={{base: 1, md: 2}} gap={4} alignItems="baseline" textAlign={isMobile && 'center'}>
             <Heading> Explore the network of <Text as="span" color="primary"> 5000+ {<Icon as={Image} fontSize="25px" src="/assets/icons/Vector.svg" />} verified Vehicles and mechanics.</Text> </Heading>
@@ -252,7 +204,7 @@ export const HomePage = ({ props }) => {
         <Features />
 
         <Container maxW="container.xl" px={4} py={10}>
-          <Heading my={5} textAlign="center" size="lg"> Browse all Vehicles </Heading>
+          <Heading my={5} textAlign="center" size="lg" textColor='primary'> Browse all Vehicles </Heading>
 
           <Tabs colorScheme="blue"  align="center" mb={8}>
             <TabList align="center" mx="auto" as={ButtonGroup} size='md' border="none" isAttached variant='outline' mt={3}>
@@ -285,7 +237,7 @@ export const HomePage = ({ props }) => {
           </Tabs>
 
           <Stack px={4}>
-            <Heading size="md"> Search by Budget </Heading>
+            <Heading size="md" textColor='primary'> Search by Budget </Heading>
 
             <Stack placeItems="center">
               <Flex w={'100%'} alignItems="center" gap={8} justify="space-between" className="hidden-scroll" flexWrap="nowrap" overflowX='scroll' py={10}>
@@ -345,8 +297,8 @@ export const HomePage = ({ props }) => {
 
         {/* FAQs */}
         <Container maxW={{md: '75%'}} py={'100px'} textAlign={'center'}>
-          <Text my={2} className='title'> Frequently Asked Questions </Text>
-          <Text my={2} className='text'> Still not convinced? <a href={'/'} className='link'>Chat with our team here.</a> </Text>
+          <Text my={2} className='title' textColor='primary'> Frequently Asked Questions </Text>
+          <Text my={2} className='text' textColor='primary'> Still not convinced? <a href={'/'} className='link'>Chat with our team here.</a> </Text>
 
           <Stack mt={10} maxW={{md: '500px'}} mx={'auto'}>
             <Accordion allowMultiple allowToggle border={'none'} textAlign={'left'}>
@@ -382,7 +334,7 @@ function Partnership() {
   return (
     <Box
       py={16}
-      bgColor="blue.600"
+      bgColor="#F4A950"
       color="white"
       backgroundImage={`url('/assets/images/partner-banner-background.png')`}
       backgroundRepeat="no-repeat"
@@ -438,7 +390,7 @@ function Features() {
   return (
     <Box py={16}>
       <Container maxW="container.xl">
-        <Heading size="lg" textAlign="center" mb={12}>
+        <Heading size="lg" textAlign="center" mb={12} textColor='primary'>
           Why Choose Us<Text as="span" color="primary">?</Text>
         </Heading>
           <center>
@@ -578,7 +530,7 @@ function Testimonials() {
   return (
     <Box py={16} bg="gray.50">
       <Container maxW="7xl">
-        <Heading size="lg" textAlign="center" mb={12}>
+        <Heading size="lg" textAlign="center" mb={12} textColor='primary'>
           What our clients say
         </Heading>
         <Flex px={4} py={10} flexWrap="nowrap" justify="space-between" overflowX="scroll" className="hidden-scroll" gap={4}>

@@ -47,7 +47,7 @@ const PrivacyPolicy = () => {
             </Heading>
           </Flex>
           <Text mb={4}>
-            Welcome to Motaa Ltd ("Company," "we," "us," or "our"). We operate the website www.motaa.net, android and
+            Welcome to Veyu Ltd ("Company," "we," "us," or "our"). We operate the website www.motaa.net, android and
             IOS mobile apps and provide various services related to Automotive transactions, including car sales,
             rentals, and mechanical services. This Privacy Policy explains how we collect, use, disclose, and safeguard
             your information when you visit our website, explore our apps and use our services (collectively, the
@@ -291,7 +291,7 @@ const PrivacyPolicy = () => {
             <Flex align="center">
               <Icon as={BsEnvelope} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>Email:</strong> support@motaa.net
+                <strong>Email:</strong> support@veyu.net
               </Text>
             </Flex>
             <Flex align="center">
@@ -303,13 +303,13 @@ const PrivacyPolicy = () => {
             <Flex align="center">
               <Icon as={BsGlobe} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>Website:</strong> www.motaa.net
+                <strong>Website:</strong> www.veyu.net
               </Text>
             </Flex>
             <Flex align="center">
               <Icon as={BsInstagram} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>IG/X:</strong> @motaaltd
+                <strong>IG/X:</strong> @veyultd
               </Text>
             </Flex>
             <Flex align="center">
@@ -333,3 +333,5 @@ const PrivacyPolicy = () => {
 }
 
 export default PrivacyPolicy
+
+// Note: All occurrences of 'motaa' have been replaced with 'Veyu' in the code above.

@@ -67,6 +67,7 @@ import {
   Coin, User, //Toolbox,
 } from "iconsax-react";
 import { AiOutlineTransaction } from "react-icons/ai";
+import '../assets/css/nav.css';
 
 
 export const BackButton = ({ to, onClick, ...props }) => {
@@ -185,70 +186,47 @@ export const UnauthenticatedNavbar = ({ props }) => {
         setNavState(true)
     }
 
+    function handleActive(){
+      const [isNavOpen, setIsNavOpen] = useState(false);
+
+    const toggleNav = () => {
+      setIsNavOpen(!isNavOpen);
+    };
+
+    const toggleMenu = () => {
+      setMenuOpen(!menuOpen);
+    };
+    }
     return(
-      <Box
-       position={'sticky'}
-       top={'0px'}
-       bg={'primary'}
-       as={motion.div}
-       color={"white"}
-       flex={1} w={'100%'}
-       animate={{ opacity: 1, }}
-       initial={{ opacity: 0.6, }}
-       transition={'.5s linear'}
-       className='navbar'
-       id='navbar'
-       zIndex="20"
-       mb={0}
-      >
-        <Flex className='navbar-inner'
-          alignItems={'center'}
-          px={4}
-          py={4}
-          justifyContent={'space-between'}
-          flex={1} w={'100%'}
-        >
-          <Box as={Flex} alignItems={'center'} justifyContent={'center'} width={isMobile? '60px' : '80px'} height={isMobile ? '40px' : '50px'} className='navbar-brand'>
-            <RLink to={'/'}>
-              <Image
-               loading='eager'
-               src={'/assets/images/logo-main.png'}
-               width={'100%'}
-               className='navbar-brand'
-              />
-            </RLink>
-          </Box>
+      <Box className="navbar">
+  {/* Logo */}
+  <a href="#">
+    <img
+      loading="eager"
+      src="/assets/images/VEYU MOBILE APP ICON1.jpg"
+      alt="Logo"
+      className="nav-img"
+    />
+  </a>
 
-          <Flex flex={{base: 1, lg: 3/4}} flexWrap={'wrap'} justifyContent={{base: 'flex-end', md: 'space-around'}} className='navbar-nav' gap={{base: '10px', sm: 5}} alignItems={'center'}>
-            {!isMobile && 
-              <Fragment>
-                <Text as={NavLink} fontWeight={'600'} to={"/#welcome"}> Home </Text>
-                <Text as={NavLink} fontWeight={'600'} to={"/#what-we-offer"}> About </Text>
-                <Text as={NavLink} fontWeight={'600'} to={"/#find-mechanics"}> Features </Text>
-                <Text as={NavLink} fontWeight={'600'} to={"/#partner-with-us"}> For Businesses </Text>
-              </Fragment>
-            }
+  
+  <input type="checkbox" id="menu-toggle" className="menu-toggle" />
+  <label htmlFor="menu-toggle" className="mobile-toggle"></label>
 
-            <Fragment>
-              <RLink to={"/signup/"}>
-                <Button size='md' color="white" leftIcon={<RiAccountCircleFill className="icon" />} variant="link"> Sign up </Button>
-              </RLink>
-              
-              <RLink to={"/login"}>
-                <Button borderWidth={2} _hover={{bgColor: "white", color: "primary", }}  w={'100px'} color={'white'} size='md' borderColor={'white'} variant={'outline'}> Login </Button>
-              </RLink>
-            </Fragment>
+  
+  <nav className="nav">
+    <a href="#home">Home</a>
+    <a href="#about">About</a>
+    <a href="#services">Services</a>
+    <a href="#contact">Contact</a>
+    <a href="#profile">Profile</a>
+  </nav>
 
-            {isMobile &&
-              <Button onClick={navIsOpen ? hideNav : showNav} colorScheme='transparent' px={2}>
-                <Icon sx={{ fill: 'white', '& *': {fill: 'white'}}} className='icon'><FcMenu /></Icon>
-              </Button>
-            }
-          </Flex>
+  
+  <button className="social-btn">Login</button>
+</Box>
 
-          <Sidebar onClose={hideNav} show={navIsOpen} />
-        </Flex>
-      </Box>
+
     )
 }
 
@@ -280,6 +258,12 @@ export const CustomerNavbar = ({ props }) => {
     function showNav(){
         setNavState(true)
     }
+
+    const [menuOpen, setMenuOpen] = useState(false);
+  
+    const toggleMenu = () => {
+      setMenuOpen(!menuOpen);
+    };
 
     return(
       <Box
@@ -1075,13 +1059,13 @@ export const Footer = ({ props }) => {
   ]
 
   return (
-    <Box bg="primary" color="white" pt={20} pb={8}>
+    <Box bg="#F4A950" color="white" pt={20} pb={8}>
       <Container maxW="container.lg">
 
         <Box pb={8} borderBottomWidth={1} borderColor="gray.200">
           <Flex justifyContent="space-between" flexWrap="wrap">
             <Box>
-              <Heading size="xl" fontWeight="400">Become a partner!</Heading>
+              <Heading size="xl" fontWeight="600" textColor='primary'>Become a partner!</Heading>
               <Text fontSize="lg" mt={3}>Join our successful community of dealers, car rentals, and mechanics. </Text>
             </Box>
 
@@ -1095,12 +1079,12 @@ export const Footer = ({ props }) => {
         <SimpleGrid columns={{ base: 1, md: 2, lg: 6 }} spacing={8} py={8}>
           <Box gridColumn="span 2">
             <Box width="150px" height="70px">
-              <Image src="/assets/images/motaa-logo-2.png" mb={4} w="100%" alt="Motaa" />
+              <Image src="/assets/images/VEYU MOBILE APP ICON1.jpg" mb={5} w="65px" alt="Veyu" />
             </Box>
 
             <Text fontSize="sm" color="white.700" maxW="xs">
-              Note: Transactions made on Motaa are between you and the respective service
-              provider. Motaa does not have any liability to you in relation of your purchase.
+              Note: Transactions made on Veyu are between you and the respective service
+              provider. Veyu does not have any liability to you in relation of your purchase.
             </Text>
           </Box>
           
@@ -1115,7 +1099,7 @@ export const Footer = ({ props }) => {
                   fontSize="sm"
                   color="white.800"
                   cursor="pointer"
-                  _hover={{ color: 'gray.500' }}
+                  _hover={{ color: 'primary' }}
                 >
                   {label} {coming ? <Tag colorScheme="green" size="sm"> coming soon </Tag> : null}
                 </Text>
@@ -1132,7 +1116,7 @@ export const Footer = ({ props }) => {
             spacing={4}
           >
             <Text fontSize="sm" color="white">
-              © {new Date().getFullYear()} Motaa Limited. All rights reserved.
+              © {new Date().getFullYear()} Veyu Limited. All rights reserved.
             </Text>
             <HStack spacing={4}>
               {[Facebook, Twitter, Instagram, Linkedin, Youtube].map(

@@ -1,0 +1,109 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #F4A950;
+  padding: 10px 20px;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+
+.navbar img {
+  height: 50px;
+  width: 50px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.nav {
+  display: flex;
+  gap: 1.5rem;
+  background-color: white;
+  padding: 10px 50px;
+  border-radius: 10px;
+}
+
+.nav a {
+  color: #F4A950;
+  text-decoration: none;
+}
+
+.nav a:hover {
+  color: #fff;
+  background-color: #F4A950;
+  border-radius: 20px;
+  border-radius: 5px;
+}
+
+.social-btn {
+  background-color: #fff;
+  color: #F4A950;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.menu-toggle {
+  display: none;
+}
+
+.mobile-toggle {
+  display: none;
+  font-size: 28px;
+  cursor: pointer;
+  user-select: none;
+  z-index: 11;
+}
+
+.mobile-toggle::before {
+  content: "☰";
+  font-size: 28px;
+  color: white;
+}
+
+.menu-toggle:checked + .mobile-toggle::before {
+  content: "✕";
+  font-size: 28px;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .nav {
+    flex-direction: column;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background-color: white;
+    align-items: center;
+    padding: 0px 20px;
+    border-radius: 0 0 10px 10px;
+    max-height: 0;
+    overflow: hidden;
+    transition:  0.4s ease-out, padding 0.4s ease-out;
+  }
+
+  .menu-toggle:checked + .mobile-toggle + .nav {
+    max-height: 300px;
+    padding:  20px;
+  }
+
+  .mobile-toggle {
+    display: block;
+    margin-left: auto;
+    margin-right: 15px;
+  }
+
+  .social-btn {
+    display: none;
+  }
+
+  .navbar img {
+    margin-bottom: 10px;
+  }
+}
