@@ -1,11 +1,11 @@
-# Motaa Marketplace
+# Veyu Marketplace
 
 
 Welcome to
 Africa's Largest
-Car Marketplace.
+Vehcle Marketplace.
 One Platform for
-All your Car Needs 
+All your Vehcle Needs 
 Buy, sell, rent and find trusted mechanics all with ease and confidence of verified dealers. 
 
 
