@@ -68,8 +68,8 @@ import WalletWithdrawalPage from './pages/marketplace/wallet/Withdraw';
 
 const BrandColors = extendTheme({
   colors: {
-    'primary': '#0065B5',
-    'secondary': '#1C3D5A',
+    'primary': '#f39f48',
+    'secondary': '#14181e',
     'tertiary': '#FDD153',
     'accent': '#F2F3F5',
     'white': '#FFFFFF',
@@ -100,7 +100,7 @@ function App() {
   const [isAuthenticated, setAuthState] = useState(false)
   const [otherContext, setOtherContext] = useState({})
   const axiosClient =  new Axios({
-     baseURL: 'https://server.motaa.net/api/v1',
+     baseURL: 'https://dev.veyu.cc/api/v1',
     // baseURL: 'http://localhost:8000/api/v1',
     headers: {
       'Content-Type': 'application/json',

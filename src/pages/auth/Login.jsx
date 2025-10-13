@@ -29,7 +29,7 @@ export const LoginView = ({ ...props }) => {
     const {onAuthenticated, axios, notify,} = useContext(GlobalStore)
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [provider, setProvider] = useState('Veyu');
+    const [provider, setProvider] = useState('veyu');
     const [rememberMe, setRemeberMe] = useState(false);
     const redirect = useNavigate();
 
@@ -119,7 +119,7 @@ export const LoginView = ({ ...props }) => {
     function refresh(){
         setEmail('');
         setPassword('');
-        setProvider('Veyu');
+        setProvider('veyu');
         setRemeberMe(false);
     }
 
@@ -159,7 +159,7 @@ export const LoginView = ({ ...props }) => {
                             </FormControl>
 
                             <FormControl my={4}>
-                                <Button type="submit" w={'100%'} colorScheme="blue" bg={'primary'}> Log in  </Button>
+                                <Button type="submit" w={'100%'} colorScheme="orange" bg={'primary'}> Log in  </Button>
                             </FormControl>
                         </Stack>
                     
@@ -168,11 +168,6 @@ export const LoginView = ({ ...props }) => {
                             <Heading size={'sm'} color={'grey'}> OR </Heading>
                             <Divider />
                         </HStack>
-
-                        <Stack flex={1} columnGap={4} rowGap={8}>
-                            <Button w={'100%'} leftIcon={<FaGoogle />} onClick={signInWithGoogle} colorScheme="white" color={'secondary'} variant={'outline'}> Log in with Google </Button>
-                            <Button w={'100%'} variant="outline" borderWidth={'2px'} rightIcon={<FaArrowRight />} colorScheme="blue" borderColor={'primary'}> Log in to Business Account </Button>
-                        </Stack>
 
                     </form>
                 </Box>

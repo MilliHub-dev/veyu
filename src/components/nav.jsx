@@ -223,7 +223,7 @@ export const UnauthenticatedNavbar = ({ props }) => {
   </nav>
 
   
-  <button className="social-btn">Login</button>
+  <Button as={Link} href="/login" className="social-btn">Login</Button>
 </Box>
 
 
