@@ -147,68 +147,138 @@ function WalletDepositPage() {
   return (
     <Box>
       <CenteredLayout>
-        <Box borderRadius="20px" w="90%" placeItems="center" maxW={'400px'} px={4} py={7} border="1px solid lavender">
-          <Heading size="md" my={4}> Deposit </Heading>
+        <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6} w="95%" maxW={'980px'}>
+          {/* Left: Amount Card */}
+          <Box borderRadius="20px" px={6} py={8} border="1px solid lavender" bg="white">
+            <VStack align="stretch" spacing={5}>
+              <Heading size="md">Deposit Funds</Heading>
+              <Text color="gray.600">Enter the amount you want to add to your wallet.</Text>
 
-          <Text my={10} size="md" fontWeight="600"> How much are you depositing? </Text>
+              <VStack align="stretch" spacing={2}>
+                <Text fontWeight="600">Amount</Text>
+                <Heading
+                 size="lg" w="100%"
+                 color="primary"
+                 ref={amountRef} display={'flex'}
+                 px={4} py={3} border="1px solid lavender" textAlign="center"
+                 justifyContent="center" borderRadius="lg"
+                >
+                  <Text as="span" mr={1}>{currency?.symbol}</Text>
+                  <Text
+                    contentEditable
+                    textAlign="left"
+                    outline="none"
+                    minW="max-content"
+                    as="span"
+                    style={{wordWrap: "normal"}}
+                    overflowX="auto"
+                    className="hidden-scroll"
+                    onBeforeInput={(e) => {
+                      if (e.data && /\D/.test(e.data)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onInput={(e) => {
+                      const selection = window.getSelection();
+                      const range = selection.getRangeAt(0);
+                      const cursorOffset = range.startOffset;
 
-          <Heading
-           size="lg" w="100%"
-           flex={1}
-           color="primary"
-           ref={amountRef} display={'flex'}
-           px={3} py={2} border="1px solid lavender" textAlign="center"
-           justifyContent="center" borderRadius="lg"
-          >
-            <Text as="span">{currency?.symbol}</Text>
-            <Text
-              contentEditable
-              textAlign="left"
-              outline="none"
-              minW="max-content"
-              as="span"
-              style={{wordWrap: "normal"}}
-              overflowX="auto"
-              className="hidden-scroll"
-              onBeforeInput={(e) => {
-                if (e.data && /\D/.test(e.data)) {
-                  e.preventDefault();
-                }
-              }}
-              onInput={(e) => {
-                const selection = window.getSelection();
-                const range = selection.getRangeAt(0);
-                const cursorOffset = range.startOffset;
+                      const newValue = e.target.textContent.replace(/\D/g, '');
+                      setAmount(newValue);
+                      const formattedValue = commaInt(newValue);
+                      e.target.textContent = formattedValue;
 
-                // Get numeric value only
-                const newValue = e.target.textContent.replace(/\D/g, '');
-                setAmount(newValue);
-                const formattedValue = commaInt(newValue);
+                      const newCursorPos = cursorOffset + (formattedValue.length - newValue.length);
+                      range.setStart(e.target.childNodes[0] || e.target, Math.min(newCursorPos, formattedValue.length));
+                      range.setEnd(e.target.childNodes[0] || e.target, Math.min(newCursorPos, formattedValue.length));
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }}
+                    dangerouslySetInnerHTML={{ __html: `${commaInt(0)}` }}
+                  ></Text>
+                </Heading>
 
-                // Update content without losing focus
-                e.target.textContent = formattedValue;
+                {amount < minDeposit && (
+                  <Text mt={1} fontSize={'13px'} fontWeight="600" color="red">
+                    Minimum allowed amount {currency?.symbol}{minDeposit}
+                  </Text>
+                )}
 
-                // Restore cursor position
-                const newCursorPos = cursorOffset + (formattedValue.length - newValue.length);
-                range.setStart(e.target.childNodes[0] || e.target, Math.min(newCursorPos, formattedValue.length));
-                range.setEnd(e.target.childNodes[0] || e.target, Math.min(newCursorPos, formattedValue.length));
-                selection.removeAllRanges();
-                selection.addRange(range);
-              }}
-              dangerouslySetInnerHTML={{ __html: `${commaInt(0)}` }}
-            ></Text>
-          </Heading>
+                <HStack spacing={3} mt={2} flexWrap="wrap">
+                  {[1000, 2000, 5000, 10000, 20000].map((v) => (
+                    <Button key={v} size="sm" variant="outline" onClick={() => {
+                      setAmount(v);
+                      if (amountRef.current) amountRef.current.textContent = commaInt(v);
+                    }}>
+                      {currency?.symbol}{commaInt(v)}
+                    </Button>
+                  ))}
+                </HStack>
+              </VStack>
 
-          {amount < minDeposit && <Text my={2} size="xs" fontSize={'13px'} fontWeight="600" color="red"> minimum allowed amount {currency?.symbol}{minDeposit} </Text>}
+              <Button onClick={payUp} isDisabled={amount < minDeposit || accept === false } bg="primary" colorScheme="blue" w="full" size="lg">Proceed</Button>
 
-          <Button onClick={payUp} isDisabled={amount < minDeposit || accept === false } display="block" bg="primary" colorScheme="blue" w="full" flex={1} mt="3rem" size="lg"> PROCEED </Button>
-          
-          <Alert fontSize={'14px'} mt={'2rem'} colorScheme="blue" color="primary" gap={2} textAlign="left" maxW="550px" borderRadius="lg" border="1px solid" borderColor="primary">
-            <Checkbox borderColor="primary" value={accept} onInput={e => setAccept(!accept)} isChecked={accept} style={{accentColor: 'primary'}} type="checkbox" name="i_accept" />
-            Motaa is not a bank, all banking services are provided by TAJ Bank.
-          </Alert>
-        </Box>
+              <Alert fontSize={'14px'} colorScheme="blue" color="primary" gap={2} textAlign="left" borderRadius="lg" border="1px solid" borderColor="primary">
+                <Checkbox borderColor="primary" value={accept} onInput={e => setAccept(!accept)} isChecked={accept} style={{accentColor: 'primary'}} type="checkbox" name="i_accept" />
+                Veyu is not a bank, all banking services are provided by Paystack.
+              </Alert>
+            </VStack>
+          </Box>
 
+          {/* Right: Instructions & Help */}
+          <Box borderRadius="20px" px={6} py={8} border="1px solid lavender" bg="white">
+            <VStack align="stretch" spacing={5}>
+              <Heading size="md">How to deposit</Heading>
+              <VStack align="stretch" spacing={3}>
+                <HStack align="start" spacing={3}>
+                  <Wallet size={18} />
+                  <Box>
+                    <Text fontWeight="600">Enter amount or choose a preset</Text>
+                    <Text color="gray.600">Use the quick buttons for common amounts or type a custom value.</Text>
+                  </Box>
+                </HStack>
+
+                <HStack align="start" spacing={3}>
+                  <Settings size={18} />
+                  <Box>
+                    <Text fontWeight="600">Accept the terms</Text>
+                    <Text color="gray.600">Tick the checkbox to proceed with secure payment processing.</Text>
+                  </Box>
+                </HStack>
+
+                <HStack align="start" spacing={3}>
+                  <Share2 size={18} />
+                  <Box>
+                    <Text fontWeight="600">Pay with Paystack</Text>
+                    <Text color="gray.600">Click Proceed and complete your payment in the Paystack modal.</Text>
+                  </Box>
+                </HStack>
+
+                <HStack align="start" spacing={3}>
+                  <Clock size={18} />
+                  <Box>
+                    <Text fontWeight="600">Auto-update</Text>
+                    <Text color="gray.600">After a successful payment, we’ll update your wallet balance automatically.</Text>
+                  </Box>
+                </HStack>
+              </VStack>
+
+              <Box borderTopWidth={1} pt={4}>
+                <Heading size="sm" mb={2}>Tips</Heading>
+                <VStack align="stretch" spacing={1} color="gray.600">
+                  <Text>- Ensure your email is correct to receive receipts.</Text>
+                  <Text>- If the modal is closed, you can try again safely.</Text>
+                  <Text>- For delays, check Transactions or refresh the page.</Text>
+                </VStack>
+              </Box>
+
+              <Box borderTopWidth={1} pt={4}>
+                <Heading size="sm" mb={2}>Need help?</Heading>
+                <Text color="gray.600">Contact support via chat or email if your payment doesn’t reflect within a few minutes.</Text>
+              </Box>
+            </VStack>
+          </Box>
+        </SimpleGrid>
       </CenteredLayout>
     </Box>
   )

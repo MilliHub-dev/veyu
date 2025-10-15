@@ -30,76 +30,78 @@ function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
       borderRightWidth={1}
       position="relative"
       h="calc(100vh - 65px)"
-      overflow="auto"
-      py={4}
+      overflow="hidden"
       {...props}
     >
-      <VStack spacing={4} align="stretch" px={4}>
-        <HStack justify="space-between">
-          <Text fontSize="xl" fontWeight="bold">
-            Messages
-          </Text>
-          <Badge colorScheme="blue">{conversations?.length}</Badge>
+      <VStack spacing={3} align="stretch" px={4} py={4} borderBottomWidth={1} bg="white" position="sticky" top={0} zIndex={1}>
+        <HStack justify="space-between" align="center">
+          <Text fontSize="lg" fontWeight="bold">Messages</Text>
+          <Badge colorScheme="blue">{conversations?.length || 0}</Badge>
         </HStack>
 
-        <InputGroup>
+        <InputGroup size="sm">
           <InputLeftElement>
             <Search className="w-4 h-4 text-gray-400" />
           </InputLeftElement>
-          <Input onInput={console.log} placeholder="Search..." />
+          <Input onInput={console.log} placeholder="Search conversations" borderRadius="full" />
         </InputGroup>
       </VStack>
 
-      <VStack spacing={0} align="stretch" mt={4}>
-        {conversations.map((conversation) => (
-          <Box
-            key={conversation.id}
-            px={4}
-            py={3}
-            cursor="pointer"
-            as={Link}
-            to={`${conversation.uuid}`}
-            bg={activeId === conversation.id ? 'blue.50' : 'transparent'}
-            _hover={{ bg: 'gray.50' }}
-            onClick={() => onSelect(conversation)}
-          >
-            <HStack spacing={3}>
-              <Box position="relative">
-                <Avatar
-                  size="md"
-                  name={conversation?.recipient?.name}
-                  src={conversation?.recipient?.image}
-                />
-                {conversation?.online && (
-                  <Badge
-                    position="absolute"
-                    bottom={0}
-                    right={0}
-                    colorScheme="green"
-                    borderRadius="full"
-                    boxSize="3"
-                  />
-                )}
-              </Box>
-              <Box flex={1}>
-                <HStack justify="space-between">
-                  <Text fontWeight="medium">{conversation?.recipient?.name}</Text>
-                  <Text fontSize="xs" color="gray.500">
-                    {conversation?.last_message?.date}
-                  </Text>
+      <Box overflowY="auto" h="calc(100% - 84px)">
+        <VStack spacing={0} align="stretch">
+          {(conversations || []).map((conversation) => {
+            const isActive = activeId === conversation.id;
+            const unread = conversation?.unread_count || 0;
+            return (
+              <Box
+                key={conversation.id}
+                px={4}
+                py={3}
+                cursor="pointer"
+                as={Link}
+                to={`${conversation.uuid}`}
+                bg={isActive ? 'blue.50' : 'transparent'}
+                _hover={{ bg: 'gray.50' }}
+                onClick={() => onSelect(conversation)}
+              >
+                <HStack spacing={3}>
+                  <Box position="relative">
+                    <Avatar
+                      size="md"
+                      name={conversation?.recipient?.name}
+                      src={conversation?.recipient?.image}
+                    />
+                    {conversation?.online && (
+                      <Badge
+                        position="absolute"
+                        bottom={0}
+                        right={0}
+                        colorScheme="green"
+                        borderRadius="full"
+                        boxSize="3"
+                      />
+                    )}
+                  </Box>
+                  <Box flex={1} minW={0}>
+                    <HStack justify="space-between" align="start">
+                      <Text fontWeight={unread ? 'bold' : 'medium'} noOfLines={1}>{conversation?.recipient?.name}</Text>
+                      <Text fontSize="xs" color="gray.500">{conversation?.last_message?.date}</Text>
+                    </HStack>
+                    <HStack justify="space-between" align="center">
+                      <Text fontSize="sm" color="gray.600" noOfLines={1}>
+                        {conversation?.last_message?.message}
+                      </Text>
+                      {unread > 0 && (
+                        <Badge colorScheme="blue" borderRadius="full">{unread}</Badge>
+                      )}
+                    </HStack>
+                  </Box>
                 </HStack>
-                <Text
-                  fontSize="sm"
-                  color="gray.500"
-                  noOfLines={1}
-                >
-                  {conversation?.last_message?.message}
-                </Text>
               </Box>
-            </HStack>
-          </Box>
-        ))}
-      </VStack>
+            )
+          })}
+        </VStack>
+      </Box>
     </Box>
   )
 }
@@ -115,9 +117,14 @@ function ChatLayout() {
 
 
   async function getData(){
-    const res = await axios.get(`/chat/chats/`);
-    const data = objectifyJSON(res.data);
-    setConversations(data?.data);
+    try{
+      const res = await axios.get(`/chat/chats/`);
+      const data = objectifyJSON(res.data);
+      setConversations(Array.isArray(data?.data) ? data?.data : []);
+    }catch(err){
+      console.error('Failed to load conversations:', err);
+      setConversations([]);
+    }
   }
 
   function init(){
@@ -130,12 +137,18 @@ function ChatLayout() {
     setTimeout(()=> setLoadingState(false), 500)
   }, [])
 
+  useEffect(() => {
+    if (authUser?.token) {
+      getData();
+    }
+  }, [authUser?.token])
+
   if (loading){
     return null
   }
 
   return (
-    <Box position="fixed" left={'0px'} width={'100%'} height="100%">
+    <Box position="fixed" left={'0px'} width={'100%'} height="100%" bg="white">
       <HStack spacing={0}>
       {room && isMobile ? null :
         <ChatSidebar
@@ -146,7 +159,7 @@ function ChatLayout() {
         />
       }
 
-        <Box w={room && "calc(100vw - 300px)"} h="calc(100vh - 75px)" position="relative">
+        <Box w={room && "calc(100vw - 300px)"} h="calc(100vh - 65px)" position="relative" bg="white">
           {
             room &&
             <Outlet />

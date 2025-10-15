@@ -35,6 +35,7 @@ import { useSearchParams, NavLink, Link } from "react-router-dom";
 import { RiGasStationLine, RiHeart2Fill, RiHeart2Line, RiMessage2Line, RiSearch2Line } from 'react-icons/ri'
 import { motion } from "framer-motion";
 import { MechanicListSkeleton } from "../../components/loaders";
+import { ShoppingCart, Car, KeyRound, Wrench } from "lucide-react";
 
 
 
@@ -110,41 +111,82 @@ export const CartPage = ({ props }) => {
             <Container maxW="container.xl" py={4}>
                 <Heading className="subtitle" size={'lg'} mb={5}>Your Cart</Heading>
 
-                <Tabs>
+                <Tabs variant="unstyled">
                 <TabList
-                    border="none"
+                    border="1px solid"
+                    borderColor="gray.200"
+                    bg="gray.50"
+                    borderRadius="xl"
                     className="hidden-scroll"
                     overflowX="auto"
                     overflowY="hidden"
                     whiteSpace="nowrap"
                     display="flex"
+                    px={2}
                     py={2}
                     alignItems="center"
                     minHeight="fit-content"
+                    gap={1}
                 >
-                    <Tab className="subtitle" borderBottom={'2px solid transparent'} gap={1} spacing={1} _selected={{ borderColor: 'primary'}}>
-                        Orders
-                        <Badge borderRadius="30px" className="subtitle" px="2" color="primary">
-                        {cart?.orders?.length}
-                        </Badge>
+                    <Tab
+                      className="subtitle"
+                      px={3}
+                      py={2}
+                      borderRadius="full"
+                      _selected={{ bg: 'white', border: '1px solid', borderColor: 'blue.200', boxShadow: 'sm' }}
+                    >
+                        <HStack spacing={2} align="center">
+                          <ShoppingCart size={16} />
+                          <Text as="span">Orders</Text>
+                          <Badge borderRadius="30px" className="subtitle" px="2" color="primary">
+                            {cart?.orders?.length}
+                          </Badge>
+                        </HStack>
                     </Tab>
-                    <Tab className="subtitle" borderBottom={'2px solid transparent'} gap={1} spacing={1} _selected={{ borderColor: 'primary'}}>
-                        Cars 
-                        <Badge borderRadius="30px" className="subtitle" px="2" color="primary">
-                        {cart?.cars?.length}
-                        </Badge>
+                    <Tab
+                      className="subtitle"
+                      px={3}
+                      py={2}
+                      borderRadius="full"
+                      _selected={{ bg: 'white', border: '1px solid', borderColor: 'blue.200', boxShadow: 'sm' }}
+                    >
+                        <HStack spacing={2} align="center">
+                          <Car size={16} />
+                          <Text as="span">Cars</Text>
+                          <Badge borderRadius="30px" className="subtitle" px="2" color="primary">
+                            {cart?.cars?.length}
+                          </Badge>
+                        </HStack>
                     </Tab>
-                    <Tab className="subtitle" borderBottom={'2px solid transparent'} gap={1} spacing={1} _selected={{ borderColor: 'primary'}}>
-                        Rentals
-                        <Badge borderRadius="30px" className="subtitle" px="2" color="primary">
-                        {cart?.rentals?.length}
-                        </Badge>
+                    <Tab
+                      className="subtitle"
+                      px={3}
+                      py={2}
+                      borderRadius="full"
+                      _selected={{ bg: 'white', border: '1px solid', borderColor: 'blue.200', boxShadow: 'sm' }}
+                    >
+                        <HStack spacing={2} align="center">
+                          <KeyRound size={16} />
+                          <Text as="span">Rentals</Text>
+                          <Badge borderRadius="30px" className="subtitle" px="2" color="primary">
+                            {cart?.rentals?.length}
+                          </Badge>
+                        </HStack>
                     </Tab>
-                    <Tab className="subtitle" borderBottom={'2px solid transparent'} gap={1} spacing={1} _selected={{ borderColor: 'primary'}}>
-                        Mechanics
-                        <Badge borderRadius="30px" className="subtitle" px="2" color="primary">
-                        {cart?.bookings?.length}
-                        </Badge>
+                    <Tab
+                      className="subtitle"
+                      px={3}
+                      py={2}
+                      borderRadius="full"
+                      _selected={{ bg: 'white', border: '1px solid', borderColor: 'blue.200', boxShadow: 'sm' }}
+                    >
+                        <HStack spacing={2} align="center">
+                          <Wrench size={16} />
+                          <Text as="span">Mechanics</Text>
+                          <Badge borderRadius="30px" className="subtitle" px="2" color="primary">
+                            {cart?.bookings?.length}
+                          </Badge>
+                        </HStack>
                     </Tab>
                     </TabList>
 

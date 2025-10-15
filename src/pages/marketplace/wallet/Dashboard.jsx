@@ -76,152 +76,148 @@ function WalletHomePage() {
     init();
   }, [])
 
+  const inflow = (transactions || [])
+    .filter(t => String(t?.type).toLowerCase() === 'deposit')
+    .reduce((sum, t) => sum + (Number(t?.amount) || 0), 0);
+  const outflow = (transactions || [])
+    .filter(t => String(t?.type).toLowerCase() !== 'deposit')
+    .reduce((sum, t) => sum + (Number(t?.amount) || 0), 0);
+
   return (
     <Box>
-      <SimpleGrid gap={5} my={8} columns={{base: 1, lg: 2}}>
-        {/* Wallet Balance */}
-        <Box
-          flex="1"
-          minW="280px"
-          p={3}
-          borderWidth={1}
-          borderRadius="15px"
-          position="relative"
-        >
-          <Text mb={2}>Wallet balance</Text>
-          <Heading size="2xl" fontWeight="600" className="title" mb={2}>
-            ₦{commaInt(wallet?.balance)}
-          </Heading>
-          <HStack color="green.500" mb={6}>
-            <TrendingUp size={16} />
-            <Text>+26% vs last month</Text>
+      <VStack align="stretch" spacing={6} my={6}>
+        <HStack justify="space-between" align="center">
+          <HStack>
+            <Wallet />
+            <Heading size="md">Wallet</Heading>
           </HStack>
-          <HStack as={Flex} flexDirection={{ base: 'column', sm: 'row'}} flexWrap={'wrap'} spacing={2}>
-            
-            <Box as={Link} to='/wallet/deposit/' w={{base: '100%', sm: 'max-content'}}>
-              <Button
-               w={'100%'}
-               leftIcon={<PiHandDepositBold />}
-               colorScheme="blue"
-               bgColor="primary"
-              >
-                Deposit
-              </Button>
+          <HStack spacing={2}>
+            <Box as={Link} to='/wallet/deposit/'>
+              <Button leftIcon={<PiHandDepositBold />} colorScheme="blue" bgColor="primary">Deposit</Button>
             </Box>
-
-            <Box as={Link} to='/wallet/withdraw/' w={{base: '100%', sm: 'max-content'}}>
-              <Button
-               w={'100%'}
-               leftIcon={<PiHandWithdrawBold />}
-               colorScheme="blue"
-               bgColor="primary"
-              >
-                  Withdraw
-                </Button>
-              </Box>
-
-            <Box as={Link} to='/wallet/savings/' w={{base: '100%', sm: 'max-content'}}>
-              <Button
-               w={'100%'}
-               leftIcon={<RiCoinsFill />}
-               colorScheme="blue"
-               bgColor="primary"
-              >
-                  Save
-                </Button>
-              </Box>
+            <Box as={Link} to='/wallet/withdraw/'>
+              <Button leftIcon={<PiHandWithdrawBold />} variant="outline" colorScheme="blue">Withdraw</Button>
+            </Box>
           </HStack>
-        </Box>
+        </HStack>
 
-        {/* Referral Card */}
-        <Box
-          w={{ base: "100%" }}
-          px={6}
-          py={2}
-          minH={'200px'}
-          pt="40px"
-          bg="primary"
-          color="white"
-          borderRadius="15px"
-          backgroundImage={`url('/assets/images/wallet-invite-background.png')`}
-          backgroundRepeat={'no-repeat'}
-          backgroundSize="contain"
-          backgroundPosition="bottom"
-        >
-          <AvatarGroup size="sm" max={5} mb={2}>
-          {[1, 2, 3, 4, 5, 6].map((id) => 
-            <Avatar name={`User ${id}`} key={id} />
-            )
-          }
-            
-          </AvatarGroup>
-          <Text fontSize="lg" fontWeight="medium" mb={2}>
-            Invite your friends to Motaa and get up to 30% cashback on payments with wallet.
-          </Text>
-        </Box>
-      </SimpleGrid>
+        <SimpleGrid columns={{ base: 1, lg: 3 }} gap={5}>
+          <Box borderWidth={1} borderRadius="xl" p={6} bg="white">
+            <Text color="gray.600">Current Balance</Text>
+            <Heading size="2xl" my={2}>₦{commaInt(wallet?.balance)}</Heading>
+            <HStack color="green.500" mb={4}>
+              <TrendingUp size={16} />
+              <Text>+26% vs last month</Text>
+            </HStack>
+            <HStack spacing={3} flexWrap="wrap">
+              
+              <Box as={Link} to='/wallet/transactions/'>
+                <Button variant="outline" colorScheme="blue">Transactions</Button>
+              </Box>
+            </HStack>
+          </Box>
 
-      <Heading my={3} size="sm" > Recent Transactions </Heading>
+          <Box borderWidth={1} borderRadius="xl" p={6}>
+            <Text color="gray.600" mb={2}>Inflow</Text>
+            <Heading size="lg" color="green.500">₦{commaInt(inflow)}</Heading>
+            <Text mt={2} color="gray.500">Total deposits</Text>
+          </Box>
 
-      {/* Transactions */}
-      <TableContainer borderWidth={1} borderRadius="lg">
-        <Table variant="striped">
-          <Thead bg="gray.50">
-            <Tr>
-              <Th>Name</Th>
-              <Th>Amount</Th>
-              <Th>Date</Th>
-              <Th>Status</Th>
-              <Th></Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {transactions?.map((transaction) => (
-              <Tr key={transaction.id}>
-                <Td>
-                  <HStack>
-                    <Avatar size="sm" name={transaction.sender} />
-                    <Box>
-                      <Text fontWeight="medium">
-                        {transaction.sender}
-                      </Text>
-                      <Tag fontSize="sm" textTransform={'capitalize'} colorScheme={transaction?.type === 'deposit' ? 'green' : "red"}>
-                        {transaction.type}
-                      </Tag>
-                    </Box>
-                  </HStack>
-                </Td>
-                <Td>
-                  <Text
-                    color={transaction?.type === 'deposit' ? 'green.500' : 'red.500'}
-                    fontWeight="medium"
-                  >
-                    {commaInt(transaction.amount)}
-                  </Text>
-                </Td>
-                <Td>
-                  <Text>{transaction.date}</Text>
-                  <Text fontSize="sm" color="gray.500">
-                    {new Date(transaction.date_created).toLocaleDateString()}
-                  </Text>
-                </Td>
-                <Td>
-                  <Badge colorScheme="green">{transaction.status}</Badge>
-                </Td>
-                <Td>
-                  <Menu>
-                    <MenuButton as={IconButton} icon={<MoreVertical size={16} />} variant="ghost" size="sm" />
-                    <MenuList>
-                      <MenuItem>View details</MenuItem>
-                      <MenuItem>Download receipt</MenuItem>
-                    </MenuList>
-                  </Menu>
-                </Td>
+          <Box borderWidth={1} borderRadius="xl" p={6}>
+            <Text color="gray.600" mb={2}>Outflow</Text>
+            <Heading size="lg" color="red.500">₦{commaInt(outflow)}</Heading>
+            <Text mt={2} color="gray.500">Payments and withdrawals</Text>
+          </Box>
+        </SimpleGrid>
+
+        <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
+          <Box
+            px={6}
+            py={6}
+            minH={'200px'}
+            bg="primary"
+            color="white"
+            borderRadius="15px"
+            backgroundImage={`url('/assets/images/wallet-invite-background.png')`}
+            backgroundRepeat={'no-repeat'}
+            backgroundSize="contain"
+            backgroundPosition="bottom"
+          >
+           
+            <Text fontSize="lg" fontWeight="medium">
+              Invite your friends to Veyu and get up to 3% cashback on payments with wallet.
+            </Text>
+          </Box>
+
+          <Box borderWidth={1} borderRadius="xl" p={6}>
+            <Heading size="sm" mb={4}>Quick Shortcuts</Heading>
+            <HStack spacing={3} flexWrap="wrap">
+              <Box as={Link} to='/rent'>
+                <Button variant="ghost" leftIcon={<GiHomeGarage />}>Rent a vehicle</Button>
+              </Box>
+              <Box as={Link} to='/buy'>
+                <Button variant="ghost" leftIcon={<LuChartLine />}>Buy a vehicle</Button>
+              </Box>
+              <Box as={Link} to='/mechanics'>
+                <Button variant="ghost" leftIcon={<HelpCircle />}>Find a mechanic</Button>
+              </Box>
+            </HStack>
+          </Box>
+        </SimpleGrid>
+
+        <Heading size="sm">Recent Transactions</Heading>
+        <TableContainer borderWidth={1} borderRadius="lg">
+          <Table variant="simple">
+            <Thead bg="gray.50">
+              <Tr>
+                <Th>Party</Th>
+                <Th>Amount</Th>
+                <Th>Date</Th>
+                <Th>Status</Th>
+                <Th></Th>
               </Tr>
-            ))}
-          </Tbody>
-        </Table>
-      </TableContainer>
+            </Thead>
+            <Tbody>
+              {(transactions || []).map((transaction) => (
+                <Tr key={transaction.id}>
+                  <Td>
+                    <HStack>
+                      <Avatar size="sm" name={transaction.sender} />
+                      <Box>
+                        <Text fontWeight="medium">{transaction.sender}</Text>
+                        <Tag fontSize="sm" textTransform={'capitalize'} colorScheme={String(transaction?.type).toLowerCase() === 'deposit' ? 'green' : 'red'}>
+                          {transaction.type}
+                        </Tag>
+                      </Box>
+                    </HStack>
+                  </Td>
+                  <Td>
+                    <Text color={String(transaction?.type).toLowerCase() === 'deposit' ? 'green.500' : 'red.500'} fontWeight="medium">
+                      ₦{commaInt(transaction.amount)}
+                    </Text>
+                  </Td>
+                  <Td>
+                    <Text>{transaction.date}</Text>
+                    <Text fontSize="sm" color="gray.500">{new Date(transaction.date_created).toLocaleDateString()}</Text>
+                  </Td>
+                  <Td>
+                    <Badge colorScheme="green">{transaction.status}</Badge>
+                  </Td>
+                  <Td>
+                    <Menu>
+                      <MenuButton as={IconButton} icon={<MoreVertical size={16} />} variant="ghost" size="sm" />
+                      <MenuList>
+                        <MenuItem>View details</MenuItem>
+                        <MenuItem>Download receipt</MenuItem>
+                      </MenuList>
+                    </Menu>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
+      </VStack>
     </Box>
   )
 }

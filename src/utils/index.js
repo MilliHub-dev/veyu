@@ -28,7 +28,12 @@ export function objectifyJSON(datastring){
         }
     }
     if (typeof data === 'string'){
-        data = JSON.parse(data);
+        try{
+            data = JSON.parse(data);
+        }catch(error){
+            console.error("objectifyJSON: non-JSON string provided.", error);
+            data = { message: datastring };
+        }
     }
 
     return data;

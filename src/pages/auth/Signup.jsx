@@ -183,14 +183,29 @@ export const SignupView = ({...props }) => {
             <br />
             <br />
         <CenteredLayout>
-            <Box as={motion.div} style={{ width: '90%', maxWidth: '600px', margin: 'auto', placeSelf: 'center', paddingTop: '3vh', paddingBottom: '5%'}} px={3}>
-                <Image src="/assets/images/logo-main.png" alt="Logo" mb={4} mx={'auto'} width="150px" />
-                <Heading textAlign='center' my={4} className="subtitle" marginTop={-7} textColor={'primary'}> {steps[step].title} </Heading>
-                <Text textAlign='center' my={4} className="text" textColor={'#F4A950'}> {steps[step].description} </Text>
-                
-                <Box>
-                    <StepComponent />
-                </Box>
+            <Box as={motion.div} style={{ width: '95%', maxWidth: '880px', margin: 'auto', placeSelf: 'center', paddingTop: '3vh', paddingBottom: '5%'}} px={3}>
+                <Card overflow="hidden" boxShadow="xl" borderRadius="2xl">
+                    <Flex direction={{ base: 'column', md: 'row' }}>
+                        <Box
+                          flex={{ base: 'none', md: 1 }}
+                          minH={{ base: '180px', md: 'auto' }}
+                          bgImage={`url('/favicon.jpg')`}
+                          bgSize="cover"
+                          bgPos="center"
+                          display={{ base: 'none', md: 'block' }}
+                        />
+
+                        <Box flex={1} p={{ base: 6, md: 10 }}>
+                            <Image src="/assets/images/logo-main.png" alt="Logo" mb={2} mx={'auto'} width="120px" />
+                            <Heading textAlign='center' my={2} size="lg" textColor={'primary'}> {steps[step].title} </Heading>
+                            <Text textAlign='center' mb={6} color={'#F4A950'}> {steps[step].description} </Text>
+
+                            <Box>
+                                <StepComponent />
+                            </Box>
+                        </Box>
+                    </Flex>
+                </Card>
             </Box>
         </CenteredLayout>
         </SignupContext.Provider>
@@ -221,7 +236,7 @@ const EmailStep = ({ signUpWithGoogle }) => {
                 addToPayload({
                     email,
                     password,
-                    provider: 'motaa'
+                    provider: 'veyu'
                 });
                 nextStep();
             }
@@ -305,6 +320,13 @@ const EmailStep = ({ signUpWithGoogle }) => {
                 <RLink to={`/signup/?type=${type !== 'business' ? 'business' : 'customer'}`}>
                     <Button py={5} rightIcon={<FaArrowRight />} colorScheme="blue" variant="outline" borderWidth={3} borderColor="primary" w={"100%"} rounded="lg"> Create {type === 'business' ? 'Personal' : 'Business'} Account </Button>
                 </RLink>
+
+                <HStack justify="center" mt={4}>
+                    <Text fontSize="sm" color="gray.600">Already have an account?</Text>
+                    <RLink to="/login">
+                        <Button variant="link" colorScheme="blue" size="sm">Log in</Button>
+                    </RLink>
+                </HStack>
             </form>
         </Box>
     )

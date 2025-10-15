@@ -30,19 +30,16 @@ import {
   Badge,
   Drawer, DrawerBody, DrawerContent, DrawerCloseButton, DrawerHeader, DrawerOverlay,
 } from '@chakra-ui/react'
-import { LayoutDashboard, Wallet, Clock, PiggyBank, BarChart2, HelpCircle, Settings, Share2, MoreVertical, TrendingUp } from 'lucide-react'
-import { RiCoinsFill, RiCoinsLine, RiMenuFill } from "react-icons/ri";
-import { LuChartLine } from "react-icons/lu";
-import { AiOutlineTransaction } from "react-icons/ai";
+import { LayoutDashboard, Wallet, Clock, PiggyBank, BarChart2, HelpCircle, Settings, Share2, MoreVertical, TrendingUp, Menu as MenuIcon, ArrowDownCircle, ArrowUpCircle, ReceiptText } from 'lucide-react'
 import { PiHandDepositBold, PiHandWithdrawBold } from "react-icons/pi";
 // import {MenuIcon} from '@chakra-ui/icons';
 
 const sidebarItems = [
   { icon: LayoutDashboard, label: 'Overview', link: 'home'},
-  { icon: RiCoinsLine, label: 'Deposit', link: 'deposit'},
-  { icon: LuChartLine, label: 'Withdraw', link: 'withdraw'},
-  { icon: AiOutlineTransaction, label: 'Transactions', link: 'transactions'},
-  { icon: RiCoinsLine, label: 'Savings', link: 'savings'},
+  { icon: ArrowDownCircle, label: 'Deposit', link: 'deposit'},
+  { icon: ArrowUpCircle, label: 'Withdraw', link: 'withdraw'},
+  { icon: ReceiptText, label: 'Transactions', link: 'transactions'},
+ // { icon: PiggyBank, label: 'Savings', link: 'savings'},
 ]
 
 
@@ -103,6 +100,7 @@ function WalletLayout({ ...props }) {
           zIndex="2"
           borderRightWidth={1}
           p={6}
+          boxShadow="sm"
         >
           <Navigation wallet={wallet} authUser={authUser} />
         </Box>
@@ -114,7 +112,7 @@ function WalletLayout({ ...props }) {
         <Container maxW="container.xl" pb={10}>
           {isMobile && 
             <Box pt={2}>
-              <Button onClick={showNav}> <RiMenuFill /> </Button>
+              <Button onClick={showNav}> <MenuIcon size={18} /> </Button>
             </Box>
           }
           <Outlet />
@@ -144,6 +142,11 @@ const Navigation = ({ authUser, wallet}) => (
       />
     </HStack>
 
+    <Box borderWidth={1} borderRadius="lg" p={4} bg="gray.50">
+      <Text fontSize="sm" color="gray.600">Current balance</Text>
+      <Heading size="md">₦{wallet?.balance ? `${wallet.balance.toLocaleString()}` : '0'}</Heading>
+    </Box>
+
     <VStack align="stretch" spacing={2}>
       {sidebarItems.map((item, index) => (
         <Button
@@ -152,8 +155,10 @@ const Navigation = ({ authUser, wallet}) => (
           leftIcon={<item.icon size={20} />}
           to={`${item.link}`}
           variant={'ghost'}
-          _activeLink={{ bgColor: 'primary', color : 'white'}}
           justifyContent="start"
+          borderRadius="md"
+          _hover={{ bg: 'gray.50' }}
+          _activeLink={{ bg: 'blue.50', color: 'blue.700', borderLeftWidth: 3, borderLeftColor: 'primary' }}
         >
           {item.label}
         </Button>

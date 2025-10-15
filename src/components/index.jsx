@@ -1187,11 +1187,11 @@ export const ListingItemCard = ({ listing, ...props }) => {
 
 
 export const CustomerSearchBar = ({ onSearch, ...props }) => {
-    const {notify, redirect} = useContext(GlobalStore);
-    const [menuOpen, setMenuState] = useState(false);
-    const [target, setTarget] = useState('cars');
-    const [query, setQuery] = useState('');
-    const nav = useNavigate();
+  const {notify, redirect} = useContext(GlobalStore);
+  const [menuOpen, setMenuState] = useState(false);
+  const [target, setTarget] = useState('cars');
+  const [query, setQuery] = useState('');
+  const nav = useNavigate();
 
     function handleSearch(e){
         e.preventDefault();
@@ -1205,30 +1205,61 @@ export const CustomerSearchBar = ({ onSearch, ...props }) => {
     }, [])
 
     return (
-        <form method='post' onSubmit={handleSearch}>
-        <Flex rounded={'30px'} alignItems={'center'} zIndex={'100'} gap={2} justifyContent={'space-between'} pl={4} pr={0} py={0} border={'1px solid lightgrey'} {...props}>
-            <Icon className='icon' color="inherit" fontSize={'20px'}><RiSearch2Line /> </Icon>
-            <Input
-             type='search'
-             value={query} pl={0}
-             rounded={'30px'} flex={1}
-             className='no-style ellipsis small'
-             placeholder='Search for cars, rentals or mechanics...'
-             onInput={(e) => setQuery(e.target.value)}
-            />
-            <Menu>
-                <Select color="inherit" minW="30px" maxW={'min-content'} onClick={() => setMenuState(!menuOpen)} type='button' rounded={'30px'} as={MenuButton} textTransform={'capitalize'}>
-                    <option value={target}>{target}</option>
-                </Select>
+      <form method='post' onSubmit={handleSearch}>
+        <Flex
+          alignItems="center"
+          gap={2}
+          pl={3}
+          pr={2}
+          py={1}
+          bg="white"
+          borderWidth={1}
+          borderColor="gray.200"
+          rounded="full"
+          boxShadow="sm"
+          _hover={{ boxShadow: 'md' }}
+          _focusWithin={{ borderColor: 'primary', boxShadow: '0 0 0 3px rgba(243,159,72,0.25)' }}
+          {...props}
+        >
+          <Icon className='icon' color="gray.500" fontSize={'18px'}><RiSearch2Line /></Icon>
 
-                <MenuList minW={'max-content'} py={0}>
-                    <MenuItem color="inherit" as={motion.button} type='button' onClick={() => setTarget('cars')} > Cars </MenuItem>
-                    <MenuItem color="inherit" as={motion.button} type='button' onClick={() => setTarget('mechanics')}  maxW={'max-content'}> Mechanics </MenuItem>
-                </MenuList>
-            </Menu>
+          <Input
+            type='search'
+            value={query}
+            placeholder='Search cars, rentals, mechanics...'
+            onInput={(e) => setQuery(e.target.value)}
+            variant="unstyled"
+            flex={1}
+            px={2}
+          />
+
+          <Menu>
+            <Select
+              color="inherit"
+              minW="90px"
+              maxW={'max-content'}
+              onClick={() => setMenuState(!menuOpen)}
+              type='button'
+              rounded={'full'}
+              as={MenuButton}
+              textTransform={'capitalize'}
+              borderWidth={1}
+              borderColor="gray.200"
+              px={3}
+              py={1}
+            >
+              <option value={target}>{target}</option>
+            </Select>
+            <MenuList minW={'max-content'} py={0}>
+              <MenuItem color="inherit" as={motion.button} type='button' onClick={() => setTarget('cars')}>Cars</MenuItem>
+              <MenuItem color="inherit" as={motion.button} type='button' onClick={() => setTarget('mechanics')}>Mechanics</MenuItem>
+            </MenuList>
+          </Menu>
+
+          <Button type='submit' colorScheme='blue' bgColor='primary' rounded='full' size='sm'>Search</Button>
         </Flex>
-        </form>
-    )
+      </form>
+  )
 }
 
 

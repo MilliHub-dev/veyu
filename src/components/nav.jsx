@@ -57,7 +57,8 @@ import { Facebook, Twitter, Instagram, Linkedin, Youtube, ArrowLeft, ArrowRight 
 import { 
   LayoutDashboard, Wallet, Clock,
   PiggyBank, BarChart2, HelpCircle,
-  Settings, Share2, MoreVertical, TrendingUp
+  Settings, Share2, MoreVertical, TrendingUp,
+  MessageCircle as MessageCircleIcon, Bell as BellIcon, ShoppingCart as ShoppingCartIcon, User as UserIcon
 } from 'lucide-react';
 import { GiHomeGarage } from "react-icons/gi";
 import { GrUserWorker } from "react-icons/gr";
@@ -291,7 +292,7 @@ export const CustomerNavbar = ({ props }) => {
             <RLink to={'/'}>
               <Image
                loading='eager'
-               src={'/assets/images/motaa-logo-3.png'}
+               src={'/assets/logo.jpg'}
                width={'100%'}
                className='navbar-brand'
               />
@@ -303,9 +304,9 @@ export const CustomerNavbar = ({ props }) => {
               <Flex flex={{base: 8/9, lg: 7/8}} flexWrap={'wrap'} alignItems={'center'}>
                 <Flex display={{base: 'none', lg: 'flex'}}  flex={1} flexWrap={'wrap'} className='navbar-nav' gap={6} alignItems={'center'}>
                   <Text as={RLink} fontWeight={'500'} to={"/home"}> Home </Text>
-                  <Text as={RLink} fontWeight={'500'} to={"/buy"}> Buy </Text>
+                  <Text as={RLink} fontWeight={'500'} to={"/buy"}> Buy Now </Text>
                   <Text as={RLink} fontWeight={'500'} to={"/rent"}> Rent </Text>
-                  <Text as={RLink} fontWeight={'500'} to={"/mechanics"}> Find Mechanic </Text>
+                  <Text as={RLink} fontWeight={'500'} to={"/mechanics"}> Search for Mechanic </Text>
                 </Flex>
               </Flex>
             }
@@ -323,13 +324,7 @@ export const CustomerNavbar = ({ props }) => {
                  as={RLink}
                  to="/wallet"
                  borderRadius={'30px'}
-                 leftIcon={
-                  <Icon
-                   fontSize={'25px'}
-                   as={Image}
-                   src='/assets/icons/WalletIcon.svg'
-                  />
-                 }
+                 leftIcon={<Wallet size={16} />}
                  variant="outline"
                  bgColor="#d9ebf5"
                  fontWeight="600"
@@ -338,15 +333,15 @@ export const CustomerNavbar = ({ props }) => {
                 >{"Wallet"}</Button>
               }
 
-              <RLink to={'/chat'}><Icon viewBox='45' className='icon'><AiOutlineMessage /></Icon></RLink>
-              <RLink to={'/notifications'}><Icon viewBox='45' className='icon'><FiBell /></Icon></RLink>
-              <RLink to={'/cart'}><Icon viewBox='45' className='icon'><HiOutlineShoppingCart /></Icon></RLink>
+              <RLink to={'/chat'}><Icon viewBox='45' className='icon' color="primary"><MessageCircleIcon size={18} /></Icon></RLink>
+              <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color="primary"><BellIcon size={18} /></Icon></RLink>
+              <RLink to={'/cart'}><Icon viewBox='45' className='icon' color="primary"><ShoppingCartIcon size={18} /></Icon></RLink>
               {!isLaptop && 
                 <Menu to={`/dashboard`}>
                 {({ isOpen, onClose }) =>
                 <Fragment>
                   <MenuButton onClose={onClose} isOpen={isOpen}>
-                    <Icon viewBox='45' className='icon'><MdOutlineAccountCircle /></Icon>
+                    <Icon viewBox='45' className='icon' color="primary"><UserIcon size={18} /></Icon>
                   </MenuButton>
                   <MenuList px={2}>
                     <Box my={3} placeItems="center">
@@ -468,31 +463,31 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
                borderColor="primary"
                px={2}
               >
-                <Icon fontSize={'25px'} as={Image} src='/assets/icons/WalletIcon.svg' />
+                <Wallet size={18} />
               </Button> 
             ):(
               <Button
                as={RLink}
                to="/wallet"
                borderRadius={'30px'}
-               leftIcon={
-                <Icon fontSize={'25px'} as={Image} src='/assets/icons/WalletIcon.svg' />
-               }
+               leftIcon={<Wallet size={16} />}
                variant="outline"
                bgColor="#d9ebf5"
                fontWeight="600"
                colorScheme="blue"
                color="primary"
-              >Wallet</Button>
+              >E-Wallet</Button>
             )
           }
-          <Button px={2} as={RLink} variant="ghost" to={'/chat'}><Icon viewBox='45' className='icon'><AiOutlineMessage /></Icon></Button>
-          <Button px={2} as={RLink} variant="ghost" to={'/notifications'}><Icon viewBox='45' className='icon'><FiBell /></Icon></Button>
+          <Button px={2} as={RLink} variant="ghost" to={'/chat'}><Icon viewBox='45' className='icon' color="primary"><MessageCircleIcon size={18} /></Icon></Button>
+          <Button px={2} as={RLink} variant="ghost" to={'/notifications'}><Icon viewBox='45' className='icon' color="primary"><BellIcon size={18} /></Icon></Button>
           
           <Menu zIndex={2} display="block">
             <MenuButton
               as={IconButton}
-              icon={<FaUser size={18} />}
+              icon={<UserIcon size={18} />}
+              colorScheme="blue"
+              color="primary"
               variant="ghost"
               size="sm"
               aria-label="Profile"
@@ -761,16 +756,14 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
                variant="outline"
                borderColor="primary"
               >
-                <Icon fontSize={'25px'} as={Image} src='/assets/icons/WalletIcon.svg' />
+                <Wallet size={22} />
               </Button> 
             ):(
               <Button
                as={RLink}
                to="/wallet"
                borderRadius={'30px'}
-               leftIcon={
-                <Icon fontSize={'25px'} as={Image} src='/assets/icons/WalletIcon.svg' />
-               }
+               leftIcon={<Wallet size={18} />}
                variant="outline"
                bgColor="#d9ebf5"
                fontWeight="600"
@@ -779,12 +772,14 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
               >Wallet</Button>
             )
           }
-          <RLink to={'/chat'}><Icon viewBox='45' className='icon'><AiOutlineMessage /></Icon></RLink>
-          <RLink to={'/notifications'}><Icon viewBox='45' className='icon'><FiBell /></Icon></RLink>
+          <RLink to={'/chat'}><Icon viewBox='45' className='icon' color="primary"><MessageCircleIcon size={18} /></Icon></RLink>
+          <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color="primary"><BellIcon size={18} /></Icon></RLink>
           <Menu zIndex={2} display="block">
             <MenuButton
               as={IconButton}
-              icon={<FaUser size={18} />}
+              icon={<UserIcon size={18} />}
+              colorScheme="blue"
+              color="primary"
               variant="ghost"
               size="sm"
               aria-label="Profile"
@@ -1059,37 +1054,36 @@ export const Footer = ({ props }) => {
   ]
 
   return (
-    <Box bg="#F4A950" color="white" pt={20} pb={8}>
-      <Container maxW="container.lg">
+    <Box bgGradient="linear(to-br, gray.900, gray.800)" color="white" pt={16} pb={8}>
+      <Container maxW="7xl">
 
-        <Box pb={8} borderBottomWidth={1} borderColor="gray.200">
-          <Flex justifyContent="space-between" flexWrap="wrap">
+        <Box pb={8}>
+          <Flex justifyContent="space-between" flexWrap="wrap" gap={6} align="center">
             <Box>
-              <Heading size="xl" fontWeight="600" textColor='primary'>Become a partner!</Heading>
-              <Text fontSize="lg" mt={3}>Join our successful community of dealers, car rentals, and mechanics. </Text>
+              <Heading size="lg" fontWeight="700">Grow with Veyu</Heading>
+              <Text fontSize="md" mt={2} color="whiteAlpha.800">Join a community of dealers, rentals, mechanics, and fleets.</Text>
             </Box>
 
-            <Flex gap={5}>
-              <Button size="lg" colorScheme="yellow" bg="tertiary" color="primary"> Get Started </Button>
-              <Button size="lg" colorScheme="white" bg="white" color="black"> Learn More </Button>
+            <Flex gap={3}>
+              <Button size="md" colorScheme="yellow" bg="tertiary" color="primary">Get Started</Button>
+              <Button size="md" variant="outline" borderColor="whiteAlpha.600">Learn More</Button>
             </Flex>
           </Flex>
         </Box>
 
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 6 }} spacing={8} py={8}>
-          <Box gridColumn="span 2">
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 6 }} spacing={8} py={6} borderTopWidth={1} borderColor="whiteAlpha.200">
+          <Box gridColumn={{ base: 'span 1', lg: 'span 2' }}>
             <Box width="150px" height="70px">
               <Image src="/assets/images/VEYU MOBILE APP ICON1.jpg" mb={5} w="65px" alt="Veyu" />
             </Box>
 
-            <Text fontSize="sm" color="white.700" maxW="xs">
-              Note: Transactions made on Veyu are between you and the respective service
-              provider. Veyu does not have any liability to you in relation of your purchase.
+            <Text fontSize="sm" color="whiteAlpha.800" maxW="xs">
+              Transactions made on Veyu are between you and the service provider. Veyu is not liable for third‑party transactions.
             </Text>
           </Box>
           
           {sections.map((section) => (
-            <Stack key={section.title} spacing={4}>
+            <Stack key={section.title} spacing={3}>
               <Text fontWeight="bold">{section.title}</Text>
               {section.links.map(({ label, url, coming}) => (
                 <Text
@@ -1097,41 +1091,46 @@ export const Footer = ({ props }) => {
                   as={url && RLink}
                   to={url}
                   fontSize="sm"
-                  color="white.800"
+                  color="whiteAlpha.800"
                   cursor="pointer"
                   _hover={{ color: 'primary' }}
                 >
-                  {label} {coming ? <Tag colorScheme="green" size="sm"> coming soon </Tag> : null}
+                  {label} {coming ? <Tag colorScheme="green" size="sm">coming soon</Tag> : null}
                 </Text>
               ))}
             </Stack>
           ))}
+
+          <Stack spacing={3}>
+            <Text fontWeight="bold">Newsletter</Text>
+            <Text fontSize="sm" color="whiteAlpha.800">Get product updates and tips.</Text>
+            <HStack>
+              <Input placeholder="Your email" bg="whiteAlpha.100" borderColor="whiteAlpha.300" _placeholder={{ color: 'whiteAlpha.600' }} />
+              <Button colorScheme="blue">Subscribe</Button>
+            </HStack>
+          </Stack>
         </SimpleGrid>
 
-        <Box pt={8} borderTopWidth={1} borderColor="gray.200">
+        <Box pt={6} borderTopWidth={1} borderColor="whiteAlpha.200">
           <Stack
             direction={{ base: 'column', md: 'row' }}
             justify="space-between"
             align="center"
             spacing={4}
           >
-            <Text fontSize="sm" color="white">
+            <Text fontSize="sm" color="whiteAlpha.800">
               © {new Date().getFullYear()} Veyu Limited. All rights reserved.
             </Text>
-            <HStack spacing={4}>
+            <HStack spacing={3}>
               {[Facebook, Twitter, Instagram, Linkedin, Youtube].map(
                 (SocialIcon, index) => (
                   <Icon
                     key={index}
                     as={SocialIcon}
-                    boxSize={'30px'}
-                    color="gray.800"
+                    boxSize={'22px'}
+                    color="whiteAlpha.800"
                     cursor="pointer"
-                    _hover={{ color: 'blue.500' }}
-                    px={1.5}
-                    py={1.35}
-                    bg={'tertiary'}
-                    borderRadius={'5px'}
+                    _hover={{ color: 'primary' }}
                   />
                 )
               )}

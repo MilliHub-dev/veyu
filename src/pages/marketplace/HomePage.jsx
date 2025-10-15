@@ -38,6 +38,8 @@ import {
   Linkedin,
   Youtube,
   Instagram,
+  ShieldCheck,
+  Zap,
 } from "lucide-react"
 import {ListingItemCard, ImageCarousel, LocationBreadcrumb} from "../../components";
 import {GlobalStore} from "../../App";
@@ -48,11 +50,11 @@ import {Link} from 'react-router-dom';
 // Feature Card Component
 function FeatureCard({ icon, title, description, ...props }) {
   return (
-    <Box bg="white" minW={'300px'} maxW={'300px'} p={8} borderRadius="xl" boxShadow="2xl" textAlign="center" {...props}>
-      <Box bg="blue.200" w="fit-content" px={4} py={3} borderRadius="10px" mx="auto" mb={4}>
+    <Box bgGradient="linear(to-br, white, gray.50)" minW={'260px'} maxW={'320px'} p={8} borderRadius="2xl" boxShadow="lg" textAlign="left" _hover={{ transform: 'translateY(-4px)', boxShadow: 'xl' }} transition="all .2s" {...props}>
+      <Box bg="blue.100" w="fit-content" px={4} py={3} borderRadius="full" mb={4}>
         {icon}
       </Box>
-      <Text fontSize="lg" color="primary" fontWeight="bold" mb={2}>
+      <Text fontSize="lg" color="primary" fontWeight="bold" mb={1}>
         {title}
       </Text>
       <Text color="gray.600">{description}</Text>
@@ -107,14 +109,14 @@ export default function MainPage() {
           >
             <Box gridArea="content">
               <Heading size="xl" mb={4} className="subtitle">
-                Welcome Back, {authUser?.first_name} {authUser?.last_name}
+                Your garage, on demand
               </Heading>
 
               <Text fontSize="md" mb={4}>
-                Buy, Sell, Rent and Find Mechanics all in one platform
+                Shop cars, rent vehicles, and book trusted mechanics — all in one seamless experience.
               </Text>
 
-              <VStack spacing={4} align="stretch" mb={4}>
+              <Stack spacing={4} align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }} mb={4} justify={{ md: 'flex-start' }}>
                {/* <InputGroup size="lg">
                   <InputLeftElement>
                     <Search size="20px"/>
@@ -128,19 +130,19 @@ export default function MainPage() {
                 </InputGroup> */}
 
                 <Button as={!query.trim() && Link} to='/buy' colorScheme="blue" bg="primary" size="lg">
-                  Browse cars for sale
+                  Shop vehicles
                 </Button>
-                <Button as={!query.trim() && Link} to='/rent' colorScheme="blue" bg="primary" size="lg">
-                  Browse cars for rent
+                <Button as={!query.trim() && Link} to='/rent' colorScheme="blue" variant="outline" borderColor="primary" borderWidth={2} size="lg">
+                  Rent vehicles
                 </Button>
-                <Button as={!query.trim() && Link} to='/mechanics' colorScheme="blue" variant="outline" borderColor="primary" borderWidth={2} size="lg">
-                  Find a Mechanic
+                <Button as={!query.trim() && Link} to='/mechanics' colorScheme="blue" variant="ghost" size="lg">
+                  Get a mechanic
                 </Button>
-              </VStack>
+              </Stack>
             </Box>
 
             <Box position="relative" gridArea="image">
-              <Image lazy src="/assets/images/motaa-car-top.png" alt="Featured Car" w="full" h="auto" />
+              <Image lazy src="/assets/images/hero-image.jpg" alt="Featured Car" w="full" h="auto" />
               <Box width="247px" position="absolute" top={4} right={4}  p={2} borderRadius="md">
                 <Image w="100%" lazy src="/assets/icons/1.png" h="auto" alt='icon' />
               </Box>
@@ -179,19 +181,27 @@ export default function MainPage() {
 
             <Box>
               <Heading size={{base: "2xl", sm: "3xl", md: "4xl"}} mb={4}>
-                NEED A CAR?
+                Featured tools
               </Heading>
 
               <Heading className="title" fontWeight="400" size={{base: 'md', md: "lg"}} mb={4} px={4} py={4} bg="tertiary" color="primary">
-                Get upto 30% OFF your first order
+                Plan smarter. Shop faster.
               </Heading>
               
               <Text mb={6}>
-                Explore a range of cars on Veyu, buy from verified car dealerships across the Globe.
+                Calculate payments, compare deals, check affordability, find dealers, and book services — all in one place.
               </Text>
 
-              <Button as={Link} to='/buy/' fontWeight={'600'} bg="tertiary" color="primary" w={{base: '100%', md: '250px'}} size="lg">
-                BUY NOW!
+              <Stack spacing={3} direction={{ base: 'column', md: 'row' }} mb={4}>
+                <Button as={Link} to='/tools/payment-calculator' size='sm' variant='outline' colorScheme='whiteAlpha' borderColor='white' color='white'>Payment Calculator</Button>
+                <Button as={Link} to='/compare' size='sm' variant='outline' colorScheme='whiteAlpha' borderColor='white' color='white'>Compare Deals</Button>
+                <Button as={Link} to='/tools/affordability' size='sm' variant='outline' colorScheme='whiteAlpha' borderColor='white' color='white'>Affordability Check</Button>
+                <Button as={Link} to='/dealers' size='sm' variant='outline' colorScheme='whiteAlpha' borderColor='white' color='white'>Dealer Finder</Button>
+                <Button as={Link} to='/mechanics' size='sm' variant='outline' colorScheme='whiteAlpha' borderColor='white' color='white'>Book Service</Button>
+              </Stack>
+
+              <Button as={Link} to='/tools' fontWeight={'600'} bg="tertiary" color="primary" w={{base: '100%', md: '250px'}} size="lg">
+                Explore tools
               </Button>
             </Box>
           </Grid>
@@ -201,11 +211,11 @@ export default function MainPage() {
       {/* Why Choose Us Section */}
       <Container maxW="container.xl" my={20}>
         <Heading size="lg" textAlign="center" mb={12}>
-          Why Choose Us<Text as="span" color="primary">?</Text>
+          Why Veyu<Text as="span" color="primary">?</Text>
         </Heading>
         <center>
         <Flex
-         w={'996px'}
+         w={'100%'}
          className="hidden-scroll"
          alignItems="center"
          px={4} gap={8} justify="space-between"
@@ -215,25 +225,25 @@ export default function MainPage() {
         >
           <ScrollAnimation animateIn="zoomIn">
             <FeatureCard
-              icon={<Icon as={Image} fontSize="25px" src="/assets/icons/FullCartIcon.svg" />}
-              title="All in One Marketplace"
-              description="Veyu offers you the best experience by providing solutions to your vehicle needs all in one place."
+              icon={<Search size={24} />}
+              title="Smart search"
+              description="Find the right vehicle or service fast with powerful filters and instant results."
             />
           </ScrollAnimation>
 
           <ScrollAnimation animateIn="zoomIn">
             <FeatureCard
-              icon={<Icon as={Image} fontSize="25px" src="/assets/icons/TrustAndTransparencyIcon.svg" />}
-              title="Trust & Transparency"
-              description="Have peace of mind when dealing on Veyu with our verified partners."
+              icon={<ShieldCheck size={24} />}
+              title="Trust & transparency"
+              description="Verified partners, clear history, and upfront pricing so you can decide with confidence."
             />
           </ScrollAnimation>
 
           <ScrollAnimation animateIn="zoomIn">
             <FeatureCard
-              icon={<Icon as={Image} fontSize="25px" src="/assets/icons/EaseOfUseIcon.svg" />}
-              title="Ease of Use"
-              description="Veyu makes it easy for users to find vehicle and mechanics with our platform."
+              icon={<Zap size={24} />}
+              title="Effortless experience"
+              description="Lightning‑fast booking and built‑in messaging streamline every step from browse to keys."
             />
           </ScrollAnimation>
         </Flex>
@@ -244,7 +254,7 @@ export default function MainPage() {
       
       <Container maxW="7xl" py={12} align="center">
         <Heading size="lg" mb={6} textAlign="center">
-          Top Deals
+          Today’s top picks
         </Heading>
 
         <Tabs colorScheme="blue"  align="center" mb={8}>

@@ -1,7 +1,7 @@
 import { createContext, Fragment, useEffect, useState } from 'react';
 import {Outlet, redirect, BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
-import { Axios, } from 'axios';
+import axios from 'axios';
 import { ChakraProvider, ToastProvider, useToast, extendTheme, Fade } from '@chakra-ui/react';
 import Layout from './pages/Layout';
 import ErrorBoundary from './components/error';
@@ -83,7 +83,7 @@ export const GlobalStore = createContext({
   apiUrl: '',
   getCookie: undefined,
   setCookie: undefined,
-  axios: Axios,
+  axios: axios,
   logout: undefined,
   redirect: undefined,
   commaInt: undefined,
@@ -99,14 +99,22 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [isAuthenticated, setAuthState] = useState(false)
   const [otherContext, setOtherContext] = useState({})
-  const axiosClient =  new Axios({
+  const axiosClient = axios.create({
      baseURL: 'https://dev.veyu.cc/api/v1',
     // baseURL: 'http://localhost:8000/api/v1',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': authUser ? `Token ${authUser?.token}` : null
     },
   });
+
+  // Keep axios auth header in sync with current user token
+  useEffect(() => {
+    if (authUser?.token) {
+      axiosClient.defaults.headers.Authorization = `Token ${authUser.token}`;
+    } else {
+      try { delete axiosClient.defaults.headers.Authorization } catch {}
+    }
+  }, [authUser]);
 
   function reloadApp(){
     // reloads user data including auth tokens
