@@ -263,7 +263,7 @@ const EmailStep = ({ signUpWithGoogle }) => {
                          bgColor={user_type === 'dealer' ? 'primary' : 'transparent'}
                          color={user_type === 'dealer' ? 'white' : 'black'}
                          onClick={() => setUserType('dealer')}
-                        > Car Dealer </Button>
+                        > Dealer </Button>
                         <Button
                          fontSize="sm"
                          rounded="lg"
