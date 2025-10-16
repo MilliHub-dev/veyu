@@ -224,7 +224,7 @@ export const UnauthenticatedNavbar = ({ props }) => {
   </nav>
 
   
-  <Button as={Link} href="/login" className="social-btn">Login</Button>
+  <RLink to="/login"> <Button bgColor={'dark.50'} className="social-btn">Login</Button></RLink>
 </Box>
 
 

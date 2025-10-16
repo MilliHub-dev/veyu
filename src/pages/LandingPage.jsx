@@ -310,7 +310,7 @@ export const HomePage = ({ props }) => {
             <Accordion allowMultiple allowToggle border={'none'} textAlign={'left'}>
               {
                 faqs.map((faq, idx) => 
-                    <AccordionItem borderRadius={5} my={4} border={'1px solid lavender'}>
+                    <AccordionItem key={idx} borderRadius={5} my={4} border={'1px solid lavender'}>
                       {({ isExpanded }) => (
                         <Fragment key={idx}>
                         <AccordionButton as={Flex} wrap={'nowrap'} alignItems={'center'} justifyContent={'space-between'}>
