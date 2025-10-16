@@ -40,6 +40,7 @@ export const LoginView = ({ ...props }) => {
             const res = await axios.post('/accounts/login/', {
                 email,
                 password,
+                provider,
             }, { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' } });
             let data = res.data;
             if (typeof data === 'string'){
