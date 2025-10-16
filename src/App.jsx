@@ -201,8 +201,8 @@ function App() {
     // try to authenticate the user else redirect to login screen
     getAuthUser();
 
-    // show loading screen for 3.5 seconds
-    setTimeout(() => setLoading(false), 5000);
+    // finish init immediately (no artificial delay)
+    setLoading(false);
 
     // TODO: try to refresh the auth token if expired - for jwt
   }
@@ -255,8 +255,7 @@ function App() {
 
 
   if (loading){
-    return null
-    // return <ErrorBoundary> <AppLoadingScreen /> </ErrorBoundary>
+    return <ErrorBoundary> <AppLoadingScreen /> </ErrorBoundary>
   }  
   
   return (
