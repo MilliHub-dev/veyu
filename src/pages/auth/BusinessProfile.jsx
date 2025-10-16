@@ -30,6 +30,8 @@ import {
   SelectField,
   Stack,
   Text,
+  SimpleGrid,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import { useContext, useRef, useState, createContext, useEffect } from "react";
 import { GlobalStore } from "../../App";
@@ -91,6 +93,9 @@ function BusinessProfile({onSubmit, ...props }) {
   const servicesOffered = payload?.business_type === 'mechanic' ? mechServices : dealerServices;
   const imageRef = useRef()
   const imagesRef = useRef()
+  const pageBg = useColorModeValue('gray.50', 'gray.900');
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderCol = useColorModeValue('#d0d5dd', 'gray.700');
 
   const changeValue = (key, value) => {
     const oldValue = businessProfile
@@ -173,12 +178,12 @@ function BusinessProfile({onSubmit, ...props }) {
   }
 
   return (
-    <Box minH="100vh" bg="white">
-      <Container maxW="3xl" py={8} px={4}>
-      <form id="profileForm" method="post" onSubmit={setupBusinessProfile} encType="multipart/form-data">
+    <Box minH="100vh" bg={pageBg}>
+      <Container maxW="4xl" py={10} px={{ base: 4, md: 6 }}>
+        <form id="profileForm" method="post" onSubmit={setupBusinessProfile} encType="multipart/form-data">
         {/* Profile Image */}
-        <Box bg="white" border="1px solid" borderColor="#d0d5dd" borderRadius="xl" p={6} mb={6}>
-          <VStack>
+        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} mb={6} boxShadow="md">
+          <VStack align="stretch" spacing={6}>
             <Flex alignItems="center" justifyContent="center" mb={2}>
               <Avatar
                w="20" h="20"
@@ -207,38 +212,36 @@ function BusinessProfile({onSubmit, ...props }) {
              onInput={(e) => {
               const file = e.target.files[0];
               changeValue('logo', file);
-              setLogoPreview(URL.createObjectURL(businessProfile?.logo))
+              if (file) setLogoPreview(URL.createObjectURL(file))
              }}
             />
 
-            <VStack mt={4} w="80%" maxW={"500px"} spacing={4}>
-            <FormControl isRequired>
-              <FormLabel> Business Name </FormLabel>
-              <Input
-               type="text" w="100%"
-               value={businessProfile.business_name}
-               placeholder="Business Name"
-               onInput={e => changeValue('business_name', e.target.value)}
-              />
-            </FormControl>
-            
-            <FormControl isRequired>
-              <FormLabel> Business Headline or Motto </FormLabel>
-              <Input
-               type="address" w="100%"
-               value={businessProfile.headline}
-               placeholder="Business Headline / Motto"
-               onInput={e => changeValue('headline', e.target.value)}
-              />
-            </FormControl>
-
-            </VStack>
+            <SimpleGrid mt={2} columns={{ base: 1, md: 2 }} spacing={4}>
+              <FormControl isRequired>
+                <FormLabel> Business Name </FormLabel>
+                <Input
+                 type="text" w="100%"
+                 value={businessProfile.business_name}
+                 placeholder="Business Name"
+                 onInput={e => changeValue('business_name', e.target.value)}
+                />
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel> Business Headline or Motto </FormLabel>
+                <Input
+                 type="text" w="100%"
+                 value={businessProfile.headline}
+                 placeholder="Business Headline / Motto"
+                 onInput={e => changeValue('headline', e.target.value)}
+                />
+              </FormControl>
+            </SimpleGrid>
           </VStack>
         </Box>
 
 
         {/* About Your Business */}
-        <Box mb={6}>
+        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} mb={6} boxShadow="sm">
           <FormLabel fontWeight="medium" mb={2}>
             About your Business
           </FormLabel>
@@ -246,15 +249,15 @@ function BusinessProfile({onSubmit, ...props }) {
             onInput={(e) => changeValue('about', e.target.value)}
            placeholder="Enter a brief description of your business. Minimum of 50 characters..."
            minH="100px"
-           borderColor="#d0d5dd"
+           borderColor={borderCol}
           />
         </Box>
 
         {/* Choose Services */}
-        <Box mb={6}>
+        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} mb={6} boxShadow="sm">
           <FormLabel fontWeight="medium" mb={2}> Services Offered </FormLabel>
-          <Box border="1px solid" borderColor="#d0d5dd" borderRadius="lg" overflow="hidden">
-            <Box p={3} borderBottom="1px solid" borderColor="#d0d5dd">
+          <Box border="1px solid" borderColor={borderCol} borderRadius="lg" overflow="hidden">
+            <Box p={3} borderBottom="1px solid" borderColor={borderCol}>
               <FormLabel fontWeight="medium" mb={2}> Choose services </FormLabel>
               <Flex flexWrap="wrap" gap={2}>
               {
@@ -268,9 +271,9 @@ function BusinessProfile({onSubmit, ...props }) {
                       cursor="pointer"
                       borderRadius="full"
                       fontSize="sm"
-                      bg={selected ? "#f2f4f7" : "white"}
-                      color={selected ? "#101828" : "#667085"}
-                      borderColor="#d0d5dd"
+                      bg={selected ? "#f2f4f7" : cardBg}
+                      color={selected ? "#101828" : useColorModeValue('#667085', 'gray.300')}
+                      borderColor={borderCol}
                       _hover={{ bg: selected ? "#e4e7ec" : "gray.50" }}
                       onClick={() => changeValue('services', [...businessProfile?.services, service])}
                     >
@@ -309,7 +312,7 @@ function BusinessProfile({onSubmit, ...props }) {
         </Box>
 
         {/* Contact Details */}
-        <Box mb={6}>
+        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} mb={6} boxShadow="sm">
           <FormLabel fontWeight="medium" mb={2}>
             Contact details
           </FormLabel>
@@ -321,7 +324,7 @@ function BusinessProfile({onSubmit, ...props }) {
             <FormLabel fontSize="sm" fontWeight="medium" mb={1}>
               Email
             </FormLabel>
-            <Input type="email" placeholder="info@company.com" borderColor="#d0d5dd"
+            <Input type="email" placeholder="info@company.com" borderColor={borderCol}
                 onInput={(e) => changeValue('contact_email', e.target.value)}
              />
           </FormControl>
@@ -332,8 +335,8 @@ function BusinessProfile({onSubmit, ...props }) {
             </FormLabel>
             <InputGroup>
               <InputLeftAddon
-                bg="white"
-                borderColor="#d0d5dd"
+                bg={cardBg}
+                borderColor={borderCol}
                 px={2}
                 children={
                   <Flex alignItems="center">
@@ -356,25 +359,29 @@ function BusinessProfile({onSubmit, ...props }) {
           </FormControl>
         </Box>
 
-        <FormControl isRequired mb={4}>
-          <FormLabel fontSize="sm" fontWeight="medium" mb={1}>
-            Street Address
-          </FormLabel>
-          <Input type="address" placeholder="e.g Suite 4. Acura Plaza" borderColor="#d0d5dd"
-              onInput={(e) => changeValue('location', {...businessProfile.location, street_address: e.target.value})}
-           />
-        </FormControl>
+        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} mb={6} boxShadow="sm">
+          <SimpleGrid columns={{ base: 1 }} spacing={4}>
+            <FormControl isRequired>
+              <FormLabel fontSize="sm" fontWeight="medium" mb={1}>
+                Street Address
+              </FormLabel>
+              <Input type="address" placeholder="e.g Suite 4. Acura Plaza" borderColor={borderCol}
+                  onInput={(e) => changeValue('location', {...businessProfile.location, street_address: e.target.value})}
+               />
+            </FormControl>
 
-        <FormControl isRequired mb={4}>
-          <FormLabel fontSize="sm" fontWeight="medium" mb={1}>
-            Physical Location <small> Select a Location on Google </small>
-          </FormLabel>
-          <CustomPlacesAutocomplete onPlaceChange={({...data}) => changeValue('location', {...businessProfile.location, ...data})} />
-        </FormControl>
+            <FormControl isRequired>
+              <FormLabel fontSize="sm" fontWeight="medium" mb={1}>
+                Physical Location <small> Select a Location on Google </small>
+              </FormLabel>
+              <CustomPlacesAutocomplete onPlaceChange={({...data}) => changeValue('location', {...businessProfile.location, ...data})} />
+            </FormControl>
+          </SimpleGrid>
+        </Box>
 
         {/* Submit Button */}
         <Box mt={8}>
-          <Button form="profileForm" type="submit" w="full" bg="#0460cc" color="white" _hover={{ bg: "#0354b4" }}>
+          <Button form="profileForm" type="submit" w="full" bg="#0460cc" color="white" _hover={{ bg: "#0354b4" }} boxShadow="md">
             Create your Profile
           </Button>
         </Box>
