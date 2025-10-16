@@ -3,6 +3,7 @@ import {
     Box, Stack, Flex,
     Image, Text,
     useMediaQuery, Icon,
+    useColorMode, useColorModeValue,
     DrawerContent,
     Divider,
     DrawerHeader,
@@ -58,7 +59,8 @@ import {
   LayoutDashboard, Wallet, Clock,
   PiggyBank, BarChart2, HelpCircle,
   Settings, Share2, MoreVertical, TrendingUp,
-  MessageCircle as MessageCircleIcon, Bell as BellIcon, ShoppingCart as ShoppingCartIcon, User as UserIcon
+  MessageCircle as MessageCircleIcon, Bell as BellIcon, ShoppingCart as ShoppingCartIcon, User as UserIcon,
+  Sun, Moon
 } from 'lucide-react';
 import { GiHomeGarage } from "react-icons/gi";
 import { GrUserWorker } from "react-icons/gr";
@@ -239,6 +241,9 @@ export const CustomerNavbar = ({ props }) => {
     const [isMobile] = useMediaQuery('(max-width: 768px)');
     const [isLaptop] = useMediaQuery('(max-width: 1028px)');
     const isLoggedIn = Boolean(authUser);
+    const { colorMode, toggleColorMode } = useColorMode();
+    const navBg = useColorModeValue('white', 'gray.900');
+    const navColor = useColorModeValue('black', 'white');
 
     window.onscroll = (ev) => {
       if(window.scrollY > 1000){
@@ -270,9 +275,9 @@ export const CustomerNavbar = ({ props }) => {
       <Box
        position={'sticky'}
        top={'0px'}
-       bg={'white'}
+       bg={navBg}
        as={motion.div}
-       color={"black"}
+       color={navColor}
        flex={1} w={'100%'}
        animate={{ opacity: 1, }}
        initial={{ opacity: 0.6, }}
@@ -336,6 +341,13 @@ export const CustomerNavbar = ({ props }) => {
               <RLink to={'/chat'}><Icon viewBox='45' className='icon' color="primary"><MessageCircleIcon size={18} /></Icon></RLink>
               <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color="primary"><BellIcon size={18} /></Icon></RLink>
               <RLink to={'/cart'}><Icon viewBox='45' className='icon' color="primary"><ShoppingCartIcon size={18} /></Icon></RLink>
+
+              <IconButton
+                onClick={toggleColorMode}
+                variant="ghost"
+                aria-label="Toggle color mode"
+                icon={colorMode === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+              />
               {!isLaptop && 
                 <Menu to={`/dashboard`}>
                 {({ isOpen, onClose }) =>

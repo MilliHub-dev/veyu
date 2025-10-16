@@ -138,7 +138,7 @@ export const LoginView = ({ ...props }) => {
                         <Box
                           flex={{ base: 'none', md: 1 }}
                           minH={{ base: '180px', md: 'auto' }}
-                          bgImage={`url('/favicon.jpg')`}
+                          bgImage={`url('/assets/veyu/login.jpg')`}
                           bgSize="cover"
                           bgPos="center"
                           display={{ base: 'none', md: 'block' }}

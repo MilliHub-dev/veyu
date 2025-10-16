@@ -71,6 +71,8 @@ export default function MainPage() {
     services: [],
   });
   const {authUser, redirect, axios, notify} = useContext(GlobalStore);
+  const words = ['Cars', 'Aircraft', 'Bikes', 'Boat'];
+  const [wordIndex, setWordIndex] = useState(0);
 
   function navToPage(path){
     if (!query.trim()){
@@ -88,6 +90,11 @@ export default function MainPage() {
 
   useEffect(() => {
     getData();
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(() => setWordIndex((i) => (i + 1) % words.length), 1600);
+    return () => clearInterval(id);
   }, [])
 
   return (
@@ -141,14 +148,22 @@ export default function MainPage() {
               </Stack>
             </Box>
 
-            <Box position="relative" gridArea="image">
-              <Image lazy src="/assets/images/hero-image.jpg" alt="Featured Car" w="full" h="auto" />
-              <Box width="247px" position="absolute" top={4} right={4}  p={2} borderRadius="md">
-                <Image w="100%" lazy src="/assets/icons/1.png" h="auto" alt='icon' />
-              </Box>
-              <Box width="247px" position="absolute" bottom={200} left={4}  p={2} borderRadius="md" >
-                <Image w="247px" lazy src="/assets/icons/2.png" h="auto" alt='icon' />
-              </Box>
+            <Box position="relative" gridArea="image" overflow="hidden" borderRadius="lg">
+              <Image lazy src="/assets/veyu/usdash.jpg" alt="Featured" w="full" h="auto" style={{ filter: 'blur(3px)', transform: 'scale(1.04)' }} />
+              <Box position="absolute" inset={0} bg="blackAlpha.500" />
+              <Flex position="absolute" inset={0} align="center" justify="center">
+                <Text
+                  key={wordIndex}
+                  color="white"
+                  fontSize={{ base: '4xl', md: '6xl' }}
+                  fontWeight="800"
+                  textTransform="uppercase"
+                  letterSpacing="widest"
+                  transition="opacity .5s ease"
+                >
+                  {words[wordIndex]}
+                </Text>
+              </Flex>
             </Box>
           </Grid>
         </Container>
@@ -177,7 +192,7 @@ export default function MainPage() {
       <Box bg="primary" color="white">
         <Container maxW="7xl" py={12}>
           <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap={8} alignItems="center">
-            <Image src="/assets/images/motaa-car-mid.png" alt="BMW Promotional" />
+            <Image src="/assets/veyu/gif.gif" alt="BMW Promotional" />
 
             <Box>
               <Heading size={{base: "2xl", sm: "3xl", md: "4xl"}} mb={4}>

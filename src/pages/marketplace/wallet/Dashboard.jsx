@@ -31,6 +31,7 @@ import {
   MenuList,
   MenuItem,
   Badge,
+  useColorModeValue,
 } from '@chakra-ui/react'
 import { LayoutDashboard, Wallet, Clock, PiggyBank, BarChart2, HelpCircle, Settings, Share2, MoreVertical, TrendingUp } from 'lucide-react'
 import { RiCoinsFill, RiCoinsLine } from "react-icons/ri";
@@ -45,6 +46,9 @@ function WalletHomePage() {
   const [wallet, setWallet] = useState({});
   const [transactions, setTransactions] = useState([]);
   const [showDepositModal, setDepositModalVisibility] = useState(false);
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderCol = useColorModeValue('gray.200', 'gray.700');
+  const tableHeadBg = useColorModeValue('gray.50', 'gray.700');
 
   async function getWalletBalance(){
     const res = await axios.get('/wallet/balance/');
@@ -102,7 +106,7 @@ function WalletHomePage() {
         </HStack>
 
         <SimpleGrid columns={{ base: 1, lg: 3 }} gap={5}>
-          <Box borderWidth={1} borderRadius="xl" p={6} bg="white">
+          <Box borderWidth={1} borderRadius="xl" p={6} bg={cardBg} borderColor={borderCol} boxShadow="md">
             <Text color="gray.600">Current Balance</Text>
             <Heading size="2xl" my={2}>₦{commaInt(wallet?.balance)}</Heading>
             <HStack color="green.500" mb={4}>
@@ -117,13 +121,13 @@ function WalletHomePage() {
             </HStack>
           </Box>
 
-          <Box borderWidth={1} borderRadius="xl" p={6}>
+          <Box borderWidth={1} borderRadius="xl" p={6} bg={cardBg} borderColor={borderCol} boxShadow="sm">
             <Text color="gray.600" mb={2}>Inflow</Text>
             <Heading size="lg" color="green.500">₦{commaInt(inflow)}</Heading>
             <Text mt={2} color="gray.500">Total deposits</Text>
           </Box>
 
-          <Box borderWidth={1} borderRadius="xl" p={6}>
+          <Box borderWidth={1} borderRadius="xl" p={6} bg={cardBg} borderColor={borderCol} boxShadow="sm">
             <Text color="gray.600" mb={2}>Outflow</Text>
             <Heading size="lg" color="red.500">₦{commaInt(outflow)}</Heading>
             <Text mt={2} color="gray.500">Payments and withdrawals</Text>
@@ -134,14 +138,15 @@ function WalletHomePage() {
           <Box
             px={6}
             py={6}
-            minH={'200px'}
+            minH={'100px'}
             bg="primary"
             color="white"
             borderRadius="15px"
-            backgroundImage={`url('/assets/images/wallet-invite-background.png')`}
+            backgroundImage={`url('')`}
             backgroundRepeat={'no-repeat'}
             backgroundSize="contain"
             backgroundPosition="bottom"
+            boxShadow="sm"
           >
            
             <Text fontSize="lg" fontWeight="medium">
@@ -149,7 +154,7 @@ function WalletHomePage() {
             </Text>
           </Box>
 
-          <Box borderWidth={1} borderRadius="xl" p={6}>
+          <Box borderWidth={1} borderRadius="xl" p={6} bg={cardBg} borderColor={borderCol} boxShadow="sm">
             <Heading size="sm" mb={4}>Quick Shortcuts</Heading>
             <HStack spacing={3} flexWrap="wrap">
               <Box as={Link} to='/rent'>
@@ -166,9 +171,9 @@ function WalletHomePage() {
         </SimpleGrid>
 
         <Heading size="sm">Recent Transactions</Heading>
-        <TableContainer borderWidth={1} borderRadius="lg">
+        <TableContainer borderWidth={1} borderRadius="lg" bg={cardBg} borderColor={borderCol} boxShadow="sm">
           <Table variant="simple">
-            <Thead bg="gray.50">
+            <Thead bg={tableHeadBg}>
               <Tr>
                 <Th>Party</Th>
                 <Th>Amount</Th>

@@ -2,7 +2,7 @@ import { createContext, Fragment, useEffect, useState } from 'react';
 import {Outlet, redirect, BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import axios from 'axios';
-import { ChakraProvider, ToastProvider, useToast, extendTheme, Fade } from '@chakra-ui/react';
+import { ChakraProvider, ToastProvider, useToast, extendTheme, Fade, ColorModeScript } from '@chakra-ui/react';
 import Layout from './pages/Layout';
 import ErrorBoundary from './components/error';
 import {AppLoadingScreen} from './components/loaders';
@@ -66,7 +66,11 @@ import WalletTransactionsPage from './pages/marketplace/wallet/Transactions';
 import WalletWithdrawalPage from './pages/marketplace/wallet/Withdraw';
 
 
-const BrandColors = extendTheme({
+const theme = extendTheme({
+  config: {
+    initialColorMode: 'system',
+    useSystemColorMode: true,
+  },
   colors: {
     'primary': '#f39f48',
     'secondary': '#14181e',
@@ -256,7 +260,8 @@ function App() {
   }  
   
   return (
-     <ChakraProvider theme={BrandColors}>
+     <ChakraProvider theme={theme}>
+     <ColorModeScript initialColorMode={theme.config.initialColorMode} />
      <ErrorBoundary>
      <LoadScript googleMapsApiKey="AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0" libraries={['places', 'maps']}> 
       <Router ErrorBoundary={ErrorBoundary}>
