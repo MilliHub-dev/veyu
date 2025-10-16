@@ -189,7 +189,7 @@ export const SignupView = ({...props }) => {
                         <Box
                           flex={{ base: 'none', md: 1 }}
                           minH={{ base: '180px', md: 'auto' }}
-                          bgImage={`url('/favicon.jpg')`}
+                          bgImage={`url('/assets/veyu/signup.jpg')`}
                           bgSize="cover"
                           bgPos="center"
                           display={{ base: 'none', md: 'block' }}

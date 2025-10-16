@@ -29,6 +29,7 @@ import {
   MenuList,
   MenuItem,
   Badge,
+  useColorModeValue,
 } from '@chakra-ui/react'
 import { LayoutDashboard, Wallet, Clock, PiggyBank, BarChart2, HelpCircle, Settings, Share2, MoreVertical, TrendingUp } from 'lucide-react'
 import { RiCoinsFill, RiCoinsLine } from "react-icons/ri";
@@ -53,6 +54,8 @@ function WalletDepositPage() {
   const [amount, setAmount] = useState(0);
   const [accept, setAccept] = useState(true);
   const amountRef = useRef();
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderCol = useColorModeValue('lavender', 'gray.700');
 
   const DEBUG = JSON.parse(import.meta.env.VITE_DEBUG);
 
@@ -149,7 +152,7 @@ function WalletDepositPage() {
       <CenteredLayout>
         <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6} w="95%" maxW={'980px'}>
           {/* Left: Amount Card */}
-          <Box borderRadius="20px" px={6} py={8} border="1px solid lavender" bg="white">
+          <Box borderRadius="20px" px={6} py={8} border="1px solid" borderColor={borderCol} bg={cardBg} boxShadow="md">
             <VStack align="stretch" spacing={5}>
               <Heading size="md">Deposit Funds</Heading>
               <Text color="gray.600">Enter the amount you want to add to your wallet.</Text>
@@ -160,7 +163,7 @@ function WalletDepositPage() {
                  size="lg" w="100%"
                  color="primary"
                  ref={amountRef} display={'flex'}
-                 px={4} py={3} border="1px solid lavender" textAlign="center"
+                 px={4} py={3} border="1px solid" borderColor={borderCol} textAlign="center"
                  justifyContent="center" borderRadius="lg"
                 >
                   <Text as="span" mr={1}>{currency?.symbol}</Text>
@@ -226,7 +229,7 @@ function WalletDepositPage() {
           </Box>
 
           {/* Right: Instructions & Help */}
-          <Box borderRadius="20px" px={6} py={8} border="1px solid lavender" bg="white">
+          <Box borderRadius="20px" px={6} py={8} border="1px solid" borderColor={borderCol} bg={cardBg}>
             <VStack align="stretch" spacing={5}>
               <Heading size="md">How to deposit</Heading>
               <VStack align="stretch" spacing={3}>

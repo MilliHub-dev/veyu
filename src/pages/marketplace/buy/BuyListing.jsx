@@ -189,7 +189,7 @@ const BuyListing = ({ }) => {
             <Container maxWidth={'container.xl'} py={4}>
                 <Flex align="center" mb={5} flexWrap="wrap-reverse" gap={{base: 2, md:8}} justify="space-between">
                     <Box>
-                        <Heading size={'lg'} className="subtitle"> Vehicles for Sale </Heading>
+                        <Heading size={'lg'} className="subtitle"> Available for Sale </Heading>
                         <ButtonGroup size='md' isAttached variant='outline' mt={3}>
                             <Button onClick={() => setCarType('new')} 
                              bgColor={carType === 'new' ? 'primary' : 'transparent'}

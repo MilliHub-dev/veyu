@@ -395,7 +395,7 @@ function SearchHero(){
       <Box
         position="absolute"
         inset={0}
-        bgImage={`url('/assets/images/hero-image.jpg')`}
+        bgImage={`url('/assets/veyu/land1.jpg')`}
         bgSize="cover"
         bgPos="center"
         filter="blur(3px)"
@@ -538,7 +538,7 @@ function Partnership() {
       py={20}
       position="relative"
       color="white"
-      backgroundImage={`url('/assets/images/image.jpg')`}
+      backgroundImage={`url('/assets/veyu/homes.jpg')`}
       backgroundRepeat="no-repeat"
       backgroundSize="cover"
       minH={'460px'}
