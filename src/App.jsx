@@ -16,6 +16,10 @@ const LandingPage = lazy(() => import("./pages/LandingPage"));
 const ComingSoon = lazy(() => import("./pages/ComingSoon"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
+const AboutPage = lazy(() => import("./pages/About"));
+const ServicesPage = lazy(() => import("./pages/Services"));
+const ContactPage = lazy(() => import("./pages/Contact"));
+const PublicProfilePage = lazy(() => import("./pages/Profile"));
 
 const RentListing = lazy(() => import("./pages/marketplace/rent/RentListing"));
 const RentDetail = lazy(() => import("./pages/marketplace/rent/RentDetail"));
@@ -233,6 +237,10 @@ function App() {
                 ) : (
                   /* Public Routes */
                   <Route element={<Layout />}>
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/services" element={<ServicesPage />} />
+                    <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/profile" element={<PublicProfilePage />} />
                     <Route path="/login" element={<LoginView />} />
                     <Route path="/signup" element={<SignupView />} />
                     <Route path="/signup/business" element={<BusinessSignupView />} />

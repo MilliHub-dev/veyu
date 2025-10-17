@@ -217,11 +217,11 @@ export const UnauthenticatedNavbar = ({ props }) => {
 
   
   <nav className="nav">
-    <a href="#home">Home</a>
-    <a href="#about">About</a>
-    <a href="#services">Services</a>
-    <a href="#contact">Contact</a>
-    <a href="#profile">Profile</a>
+    <RLink to="/home">Home</RLink>
+    <RLink to="/about">About</RLink>
+    <RLink to="/services">Services</RLink>
+    <RLink to="/contact">Contact</RLink>
+    <RLink to="/profile">Profile</RLink>
   </nav>
 
   
