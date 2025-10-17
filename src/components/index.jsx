@@ -86,7 +86,6 @@ import {
   MdCalendarMonth,
 } from "react-icons/md"
 import { BsWallet2 } from "react-icons/bs"
-import Dojah from 'react-dojah';
 
 
 export const ComboBox = ({ defaultOptions, onSelect }) => {
@@ -205,18 +204,7 @@ export const VerificationNotice = ({ businessType, user, onVerification, ...prop
         }.
         </AlertTitle>
         <Button onClick={() => setVerificationState(true)} colorScheme="yellow" variant="outline" borderColor="tertiary"> Complete verification </Button>
-        {
-          beginVerification && 
-          <Dojah
-            response={onVerification}
-            publicKey={import.meta.env.VITE_DOJAH_LIVE_PUBLIC_KEY}
-            appId={appIds[businessType]}
-            type="custom"
-            config={{
-              widget_id: import.meta.env.VITE_DOJAH_BIZ_DEALER_WIDGET_ID,
-            }}
-          />
-        }
+        {beginVerification && null}
       </Flex>
     </Alert>
   )
