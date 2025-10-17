@@ -191,6 +191,7 @@ export const VerificationNotice = ({ businessType, user, onVerification, ...prop
   const [beginVerification, setVerificationState] = useState(false);
   const appIds = {
     'dealership': "6790a5a3a5a0229a0a5c0839",
+    'dealer': "6790a5a3a5a0229a0a5c0839",
     'mechanic': "682932fdd3eb2aebd3716885",
   }
 
@@ -204,7 +205,34 @@ export const VerificationNotice = ({ businessType, user, onVerification, ...prop
         }.
         </AlertTitle>
         <Button onClick={() => setVerificationState(true)} colorScheme="yellow" variant="outline" borderColor="tertiary"> Complete verification </Button>
-        {beginVerification && null}
+        {beginVerification && (
+          <Box display="none">
+            {(() => {
+              try{
+                onVerification && onVerification('begin');
+              }catch(e){}
+              const appId = appIds[businessType] || appIds['dealership'];
+              const openWidget = () => {
+                const sdk = (window && window.Dojah) ? window.Dojah : null;
+                if (!sdk){ return; }
+                if (typeof sdk.init === 'function'){
+                  const instance = sdk.init({
+                    app_id: appId,
+                    type: 'verification',
+                    user_data: { email: user?.email, name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim() },
+                    onSuccess: (data) => { try{ onVerification && onVerification('success', data); }catch(e){} },
+                    onClose: () => { try{ onVerification && onVerification('close'); }catch(e){} },
+                    onError: (err) => { try{ onVerification && onVerification('error', err); }catch(e){} },
+                  });
+                  if (instance && typeof instance.open === 'function'){
+                    instance.open();
+                  }
+                }
+              };
+              setTimeout(openWidget, 0);
+            })()}
+          </Box>
+        )}
       </Flex>
     </Alert>
   )

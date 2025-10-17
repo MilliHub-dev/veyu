@@ -181,8 +181,10 @@ function BusinessProfile({onSubmit, ...props }) {
     <Box minH="100vh" bg={pageBg}>
       <Container maxW="4xl" py={10} px={{ base: 4, md: 6 }}>
         <form id="profileForm" method="post" onSubmit={setupBusinessProfile} encType="multipart/form-data">
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} alignItems="start">
+        <VStack spacing={6} align="stretch" gridColumn={{ md: 'span 2' }}>
         {/* Profile Image */}
-        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} mb={6} boxShadow="md">
+        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} boxShadow="md">
           <VStack align="stretch" spacing={6}>
             <Flex alignItems="center" justifyContent="center" mb={2}>
               <Avatar
@@ -241,7 +243,7 @@ function BusinessProfile({onSubmit, ...props }) {
 
 
         {/* About Your Business */}
-        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} mb={6} boxShadow="sm">
+        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} boxShadow="sm">
           <FormLabel fontWeight="medium" mb={2}>
             About your Business
           </FormLabel>
@@ -254,7 +256,7 @@ function BusinessProfile({onSubmit, ...props }) {
         </Box>
 
         {/* Choose Services */}
-        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} mb={6} boxShadow="sm">
+        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} boxShadow="sm">
           <FormLabel fontWeight="medium" mb={2}> Services Offered </FormLabel>
           <Box border="1px solid" borderColor={borderCol} borderRadius="lg" overflow="hidden">
             <Box p={3} borderBottom="1px solid" borderColor={borderCol}>
@@ -312,7 +314,7 @@ function BusinessProfile({onSubmit, ...props }) {
         </Box>
 
         {/* Contact Details */}
-        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} mb={6} boxShadow="sm">
+        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} boxShadow="sm">
           <FormLabel fontWeight="medium" mb={2}>
             Contact details
           </FormLabel>
@@ -359,7 +361,7 @@ function BusinessProfile({onSubmit, ...props }) {
           </FormControl>
         </Box>
 
-        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} mb={6} boxShadow="sm">
+        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} boxShadow="sm">
           <SimpleGrid columns={{ base: 1 }} spacing={4}>
             <FormControl isRequired>
               <FormLabel fontSize="sm" fontWeight="medium" mb={1}>
@@ -378,6 +380,43 @@ function BusinessProfile({onSubmit, ...props }) {
             </FormControl>
           </SimpleGrid>
         </Box>
+
+        {/* Close left column and add right preview column */}
+        </VStack>
+
+        <Box position="sticky" top={4} bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 6 }}>
+          <VStack spacing={4} align="stretch">
+            <HStack>
+              <Avatar w="14" h="14" src={logoPreview} name={businessProfile?.business_name} />
+              <Box>
+                <Heading as="h3" fontSize="md" fontWeight="semibold">
+                  {businessProfile?.business_name || 'Business name'}
+                </Heading>
+                <Text fontSize="sm" color="#667085">{businessProfile?.headline || 'Headline'}</Text>
+              </Box>
+            </HStack>
+            <Divider />
+            <Text fontSize="sm" color="#667085">{businessProfile?.about || 'Tell customers about your business...'}</Text>
+            <HStack flexWrap={{base: 'wrap', md: 'nowrap'}} mt={2} fontSize="sm" color="#667085">
+              <Text>{businessProfile?.contact_email || 'email@example.com'}</Text>
+              <Text>•</Text>
+              <Text>{businessProfile?.contact_phone || '+234 000 000 0000'}</Text>
+            </HStack>
+            <Box>
+              <Text fontWeight="medium" mb={2}>Services</Text>
+              <HStack flexWrap="wrap" gap={2}>
+                {businessProfile?.services?.map((s, i) => <Tag key={i} colorScheme="blue" variant="subtle">{s}</Tag>)}
+                {(!businessProfile?.services || businessProfile?.services?.length === 0) && <Text color="gray.500">No services selected</Text>}
+              </HStack>
+            </Box>
+            <Box>
+              <Text fontWeight="medium" mb={1}>Address</Text>
+              <Text fontSize="sm" color="#667085">{businessProfile?.location?.street_address || 'Street address'}</Text>
+            </Box>
+          </VStack>
+        </Box>
+
+        </SimpleGrid>
 
         {/* Submit Button */}
         <Box mt={8}>

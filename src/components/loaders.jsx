@@ -38,7 +38,7 @@ const pulse = keyframes`
 
 
 
-export const LoadingSpinner = ({message = "Loading...", fullscreen = false, size="lg"}) => {
+export const LoadingSpinner = ({message = "", fullscreen = false, size="lg"}) => {
   return (
     <VStack
       spacing={4}

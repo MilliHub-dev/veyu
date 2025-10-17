@@ -541,7 +541,7 @@ export const DealerDashboardSideBar = ({ dealership, sidebarOpen, setSidebarStat
      const links = [
       { icon: Home3, label: 'Dashboard', path: '/dashboard', active: pathname.includes('dashboard')},
       { icon: Coin, label: 'Orders', path: '/orders', active: pathname.includes('orders')},
-      { icon: Shop, label: 'Inventory', path: '/inventory', active: pathname.includes('analytics')},
+      { icon: Shop, label: 'Inventory', path: '/inventory', active: pathname.includes('inventory')},
       { icon: LuChartLine, label: 'Analytics', path: '/analytics', active: pathname.includes('analytics')},
       { icon: HelpCircle, label: 'Support', path: '/support', active: pathname.includes('support')},
       { icon: Settings, label: 'Settings', path: '/settings', active: pathname.includes('settings')},
