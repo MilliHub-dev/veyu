@@ -3,7 +3,7 @@ import {
     Box, Stack, Flex,
     Image, Text,
     useMediaQuery, Icon,
-    useColorMode, useColorModeValue,
+    useColorModeValue,
     DrawerContent,
     Divider,
     DrawerHeader,
@@ -59,8 +59,7 @@ import {
   LayoutDashboard, Wallet, Clock,
   PiggyBank, BarChart2, HelpCircle,
   Settings, Share2, MoreVertical, TrendingUp,
-  MessageCircle as MessageCircleIcon, Bell as BellIcon, ShoppingCart as ShoppingCartIcon, User as UserIcon,
-  Sun, Moon
+  MessageCircle as MessageCircleIcon, Bell as BellIcon, ShoppingCart as ShoppingCartIcon, User as UserIcon
 } from 'lucide-react';
 import { GiHomeGarage } from "react-icons/gi";
 import { GrUserWorker } from "react-icons/gr";
@@ -241,7 +240,6 @@ export const CustomerNavbar = ({ props }) => {
     const [isMobile] = useMediaQuery('(max-width: 768px)');
     const [isLaptop] = useMediaQuery('(max-width: 1028px)');
     const isLoggedIn = Boolean(authUser);
-    const { colorMode, toggleColorMode } = useColorMode();
     const navBg = useColorModeValue('white', 'gray.900');
     const navColor = useColorModeValue('black', 'white');
 
@@ -341,13 +339,6 @@ export const CustomerNavbar = ({ props }) => {
               <RLink to={'/chat'}><Icon viewBox='45' className='icon' color="primary"><MessageCircleIcon size={18} /></Icon></RLink>
               <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color="primary"><BellIcon size={18} /></Icon></RLink>
               <RLink to={'/cart'}><Icon viewBox='45' className='icon' color="primary"><ShoppingCartIcon size={18} /></Icon></RLink>
-
-              <IconButton
-                onClick={toggleColorMode}
-                variant="ghost"
-                aria-label="Toggle color mode"
-                icon={colorMode === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-              />
               {!isLaptop && 
                 <Menu to={`/dashboard`}>
                 {({ isOpen, onClose }) =>
@@ -447,7 +438,7 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
         <Flex justifyContent="space-betweeen" alignItems="center">
           <Box as={Flex} alignItems={'center'} justifyContent={'center'} width={isMobile? '60px' : '80px'} height={isMobile ? '40px' : '50px'} className='navbar-brand'>
             <RLink to={'/'}><Image loading='eager'
-                src={!authUser ? '/assets/images/motaa-logo-2.png' : '/assets/images/motaa-logo-3.png'}
+                src={!authUser ? '/logo512.jpg' : '/logo512.jpg'}
                 width={'100%'} className='navbar-brand' /></RLink>
           </Box>
         </Flex>
@@ -568,7 +559,7 @@ export const DealerDashboardSideBar = ({ dealership, sidebarOpen, setSidebarStat
           <Avatar size="md" src={dealership?.logo} mx={sidebarOpen ? '0px' : 'auto'} name={`${dealership?.business_name}`} />
 
           <Box flex={1}>
-            <Text fontWeight="medium">{`${dealership?.business_name}`}</Text>
+            <Text fontWeight="medium" color="black">{`${dealership?.business_name}`}</Text>
             <Text fontSize="sm" color="gray.500">@{dealership?.slug}</Text>
           </Box>
         </HStack>
@@ -587,6 +578,7 @@ export const DealerDashboardSideBar = ({ dealership, sidebarOpen, setSidebarStat
                       w={'100%'}
                       justifyContent="space-between"
                       alignItems="center"
+                      color="black"
                       bgColor={item.active ? 'gray' : 'transparent'}
                       _expanded={{ bgColor: 'gray', color: 'white'}}
                     >
@@ -594,7 +586,7 @@ export const DealerDashboardSideBar = ({ dealership, sidebarOpen, setSidebarStat
                       <>
                       <Flex flex={1} gap={3} alignItems="center">
                         <item.icon size={20} />
-                        <Text fontWeight="600"> {item.label} </Text>
+                        <Text fontWeight="600" color="black"> {item.label} </Text>
                       </Flex>
                       {expanded ? <FaChevronUp /> : <FaChevronDown />}
                       </>
@@ -611,13 +603,14 @@ export const DealerDashboardSideBar = ({ dealership, sidebarOpen, setSidebarStat
                             w={'100%'}
                             mt={1.5}
                             bgColor="transparent"
+                            color="black"
                             _activeLink={{ bgColor: 'primary', color: 'white', }}
                             justifyContent="space-between"
                             alignItems="center"
                           >
                             <Flex flex={1} gap={3} alignItems="center">
                               <item.icon size={20} />
-                              <Text> {child.label} </Text>
+                              <Text color="black"> {child.label} </Text>
                             </Flex>                          
                           </Button>
                           </Tooltip>
@@ -634,13 +627,14 @@ export const DealerDashboardSideBar = ({ dealership, sidebarOpen, setSidebarStat
                       to={item.path}
                       w={'100%'}
                       bgColor="transparent"
+                      color="black"
                       _activeLink={{ bgColor: 'primary', color: 'white' }}
                       justifyContent="space-between"
                       alignItems="center"
                     >
                       <Flex flex={1} gap={3} alignItems="center">
                         <item.icon size={20} />
-                        <Text> {item.label} </Text>
+                        <Text color="black"> {item.label} </Text>
                       </Flex>
                       {item?.children && !!sidebarOpen && <FaChevronDown />}
                     </Button>
@@ -655,7 +649,7 @@ export const DealerDashboardSideBar = ({ dealership, sidebarOpen, setSidebarStat
            leftIcon={sidebarOpen ? <FaChevronLeft size={20} /> : <FaChevronRight size={20} />}
            onClick={() => setSidebarState(!sidebarOpen)}
            justifyContent="start"
-           colorScheme="gray.500"
+           colorScheme="gray"
            variant="solid"
            bottom="0px"
            zIndex="10"
@@ -670,7 +664,7 @@ export const DealerDashboardSideBar = ({ dealership, sidebarOpen, setSidebarStat
   if (isMobile || props.mode === 'drawer'){
     return(
       <Drawer placement={'right'} isOpen={sidebarOpen} onClose={() => setSidebarState(false)} {...props}>
-        <DrawerContent>
+        <DrawerContent bg="white" color="black">
           <DrawerHeader>
             <DrawerCloseButton />
           </DrawerHeader>
@@ -691,6 +685,7 @@ export const DealerDashboardSideBar = ({ dealership, sidebarOpen, setSidebarStat
       left="0"
       h={"100vh"}
       bgColor="#fff"
+      color="black"
       zIndex="20"
       borderRightWidth={1}
       p={sidebarOpen ? 6 : 2}
@@ -757,7 +752,7 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
 
           <Box as={Flex} alignItems={'center'} justifyContent={'center'} width={isMobile? '60px' : '80px'} height={isMobile ? '40px' : '50px'} className='navbar-brand'>
             <RLink to={'/'}><Image loading='eager'
-                src={!authUser ? '/assets/images/motaa-logo-2.png' : '/assets/images/motaa-logo-3.png'}
+                src={!authUser ? '/logo512.jpg' : '/logo512.jpg'}
                 width={'100%'} className='navbar-brand' /></RLink>
           </Box>
         </Flex>
@@ -1163,7 +1158,7 @@ export const FormStepper = () => {
   return (
     <Box textAlign="center" p={5}>
       {/* Logo */}
-      <Image src="/assets/images/motaa-logo-3.png" alt="Logo" mb={4} width="100px" />
+      <Image src="/logo512.jpg" alt="Logo" mb={4} width="100px" />
 
       {/* Title */}
       <Text fontSize="2xl" fontWeight="bold" color="gray.800" mb={2}>

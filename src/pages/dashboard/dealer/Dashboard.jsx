@@ -32,6 +32,9 @@ import {
   Badge,
   TableContainer,
   Stack,
+  Skeleton,
+  ButtonGroup,
+  Select,
 } from '@chakra-ui/react'
 import { LayoutDashboard, Wallet, Clock, PiggyBank, BarChart2, HelpCircle, Settings, Share2, MoreVertical, TrendingUp } from 'lucide-react'
 import { RiCoinsFill, RiCoinsLine } from "react-icons/ri";
@@ -75,6 +78,10 @@ function Dashboard({ }) {
   const [recentOrders, setRecentOrders] = useState([])
   const [dashboardData, setDashboardData] = useState({})
   const [chartData, setChartData] = useState({})
+  const cardBg = 'white';
+  const borderCol = 'gray.200';
+  const tableHeadBg = 'gray.50';
+  const [dateRange, setDateRange] = useState('30d');
   const formatCurrency = (value) => {
     return `₦${parseInt(value).toLocaleString()}`;
   };
@@ -95,6 +102,33 @@ function Dashboard({ }) {
       y: { display: true },
     },
   };
+
+  function onSetRange(range){
+    setDateRange(range);
+    getDashboardData();
+  }
+
+  function exportOrdersCsv(){
+    const rows = [
+      ['Car', 'Order Type', 'Price', 'Status', 'Client', 'Last Updated'],
+      ...recentOrders.map(o => [
+        o?.order_item?.vehicle?.name,
+        o?.order_type,
+        o?.order_item?.price,
+        o?.order_status,
+        o?.customer,
+        o?.last_updated,
+      ])
+    ];
+    const csv = rows.map(r => r.map(v => (v === undefined || v === null) ? '' : String(v).replace(/"/g,'""')).map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'recent-orders.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function getWalletBalance(){
     const res = await axios.get('/wallet/balance/');
@@ -125,11 +159,17 @@ function Dashboard({ }) {
     }
   }
 
-  function init(){
-    getWalletBalance();
-    getWalletTransactions();
-    getDashboardData();
-    setTimeout(() => setLoadingState(false), 2000);
+  async function init(){
+    try{
+      setLoadingState(true);
+      await Promise.all([
+        getWalletBalance(),
+        getWalletTransactions(),
+        getDashboardData(),
+      ]);
+    } finally {
+      setLoadingState(false);
+    }
   }
 
   useEffect(() => {
@@ -138,26 +178,76 @@ function Dashboard({ }) {
   }, [])
 
   if (loading){
-    return null
+    return (
+      <Box w={'100%'}>
+        <Box py={6} borderBottom={`2px solid ${borderCol}`}>
+          <Skeleton height='20px' width='180px' mb={2} />
+          <Skeleton height='14px' width='260px' />
+        </Box>
+
+        <SimpleGrid gap={4} my={5} minChildWidth={'250px'}>
+          {[1,2,3].map((i) => (
+            <Box key={i} p={5} borderWidth={1} borderColor={borderCol} borderRadius='xl' bg={cardBg} boxShadow='sm'>
+              <Skeleton height='14px' width='40%' mb={2} />
+              <Skeleton height='28px' width='60%' />
+            </Box>
+          ))}
+        </SimpleGrid>
+
+        <Box py={4} my={5}>
+          <Skeleton height='20px' width='200px' mb={3} />
+          <Box h={'300px'} borderWidth={1} borderColor={borderCol} borderRadius='xl' bg={cardBg} boxShadow='sm' p={3}>
+            <Skeleton height='100%' />
+          </Box>
+        </Box>
+
+        <Skeleton height='20px' width='180px' mb={3} />
+        <TableContainer w={'100%'} borderWidth={1} borderRadius='lg' borderColor={borderCol} bg={cardBg} boxShadow='sm'>
+          <Table>
+            <Thead bg={tableHeadBg}>
+              <Tr>
+                <Th>Car Listings</Th>
+                <Th>Amount</Th>
+                <Th>Date</Th>
+                <Th>Status</Th>
+                <Th>Client</Th>
+                <Th></Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {[...Array(5)].map((_, idx) => (
+                <Tr key={idx}>
+                  {[...Array(6)].map((__, jdx) => (
+                    <Td key={jdx}><Skeleton height='16px' /></Td>
+                  ))}
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
+      </Box>
+    )
   }
 
   return (
     <Box w={'100%'}>
-      <Box py={6} borderBottom="2px solid lavender">
+      <Box py={6} borderBottom={`2px solid ${borderCol}`}>
         <Text size="md" className="text" fontWeight="600">Dashboard</Text>
         <Text size="xs" className="small">Welcome back, {authUser?.first_name}👋</Text>
       </Box>
 
       <SimpleGrid gap={4} direction={'row'} flexWrap={'wrap'} my={5} minChildWidth={'250px'}>
         
-        <StatCard
+        <Box as={StatCard}
+          borderWidth={1} borderRadius='xl' bg={cardBg} boxShadow='md' borderColor={borderCol}
           title={"Revenue"}
           value={dashboardData?.total_revenue}
           // change={10}
           // data={sparklineData.revenue}
           format={formatCurrency}
         />
-        <StatCard
+        <Box as={StatCard}
+          borderWidth={1} borderRadius='xl' bg={cardBg} boxShadow='md' borderColor={borderCol}
           title={"Impressions"}
           value={dashboardData?.impressions}
           // change={-2}
@@ -170,7 +260,8 @@ function Dashboard({ }) {
             }
           }}
         />
-        <StatCard
+        <Box as={StatCard}
+          borderWidth={1} borderRadius='xl' bg={cardBg} boxShadow='md' borderColor={borderCol}
           title={"Total Deals"}
           value={dashboardData?.total_deals}
           // change={14}
@@ -180,71 +271,89 @@ function Dashboard({ }) {
       </SimpleGrid>
 
       <Box py={4} my={5}>
-        <Heading size={'sm'} fontWeight="500" my={3}> Revenue Earnings </Heading>
-        <Box h={'300px'}>
+        <Flex justify="space-between" align="center" mb={2}>
+          <Heading size={'sm'} fontWeight="500"> Revenue Earnings </Heading>
+          <ButtonGroup size="sm" isAttached>
+            <Button variant={dateRange==='7d'?'solid':'outline'} colorScheme={dateRange==='7d'?'blue':undefined} onClick={() => onSetRange('7d')}>7d</Button>
+            <Button variant={dateRange==='30d'?'solid':'outline'} colorScheme={dateRange==='30d'?'blue':undefined} onClick={() => onSetRange('30d')}>30d</Button>
+            <Button variant={dateRange==='90d'?'solid':'outline'} colorScheme={dateRange==='90d'?'blue':undefined} onClick={() => onSetRange('90d')}>90d</Button>
+          </ButtonGroup>
+        </Flex>
+        <Box h={'300px'} borderWidth={1} borderColor={borderCol} borderRadius='xl' bg={cardBg} boxShadow='sm' p={3}>
           {chartData && <Line data={{...chartData, pointRadius: 20}} options={chartOptions} />}
         </Box>
       </Box>
 
       {/* Transactions */}
-      <Heading size="sm" my={3} fontWeight="500"> Recent Orders </Heading>
-      <TableContainer w={'100%'} variant="simple" borderWidth={1} borderRadius="lg">
-        <Table variant="simple" textWrap="nowrap" overflow="auto">
-          <Thead bg="gray.50">
-            <Tr>
-              <Th columns={5}>Car Listings</Th>
-              <Th>Amount</Th>
-              <Th>Date</Th>
-              <Th>Status</Th>
-              <Th>Client</Th>
-              <Th></Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {recentOrders?.map((order) => (
-              <Tr key={order?.uuid}>
-                <Td columns={5}>
-                  <Flex gap={1} align="center">
-                    <Image
-                      src={order?.order_item?.vehicle?.images[0]?.url}
-                      alt={order?.order_item?.vehicle.name}
-                      boxSize="70px"
-                      objectFit="cover"
-                      borderRadius="md"
-                      mr={3}
-                    />
-                    <Box>
-                      <Text fontWeight="medium">{order?.order_item.vehicle.name}</Text>
-                      <Text color="gray.700" fontWeight="medium">
-                        {order?.order_type}
-                      </Text>
-                    </Box>
-                  </Flex>
-                </Td>
-                <Td>
-                  <Text color="green.500" fontWeight="medium">
-                    {parseInt(order?.order_item?.price/10**6).toFixed('2')}M
-                  </Text>
-                </Td>
-                <Td>
-                  <Text>{new Date(order?.last_updated).toLocaleDateString()}</Text>
-                  <Text color="gray.500" fontSize="sm">
-                    {new Date(order?.last_updated).toLocaleTimeString()}
-                  </Text>
-                </Td>
-                <Td>
-                  <StatusBadge status={order?.order_status} />
-                </Td>
-                <Td>
-                  <Avatar size="sm" name={order?.customer} />
-                </Td>
-                <Td>
-
-                </Td>
+      <Flex justify="space-between" align="center" mb={2}>
+        <Heading size="sm" fontWeight="500"> Recent Orders </Heading>
+        <ButtonGroup size="sm">
+          <Button variant="outline" onClick={exportOrdersCsv}>Export CSV</Button>
+          <Button colorScheme="blue" variant="solid" onClick={init}>Refresh</Button>
+        </ButtonGroup>
+      </Flex>
+      <TableContainer w={'100%'} variant="simple" borderWidth={1} borderRadius="lg" borderColor={borderCol} bg={cardBg} boxShadow='sm'>
+        {(!recentOrders || recentOrders.length === 0) ? (
+          <Box p={8} textAlign="center">
+            <Text color="gray.600">No recent orders yet.</Text>
+          </Box>
+        ) : (
+          <Table variant="simple" textWrap="nowrap" overflow="auto">
+            <Thead bg={tableHeadBg}>
+              <Tr>
+                <Th columns={5}>Car Listings</Th>
+                <Th>Amount</Th>
+                <Th>Date</Th>
+                <Th>Status</Th>
+                <Th>Client</Th>
+                <Th></Th>
               </Tr>
-            ))}
-          </Tbody>
-        </Table>
+            </Thead>
+            <Tbody>
+              {recentOrders?.map((order) => (
+                <Tr key={order?.uuid}>
+                  <Td columns={5}>
+                    <Flex gap={1} align="center">
+                      <Image
+                        src={order?.order_item?.vehicle?.images[0]?.url}
+                        alt={order?.order_item?.vehicle?.name}
+                        boxSize="70px"
+                        objectFit="cover"
+                        borderRadius="md"
+                        mr={3}
+                      />
+                      <Box>
+                        <Text fontWeight="medium">{order?.order_item?.vehicle?.name}</Text>
+                        <Text color="gray.700" fontWeight="medium">
+                          {order?.order_type}
+                        </Text>
+                      </Box>
+                    </Flex>
+                  </Td>
+                  <Td>
+                    <Text color="green.500" fontWeight="medium">
+                      {parseInt(order?.order_item?.price/10**6).toFixed('2')}M
+                    </Text>
+                  </Td>
+                  <Td>
+                    <Text>{new Date(order?.last_updated).toLocaleDateString()}</Text>
+                    <Text color="gray.500" fontSize="sm">
+                      {new Date(order?.last_updated).toLocaleTimeString()}
+                    </Text>
+                  </Td>
+                  <Td>
+                    <StatusBadge status={order?.order_status} />
+                  </Td>
+                  <Td>
+                    <Avatar size="sm" name={order?.customer} />
+                  </Td>
+                  <Td>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        )}
       </TableContainer>
     </Box>
   )
