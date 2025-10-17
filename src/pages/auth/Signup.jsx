@@ -113,7 +113,7 @@ export const SignupView = ({...props }) => {
         },
         // {
         //     title: 'Confirm your email',
-        //     description: 'Verify your email to get notifications and updates from Motaa.',
+        //     description: 'Verify your email to get notifications and updates from Veyu.',
         //     key: 'email',
         //     component: <ConfirmationStep type={type} verification={'email'}  />
         // },
