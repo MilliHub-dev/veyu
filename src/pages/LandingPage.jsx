@@ -25,6 +25,7 @@ import {
     Avatar,
     Select,
     InputRightElement,
+    useToast,
 } from "@chakra-ui/react";
 import {Link, useNavigate} from 'react-router-dom';
 import { Autocomplete } from '@react-google-maps/api';
@@ -175,6 +176,99 @@ function TrustedBy(){
 }
 
 
+function VinCheckSection(){
+  const [vin, setVin] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+  const toast = useToast();
+
+  async function onCheckVin(){
+    setError("");
+    setResult(null);
+    const clean = vin.trim().toUpperCase();
+    if (!/^[A-HJ-NPR-Z0-9]{11,17}$/.test(clean)){
+      setError("Enter a valid VIN (11-17 characters, excluding I, O, Q)");
+      return;
+    }
+    setLoading(true);
+    try{
+      const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvaluesextended/${clean}?format=json`);
+      const data = await res.json();
+      const first = Array.isArray(data?.Results) ? data.Results[0] : null;
+      if (!first){
+        setError("No result found for this VIN");
+      } else {
+        setResult(first);
+        toast({ title: "VIN decoded", description: `Found ${first?.Make || ''} ${first?.Model || ''} ${first?.ModelYear || ''}` });
+      }
+    }catch(e){
+      setError(e?.message || "Failed to decode VIN");
+    }finally{
+      setLoading(false);
+    }
+  }
+
+  const fields = [
+    { label: 'Make', key: 'Make' },
+    { label: 'Model', key: 'Model' },
+    { label: 'Year', key: 'ModelYear' },
+    { label: 'Body Class', key: 'BodyClass' },
+    { label: 'Vehicle Type', key: 'VehicleType' },
+    { label: 'Trim', key: 'Trim' },
+    { label: 'Engine Cylinders', key: 'EngineCylinders' },
+    { label: 'Engine HP', key: 'EngineHP' },
+    { label: 'Fuel Type', key: 'FuelTypePrimary' },
+    { label: 'Plant Country', key: 'PlantCountry' },
+  ];
+
+  return (
+    <Box py={16} bg="gray.50">
+      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
+        <Heading size="lg" textAlign="center" mb={4} textColor='primary'>Check a VIN</Heading>
+        <Text textAlign="center" color="gray.600" mb={8}>Enter a vehicle VIN to decode make, model, year and more.</Text>
+        <Flex direction={{ base: 'column', md: 'row' }} gap={3} maxW="900px" mx="auto">
+          <Input
+            value={vin}
+            onChange={(e) => setVin(e.target.value)}
+            placeholder="Enter VIN e.g. 1HGCM82633A004352"
+            bg="white"
+            textTransform="uppercase"
+          />
+          <Button onClick={onCheckVin} colorScheme="blue" bg="primary" isLoading={loading}>Check VIN</Button>
+        </Flex>
+        {error && (
+          <Text mt={3} color="red.500" textAlign="center">{error}</Text>
+        )}
+
+        {result && (
+          <Box
+            mt={8}
+            bg="white"
+            borderWidth="1px"
+            borderColor="gray.200"
+            borderRadius="xl"
+            boxShadow="sm"
+            p={6}
+            maxW="900px"
+            mx="auto"
+          >
+            <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
+              {fields.map((f) => (
+                <Flex key={f.key} justify="space-between" borderBottom="1px solid" borderColor="gray.100" py={2}>
+                  <Text color="gray.600">{f.label}</Text>
+                  <Text fontWeight="semibold">{result?.[f.key] || '—'}</Text>
+                </Flex>
+              ))}
+            </SimpleGrid>
+            <Text mt={4} fontSize="sm" color="gray.500">Data by NHTSA. Always verify details with the seller.</Text>
+          </Box>
+        )}
+      </Container>
+    </Box>
+  );
+}
+
 export const HomePage = ({ props }) => {
     const heroRef = useRef();
     const [isMobile] = useMediaQuery('(max-width: 760px)');
@@ -187,6 +281,8 @@ export const HomePage = ({ props }) => {
         <TrustedBy />
 
         <Features />
+
+        <VinCheckSection />
 
         <Container maxW="container.xl" px={4} py={10}>
           <Heading my={5} textAlign="center" size="lg" textColor='primary'> Browse all Vehicles </Heading>

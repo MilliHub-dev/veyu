@@ -55,10 +55,10 @@ export const LoginView = ({ ...props }) => {
                 });
 
                 switch(data?.user_type){
-                    case 'dealer': return redirect('/dashboard', 200);
-                    case 'mechanic': return redirect('/dashboard', 200);
-                    default: return redirect(`/home?user=${data.email}`, 200);
-                }                
+                    case 'dealer': redirect('/dashboard'); break;
+                    case 'mechanic': redirect('/dashboard'); break;
+                    default: redirect(`/home?user=${data.email}`); break;
+                }
             }else{
                 return onError(data?.message, true)
             }
@@ -99,10 +99,10 @@ export const LoginView = ({ ...props }) => {
                     });
 
                     switch(data?.user_type){
-                        case 'dealer': return redirect('/dashboard', 200);
-                        case 'mechanic': return redirect('/dashboard', 200);
-                        default: return redirect(`/home?user=${data.email}`, 200);
-                    }                
+                        case 'dealer': redirect('/dashboard'); break;
+                        case 'mechanic': redirect('/dashboard'); break;
+                        default: redirect(`/home?user=${data.email}`); break;
+                    }
                 }else{
                     return onError(data?.message, true)
                 }

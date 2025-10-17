@@ -73,18 +73,17 @@ export default function AnalyticsDashboard() {
   const {axios, notify} = useContext(GlobalStore);
 
   async function getChartData(){
-    const res = await axios.get('/admin/dealership/analytics/?charts=all')
-    const data = objectifyJSON(res.data);
-
-    if (res.status === 200){
-      console.log("Analytics Data:", data.data);
-      setChartsData(data.data);
-    }else{
-      notify({
-        title: 'An error occured',
-        body: data?.message,
-        color: 'red'
-      })
+    try{
+      const res = await axios.get('/admin/dealership/analytics/?charts=all')
+      const data = objectifyJSON(res.data);
+      if (res.status === 200){
+        console.log("Analytics Data:", data.data);
+        setChartsData(data.data || {});
+      }else{
+        notify({ title: 'An error occured', body: data?.message, color: 'red' })
+      }
+    }catch(error){
+      notify({ title: 'Failed to load analytics', body: error?.message, color: 'red' });
     }
 
   }
@@ -114,7 +113,9 @@ export default function AnalyticsDashboard() {
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={5} my={5}>
         <Stat>
           <StatLabel>Total Revenue</StatLabel>
-          <StatNumber>₦{parseInt(chartsData?.revenue?.amount).toLocaleString()}</StatNumber>
+          <StatNumber>
+            ₦{Number(chartsData?.revenue?.amount || 0).toLocaleString()}
+          </StatNumber>
           {/*<StatHelpText>
             <StatArrow type="increase" /> 10% increase this month
           </StatHelpText>*/}
@@ -122,37 +123,44 @@ export default function AnalyticsDashboard() {
       </SimpleGrid>
 
       <Box my={5} height="300px">
-         <Bar data={{...chartsData?.revenue?.chart_data}} options={chartOptions} /> 
+         {Array.isArray(chartsData?.revenue?.chart_data?.datasets)
+            ? <Bar data={chartsData.revenue.chart_data} options={chartOptions} />
+            : Array.isArray(chartsData?.revenue_chart?.datasets)
+              ? <Bar data={chartsData.revenue_chart} options={chartOptions} />
+              : <Flex align="center" justify="center" h="100%" color="gray.500">No revenue chart data</Flex>}
       </Box>
 
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={5} my={5}>
         <Stat borderColor="gray.200" px={5} py={5} borderRadius="lg" borderWidth={2}>
           <StatLabel>Fulfilled Orders</StatLabel>
-          <StatNumber>{chartsData?.orders?.fulfilled}</StatNumber>
+          <StatNumber>{chartsData?.orders?.fulfilled || 0}</StatNumber>
         </Stat>
         <Stat borderColor="gray.200" px={5} py={5} borderRadius="lg" borderWidth={2}>
           <StatLabel>Pending Orders </StatLabel>
-          <StatNumber>{chartsData?.orders?.pending}</StatNumber>
+          <StatNumber>{chartsData?.orders?.pending || 0}</StatNumber>
         </Stat>
         <Stat borderColor="gray.200" px={5} py={5} borderRadius="lg" borderWidth={2}>
           <StatLabel>Canceled Orders</StatLabel>
-          <StatNumber>{chartsData?.orders?.cancelled}</StatNumber>
+          <StatNumber>{chartsData?.orders?.cancelled || 0}</StatNumber>
         </Stat>
       </SimpleGrid>
 
       <Stat>
         <StatLabel>Total Deals</StatLabel>
-        <StatNumber>{parseInt(chartsData?.revenue?.amount).toLocaleString()}</StatNumber>
+        <StatNumber>{Number(chartsData?.deals?.count || 0).toLocaleString()}</StatNumber>
         {/*<StatHelpText>
           <StatArrow type="decrease" /> 13% decrease this month
         </StatHelpText>*/}
       </Stat>
 
       <Box my={5} height="300px">
-        <Line data={{...chartsData?.sales?.chart_data}} options={chartOptions} />
+        {Array.isArray(chartsData?.sales?.chart_data?.datasets)
+          ? <Line data={chartsData.sales.chart_data} options={chartOptions} />
+          : Array.isArray(chartsData?.sales_chart?.datasets)
+            ? <Line data={chartsData.sales_chart} options={chartOptions} />
+            : <Flex align="center" justify="center" h="100%" color="gray.500">No sales chart data</Flex>}
       </Box>
 
     </Box>
   );
 }
-

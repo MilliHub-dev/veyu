@@ -131,19 +131,28 @@ function Dashboard({ }) {
   }
 
   async function getWalletBalance(){
-    const res = await axios.get('/wallet/balance/');
-    const data = objectifyJSON(res.data);
-    console.log("Wallet:", data)
-    setWallet(data?.data)
+    try{
+      const res = await axios.get('/wallet/balance/');
+      const data = objectifyJSON(res.data);
+      console.log("Wallet:", data)
+      setWallet(data?.data || {});
+    }catch(error){
+      notify({ title: "Failed to load wallet", body: error?.message, color: 'red' });
+    }
   }
   
   async function getDashboardData(){
-    const res = await axios.get('/admin/dealership/dashboard/');
-    const data = objectifyJSON(res.data);
-    setDashboardData(data.data)
-    setChartData(data.data.chart_data)
-    console.log("Chart Data:", data.data.chart_data)
-    setRecentOrders(data.data.recent_orders)
+    try{
+      const res = await axios.get('/admin/dealership/dashboard/');
+      const data = objectifyJSON(res.data);
+      const payload = data?.data || {};
+      setDashboardData(payload);
+      setChartData(payload?.chart_data || null);
+      console.log("Chart Data:", payload?.chart_data);
+      setRecentOrders(Array.isArray(payload?.recent_orders) ? payload.recent_orders : []);
+    }catch(error){
+      notify({ title: "Failed to load dashboard", body: error?.message, color: 'red' });
+    }
   }
 
   async function getWalletTransactions(){
@@ -160,13 +169,15 @@ function Dashboard({ }) {
   }
 
   async function init(){
+    setLoadingState(true);
     try{
-      setLoadingState(true);
       await Promise.all([
         getWalletBalance(),
         getWalletTransactions(),
         getDashboardData(),
       ]);
+    }catch(error){
+      // Errors are handled in individual functions
     } finally {
       setLoadingState(false);
     }
@@ -280,7 +291,11 @@ function Dashboard({ }) {
           </ButtonGroup>
         </Flex>
         <Box h={'300px'} borderWidth={1} borderColor={borderCol} borderRadius='xl' bg={cardBg} boxShadow='sm' p={3}>
-          {chartData && <Line data={{...chartData, pointRadius: 20}} options={chartOptions} />}
+          {Array.isArray(chartData?.datasets) && chartData.datasets.length > 0 ? (
+            <Line data={chartData} options={chartOptions} />
+          ) : (
+            <Flex align="center" justify="center" h="100%" color="gray.500">No chart data</Flex>
+          )}
         </Box>
       </Box>
 
@@ -311,41 +326,41 @@ function Dashboard({ }) {
             </Thead>
             <Tbody>
               {recentOrders?.map((order) => (
-                <Tr key={order?.uuid}>
+                <Tr key={order?.uuid || Math.random()}>
                   <Td columns={5}>
                     <Flex gap={1} align="center">
                       <Image
-                        src={order?.order_item?.vehicle?.images[0]?.url}
-                        alt={order?.order_item?.vehicle?.name}
+                        src={order?.order_item?.vehicle?.images?.[0]?.url || '/assets/images/app_icon.jpg'}
+                        alt={order?.order_item?.vehicle?.name || 'Vehicle'}
                         boxSize="70px"
                         objectFit="cover"
                         borderRadius="md"
                         mr={3}
                       />
                       <Box>
-                        <Text fontWeight="medium">{order?.order_item?.vehicle?.name}</Text>
+                        <Text fontWeight="medium">{order?.order_item?.vehicle?.name || 'Untitled listing'}</Text>
                         <Text color="gray.700" fontWeight="medium">
-                          {order?.order_type}
+                          {order?.order_type || 'N/A'}
                         </Text>
                       </Box>
                     </Flex>
                   </Td>
                   <Td>
                     <Text color="green.500" fontWeight="medium">
-                      {parseInt(order?.order_item?.price/10**6).toFixed('2')}M
+                      {order?.order_item?.price ? `${(order.order_item.price/10**6).toFixed(2)}M` : '—'}
                     </Text>
                   </Td>
                   <Td>
-                    <Text>{new Date(order?.last_updated).toLocaleDateString()}</Text>
+                    <Text>{order?.last_updated ? new Date(order.last_updated).toLocaleDateString() : '—'}</Text>
                     <Text color="gray.500" fontSize="sm">
-                      {new Date(order?.last_updated).toLocaleTimeString()}
+                      {order?.last_updated ? new Date(order.last_updated).toLocaleTimeString() : ''}
                     </Text>
                   </Td>
                   <Td>
-                    <StatusBadge status={order?.order_status} />
+                    <StatusBadge status={order?.order_status || 'unknown'} />
                   </Td>
                   <Td>
-                    <Avatar size="sm" name={order?.customer} />
+                    <Avatar size="sm" name={order?.customer || 'Customer'} />
                   </Td>
                   <Td>
                   </Td>

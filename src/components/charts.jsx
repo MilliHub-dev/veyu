@@ -7,7 +7,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip);
 
 
-export const StatCard = ({ title, value, change, data, format = (v) => v }, ...props) => {
+export const StatCard = ({ title, value, change = 0, data = [], format = (v) => v, ...rest }) => {
   const chartData = {
     labels: ['', '', '', '', '', '', ''],
     datasets: [
@@ -35,7 +35,7 @@ export const StatCard = ({ title, value, change, data, format = (v) => v }, ...p
   };
 
   return (
-    <Box bg="white" px={6} py={4} borderRadius="lg" boxShadow="lg" flex={1} {...props}>
+    <Box bg="white" px={6} py={4} borderRadius="lg" boxShadow="lg" flex={1} {...rest}>
       <Stack spacing={2}>
         <Text fontSize="sm" color="gray.500">
           {title}
