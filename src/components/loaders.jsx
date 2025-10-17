@@ -18,7 +18,9 @@ import {
   Button,
   Wrap,
   WrapItem, 
-  Center, 
+  Text,
+  Center,
+  Spinner, 
 } from "@chakra-ui/react";
 import { css, keyframes } from "@emotion/react";
 
@@ -33,18 +35,49 @@ const pulse = keyframes`
   100% { transform: scale(1); background-color: #2e5cb8; }
 `;
 
-export const AppLoadingScreen = ({ loading }) => {
+
+
+
+export const LoadingSpinner = ({message = "Loading...", fullscreen = false, size="lg"}) => {
   return (
-    <Center height="100vh" bg="gray.50">
-      <Box
-        w="80px"
-        h="80px"
-        borderRadius="full"
-        css={css`animation: ${pulse} 2s infinite`}
-      ></Box>
-    </Center>
+    <VStack
+      spacing={4}
+      justify="center"
+      align="center"
+      w="100%"
+      h={fullscreen ? "100vh" : "100%"}
+      bg={fullscreen ? "dark.900" : "transparent"}
+    >
+      <Spinner
+        thickness="4px"
+        speed="0.65s"
+        emptyColor="black"
+        color="primary"
+        size={size}
+      />
+      {/*{message && (
+        <Text color="dark.100" fontSize="md" fontWeight="medium">
+          {message}
+        </Text>
+      )}*/}
+    </VStack>
   );
-}
+};
+
+
+
+// export const AppLoadingScreen = ({ loading }) => {
+//   return (
+//     <Center height="100vh" bg="gray.50">
+//       <Box
+//         w="80px"
+//         h="80px"
+//         borderRadius="full"
+//         css={css`animation: ${pulse} 2s infinite`}
+//       ></Box>
+//     </Center>
+//   );
+// }
 
 
 

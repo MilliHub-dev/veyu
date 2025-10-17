@@ -1,376 +1,250 @@
-import { createContext, Fragment, useEffect, useState } from 'react';
-import {Outlet, redirect, BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Cookies from 'js-cookie';
-import axios from 'axios';
-import { ChakraProvider, ToastProvider, useToast, extendTheme, Fade, ColorModeScript } from '@chakra-ui/react';
-import Layout from './pages/Layout';
-import ErrorBoundary from './components/error';
-import {AppLoadingScreen} from './components/loaders';
+import { createContext, Fragment, useEffect, useState, lazy, Suspense } from "react";
+import { Outlet, BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Cookies from "js-cookie";
+import axios from "axios";
+import { ChakraProvider, useToast } from "@chakra-ui/react";
+import ErrorBoundary from "./components/error";
+import { LoadingSpinner } from "./components/loaders";
+import VeyuTheme from "./theme.jsx";
 import {APIProvider} from '@vis.gl/react-google-maps';
 import {Autocomplete, LoadScript} from "@react-google-maps/api";
 
+// Lazy-loaded pages (split chunks)
+const Layout = lazy(() => import("./pages/Layout"));
+const HomePage = lazy(() => import("./pages/marketplace/HomePage"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const ComingSoon = lazy(() => import("./pages/ComingSoon"));
+const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
+const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
 
-// pages
-import HomePage from './pages/marketplace/HomePage';
-import LandingPage from './pages/LandingPage';
-import ComingSoon from './pages/ComingSoon';
-import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
-import TermsOfServicePage from './pages/TermsOfServicePage';
-
-
-import RentListing from './pages/marketplace/rent/RentListing';
-import RentDetail from './pages/marketplace/rent/RentDetail';
-import BuyListing from './pages/marketplace/buy/BuyListing';
-import BuyDetail from './pages/marketplace/buy/BuyDetail';
-import MechanicSearchPage from './pages/marketplace/search/MechanicSearch';
-import CarSearchPage from './pages/marketplace/search/CarSearch';
-import MechanicListPage from './pages/marketplace/mechanics/MechanicsListing';
-import ConfirmMechanicBookingPage from './pages/marketplace/mechanics/ConfirmBooking';
-import MechanicDetailPage from './pages/marketplace/mechanics/MechanicDetail';
-import LoginView from './pages/auth/Login';
-import SignupView from './pages/auth/Signup';
-import BusinessSignupView from './pages/auth/BusinessProfile';
-import ChatLayout from './pages/marketplace/chat/Layout';
-import ChatRoom from './pages/marketplace/chat/ChatRoom';
-import CartPage from './pages/marketplace/CartPage';
-import CheckoutPage from './pages/marketplace/checkout/CheckoutPage';
-import CheckoutWithInspection from './pages/marketplace/checkout/CheckoutInspection';
-import DocumentSigningPage from './pages/marketplace/checkout/DocumentSigningPage';
-import NotificationsPage from './pages/marketplace/Notifications';
+const RentListing = lazy(() => import("./pages/marketplace/rent/RentListing"));
+const RentDetail = lazy(() => import("./pages/marketplace/rent/RentDetail"));
+const BuyListing = lazy(() => import("./pages/marketplace/buy/BuyListing"));
+const BuyDetail = lazy(() => import("./pages/marketplace/buy/BuyDetail"));
+const MechanicSearchPage = lazy(() => import("./pages/marketplace/search/MechanicSearch"));
+const CarSearchPage = lazy(() => import("./pages/marketplace/search/CarSearch"));
+const MechanicListPage = lazy(() => import("./pages/marketplace/mechanics/MechanicsListing"));
+const ConfirmMechanicBookingPage = lazy(() => import("./pages/marketplace/mechanics/ConfirmBooking"));
+const MechanicDetailPage = lazy(() => import("./pages/marketplace/mechanics/MechanicDetail"));
+const LoginView = lazy(() => import("./pages/auth/Login"));
+const SignupView = lazy(() => import("./pages/auth/Signup"));
+const BusinessSignupView = lazy(() => import("./pages/auth/BusinessProfile"));
+const ChatLayout = lazy(() => import("./pages/marketplace/chat/Layout"));
+const ChatRoom = lazy(() => import("./pages/marketplace/chat/ChatRoom"));
+const CartPage = lazy(() => import("./pages/marketplace/CartPage"));
+const CheckoutPage = lazy(() => import("./pages/marketplace/checkout/CheckoutPage"));
+const CheckoutWithInspection = lazy(() => import("./pages/marketplace/checkout/CheckoutInspection"));
+const DocumentSigningPage = lazy(() => import("./pages/marketplace/checkout/DocumentSigningPage"));
+const NotificationsPage = lazy(() => import("./pages/marketplace/Notifications"));
 
 // Mechanic Dashboard
-import MechanicDashboardLayout from './pages/dashboard/mechanic/Layout';
-import MechanicDashboard from './pages/dashboard/mechanic/MechanicDashboard';
-import BookingsAdmin from './pages/dashboard/mechanic/Bookings';
-import ServiceOfferings from './pages/dashboard/mechanic/services/ServiceOfferings';
-import MechanicAnalytics from './pages/dashboard/mechanic/Analytics';
-import CreateServiceOffering from './pages/dashboard/mechanic/services/CreateServiceOffering';
-import BusinessProfile from './pages/dashboard/mechanic/settings/BusinessProfile';
+const MechanicDashboardLayout = lazy(() => import("./pages/dashboard/mechanic/Layout"));
+const MechanicDashboard = lazy(() => import("./pages/dashboard/mechanic/MechanicDashboard"));
+const BookingsAdmin = lazy(() => import("./pages/dashboard/mechanic/Bookings"));
+const ServiceOfferings = lazy(() => import("./pages/dashboard/mechanic/services/ServiceOfferings"));
+const MechanicAnalytics = lazy(() => import("./pages/dashboard/mechanic/Analytics"));
+const CreateServiceOffering = lazy(() => import("./pages/dashboard/mechanic/services/CreateServiceOffering"));
+const BusinessProfile = lazy(() => import("./pages/dashboard/mechanic/settings/BusinessProfile"));
 
-// Dealership Dashboard
-import DealerProfile from './pages/marketplace/DealerProfile';
-import DealerDashboardLayout from './pages/dashboard/dealer/Layout';
-import DealerDashboard from './pages/dashboard/dealer/Dashboard';
-import ListingsAdmin from './pages/dashboard/dealer/inventory/Listings';
-import CreateListingAdmin from './pages/dashboard/dealer/inventory/CreateListing';
-import EditListingAdmin from './pages/dashboard/dealer/inventory/EditListing';
-import OrderListAdmin from './pages/dashboard/dealer/orders/OrderList';
-import AnalyticsDashboard from './pages/dashboard/dealer/analytics/AnalyticsOverview';
-import DealershipSettings from './pages/dashboard/dealer/settings/Settings';
-import DealerSupport from './pages/dashboard/dealer/Support';
+// Dealer Dashboard
+const DealerProfile = lazy(() => import("./pages/marketplace/DealerProfile"));
+const DealerDashboardLayout = lazy(() => import("./pages/dashboard/dealer/Layout"));
+const DealerDashboard = lazy(() => import("./pages/dashboard/dealer/Dashboard"));
+const ListingsAdmin = lazy(() => import("./pages/dashboard/dealer/inventory/Listings"));
+const CreateListingAdmin = lazy(() => import("./pages/dashboard/dealer/inventory/CreateListing"));
+const EditListingAdmin = lazy(() => import("./pages/dashboard/dealer/inventory/EditListing"));
+const OrderListAdmin = lazy(() => import("./pages/dashboard/dealer/orders/OrderList"));
+const AnalyticsDashboard = lazy(() => import("./pages/dashboard/dealer/analytics/AnalyticsOverview"));
+const DealershipSettings = lazy(() => import("./pages/dashboard/dealer/settings/Settings"));
 
 // Wallet
-import WalletLayout from './pages/marketplace/wallet/Layout';
-import WalletHomePage from './pages/marketplace/wallet/Dashboard';
-import WalletDepositPage from './pages/marketplace/wallet/Deposit';
-import WalletTransactionsPage from './pages/marketplace/wallet/Transactions';
-import WalletWithdrawalPage from './pages/marketplace/wallet/Withdraw';
+const WalletLayout = lazy(() => import("./pages/marketplace/wallet/Layout"));
+const WalletHomePage = lazy(() => import("./pages/marketplace/wallet/Dashboard"));
+const WalletDepositPage = lazy(() => import("./pages/marketplace/wallet/Deposit"));
+const WalletTransactionsPage = lazy(() => import("./pages/marketplace/wallet/Transactions"));
+const WalletWithdrawalPage = lazy(() => import("./pages/marketplace/wallet/Withdraw"));
 
+export const GlobalStore = createContext({});
 
-const theme = extendTheme({
-  config: {
-    initialColorMode: 'light',
-    useSystemColorMode: false,
-  },
-  colors: {
-    'primary': '#f39f48',
-    'secondary': '#14181e',
-    'tertiary': '#FDD153',
-    'accent': '#F2F3F5',
-    'white': '#FFFFFF',
-  }
-})
-
-export const GlobalStore = createContext({
-  notify: undefined,
-  loading: undefined,
-  authUser: undefined,
-  apiUrl: '',
-  getCookie: undefined,
-  setCookie: undefined,
-  axios: axios,
-  logout: undefined,
-  redirect: undefined,
-  commaInt: undefined,
-  naturalDate: undefined,
-});
-
-//const IS_DEBUG = JSON.parse(import.meta.env.VITE_DEBUG) || false;
-
-  
 function App() {
-  const notification = useToast();
-  const [authUser, setAuthUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [isAuthenticated, setAuthState] = useState(false)
-  const [otherContext, setOtherContext] = useState({})
+  const toast = useToast();
+  const [authUser, setAuthUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setAuthState] = useState(false);
+  const [otherContext, setOtherContext] = useState({});
+
   const axiosClient = axios.create({
-     baseURL: 'https://dev.veyu.cc/api/v1',
-    // baseURL: 'http://localhost:8000/api/v1',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    baseURL: "https://dev.veyu.cc/api/v1",
+    headers: { "Content-Type": "application/json" },
   });
 
-  // Keep axios auth header in sync with current user token
+  // Sync axios auth header
   useEffect(() => {
     if (authUser?.token) {
       axiosClient.defaults.headers.Authorization = `Token ${authUser.token}`;
     } else {
-      try { delete axiosClient.defaults.headers.Authorization } catch {}
+      delete axiosClient.defaults.headers.Authorization;
     }
   }, [authUser]);
 
-  function reloadApp(){
-    // reloads user data including auth tokens
-    // use after verification or destructive actions only.
-    
-  }
-  
-  function getCookie(name){
-    let cookie = Cookies.getJSON(name)
-    return cookie
-  }
+  const notify = ({ title, body, color = "green", duration = 2500 }) =>
+    toast({ title, description: body, colorScheme: color, duration });
 
-  async function logout(){
-    return onLogout();
-  }
+  const redirect = (url, timeout) => {
+    timeout ? setTimeout(() => (window.location.href = url), timeout) : (window.location.href = url);
+  };
 
-  function notify({ title, body, icon, color = 'green', duration = 2500 }){
-    notification({
-      title,
-      description: body,
-      icon,
-      colorScheme: color,
-      duration
-    })
-  }
+  const onAuthenticated = (data) => {
+    localStorage.setItem("veyu-auth-user", JSON.stringify(data));
+    setAuthUser(data);
+    setAuthState(true);
+  };
 
-  function redirect(url, timeout){
-    if(timeout){
-      setTimeout(() => window.location.href = `${url}`, timeout)
-    }else{
-      window.location.href = `${url}`
-    }
-  }
-
-  function onAuthenticated(data){
-    localStorage.setItem('motaa-auth-user', JSON.stringify({...data}));
-    setAuthState(true)
-  }
-
-  function naturalDate (dateObj) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ]
-    return (`${months[dateObj.getMonth()]} ${dateObj.getDate()}, ${dateObj.getFullYear()}`)
-  }
-
-  function naturalTime (dateObj) {
-    let time = 'am'
-    let hours = dateObj.getHours()
-    if (hours >= 12){
-      time = 'pm'
-      if (hours > 12){
-        hours -= 12
-      }
-    }
-    return (`${hours}:${dateObj.getMinutes()} ${time}`)
-  }
-
-  function setCookie({name, val, expires}){
-    let cookie = Cookies.set(name, val, { expires })
-    return cookie
-  }
-
-  function getAuthUser(){
-    const user = localStorage.getItem('motaa-auth-user')
-    if (user === null){
-    }else{
-      const userData = JSON.parse(user)
-      setAuthUser(userData);
-      setAuthState(true)
-    }
-  }
-  
-  function init(){
-    if (!loading){
-      setLoading(true);
-    }
-
-    // try to authenticate the user else redirect to login screen
-    getAuthUser();
-
-    // finish init immediately (no artificial delay)
-    setLoading(false);
-
-    // TODO: try to refresh the auth token if expired - for jwt
-  }
-
-  
-  function onError(message){
-    notify({
-        'title': 'Error!',
-        'body': message || 'Something went wrong!',
-        'color': 'red'
-    });
-  }
-  
-  function onLogout(){
+  const onLogout = () => {
     setAuthState(false);
     setAuthUser(null);
-    localStorage.removeItem('motaa-auth-user', null);
-  }
+    localStorage.removeItem("veyu-auth-user");
+  };
 
-  function commaInt(number) {
-    if (typeof number !== Number){
-      number = Number(number)
+  const getAuthUser = () => {
+    const user = localStorage.getItem("veyu-auth-user");
+    if (user) {
+      const data = JSON.parse(user);
+      setAuthUser(data);
+      setAuthState(true);
     }
-    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  }
+  };
+
+  const init = () => {
+    // setLoading(true);
+    // setLoading(false);
+    getAuthUser();
+  };
+
+  useEffect(() => {
+    init();
+  }, []);
 
   const context = {
     notify,
     authUser,
     loading,
-    onLogout,
-    onError,
     axios: axiosClient,
-    setCookie,
-    getCookie,
+    redirect,
     onAuthenticated,
     isAuthenticated,
-    commaInt,
-    redirect,
-    logout,
-    naturalDate,
-    naturalTime,
+    onLogout,
     setOtherContext,
     otherContext,
-  }
+  };
 
-  useEffect(() => {
-    init();
-  }, [isAuthenticated,])
-
-
-  if (loading){
-    return <ErrorBoundary> <AppLoadingScreen /> </ErrorBoundary>
-  }  
-  
   return (
-     <ChakraProvider theme={theme}>
-     <ColorModeScript initialColorMode={theme.config.initialColorMode} />
-     <ErrorBoundary>
-     <LoadScript googleMapsApiKey="AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0" libraries={['places', 'maps']}> 
-      <Router ErrorBoundary={ErrorBoundary}>
-        <GlobalStore.Provider value={context}>
-           <Routes ErrorBoundary={ErrorBoundary}>
-            {authUser ? (
-                <Fragment>
-                  {authUser?.user_type === 'dealer' ? (
-                    <Route ErrorBoundary={ErrorBoundary} element={<DealerDashboardLayout />}>
-                      <Route ErrorBoundary={ErrorBoundary} path='/dashboard' element={<DealerDashboard />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='/orders' element={<OrderListAdmin />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='/inventory' element={<><Outlet /></>}>
-                        <Route ErrorBoundary={ErrorBoundary} path='edit/:listingId' element={<EditListingAdmin />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='add' element={<CreateListingAdmin />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='discounts' element={<DealerDashboard />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='' element={<ListingsAdmin />} />
-                      </Route>
-                      <Route ErrorBoundary={ErrorBoundary} path='/orders' element={<DealerDashboard />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='/analytics' element={<AnalyticsDashboard />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='/settings' element={<DealershipSettings />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='/support' element={<DealerSupport />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='/notifications' element={<NotificationsPage />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='/*' element={<Navigate to={'/dashboard'} />} />
-                    </Route>
-                    ) : authUser?.user_type === 'mechanic' ? (
-                      <Route ErrorBoundary={ErrorBoundary} element={<MechanicDashboardLayout />}>
-                        <Route ErrorBoundary={ErrorBoundary} path='/analytics' element={<MechanicAnalytics />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/dashboard' element={<MechanicDashboard />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/bookings' element={<BookingsAdmin />} />
-                        
-                        <Route ErrorBoundary={ErrorBoundary} path='/services' element={<> <Outlet /> </>}>
-                          <Route ErrorBoundary={ErrorBoundary} path='edit/:serviceId' element={<ServiceOfferings />} />
-                          <Route ErrorBoundary={ErrorBoundary} path='add' element={<CreateServiceOffering />} />
-                          <Route ErrorBoundary={ErrorBoundary} path='' element={<ServiceOfferings />} />
+    <ChakraProvider theme={VeyuTheme}>
+      <ErrorBoundary>
+      <GlobalStore.Provider value={context}>
+        <LoadScript googleMapsApiKey="AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0" libraries={['places', 'maps']}>
+          <Router>
+            <Suspense fallback={<LoadingSpinner fullscreen message="Veyu is Loading..." />}>
+              <Routes>
+                {authUser ? (
+                  <Fragment>
+                    {/* Dealer Dashboard */}
+                    {authUser.user_type === "dealer" ? (
+                      <Route element={<DealerDashboardLayout />}>
+                        <Route path="/dashboard" element={<DealerDashboard />} />
+                        <Route path="/orders" element={<OrderListAdmin />} />
+                        <Route path="/inventory" element={<Outlet />}>
+                          <Route path="edit/:listingId" element={<EditListingAdmin />} />
+                          <Route path="add" element={<CreateListingAdmin />} />
+                          <Route path="" element={<ListingsAdmin />} />
                         </Route>
-
-                        <Route ErrorBoundary={ErrorBoundary} path='/settings' element={<BusinessProfile />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/notifications' element={<NotificationsPage />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/*' element={<Navigate to={'/dashboard'} />} />
+                        <Route path="/analytics" element={<AnalyticsDashboard />} />
+                        <Route path="/settings" element={<DealershipSettings />} />
+                        <Route path="/notifications" element={<NotificationsPage />} />
+                        <Route path="/*" element={<Navigate to="/dashboard" />} />
+                      </Route>
+                    ) : authUser.user_type === "mechanic" ? (
+                      /* Mechanic Dashboard */
+                      <Route element={<MechanicDashboardLayout />}>
+                        <Route path="/dashboard" element={<MechanicDashboard />} />
+                        <Route path="/bookings" element={<BookingsAdmin />} />
+                        <Route path="/analytics" element={<MechanicAnalytics />} />
+                        <Route path="/services" element={<Outlet />}>
+                          <Route path="edit/:serviceId" element={<ServiceOfferings />} />
+                          <Route path="add" element={<CreateServiceOffering />} />
+                          <Route path="" element={<ServiceOfferings />} />
+                        </Route>
+                        <Route path="/settings" element={<BusinessProfile />} />
+                        <Route path="/notifications" element={<NotificationsPage />} />
+                        <Route path="/*" element={<Navigate to="/dashboard" />} />
                       </Route>
                     ) : (
-                      <Route ErrorBoundary={ErrorBoundary} element={<Layout />}>
-                        <Route ErrorBoundary={ErrorBoundary} path='/rent' element={<RentListing />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/rent/:listingId' element={<RentDetail />} />
-
-                        <Route ErrorBoundary={ErrorBoundary} path='/buy' element={<BuyListing />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/buy/:listingId' element={<BuyDetail />} />
-                        
-                        <Route ErrorBoundary={ErrorBoundary} path='/mechanics' element={<MechanicListPage />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/mechanics/book/:mechId' element={<ConfirmMechanicBookingPage />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/mechanics/:mechId' element={<MechanicDetailPage />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/dealership/:dealerId' element={<DealerProfile />} />
-                        
-                        <Route ErrorBoundary={ErrorBoundary} path='/cart' element={<CartPage />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/checkout/pay' element={<CheckoutPage />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/checkout/docs' element={<DocumentSigningPage />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/checkout/inspection' element={<CheckoutWithInspection />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/checkout/' element={<CheckoutPage />} />
-                        
-                        <Route ErrorBoundary={ErrorBoundary} path='/search/cars/' element={<CarSearchPage />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/search/mechanics/' element={<MechanicSearchPage />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/notifications' element={<NotificationsPage />} />
-                    
-                        <Route ErrorBoundary={ErrorBoundary} path='/home' element={<HomePage />} />
-                        <Route ErrorBoundary={ErrorBoundary} path='/*' element={<Navigate to='/home' />} />
+                      /* General Marketplace */
+                      <Route element={<Layout />}>
+                        <Route path="/rent" element={<RentListing />} />
+                        <Route path="/rent/:listingId" element={<RentDetail />} />
+                        <Route path="/buy" element={<BuyListing />} />
+                        <Route path="/buy/:listingId" element={<BuyDetail />} />
+                        <Route path="/mechanics" element={<MechanicListPage />} />
+                        <Route path="/mechanics/book/:mechId" element={<ConfirmMechanicBookingPage />} />
+                        <Route path="/mechanics/:mechId" element={<MechanicDetailPage />} />
+                        <Route path="/dealership/:dealerId" element={<DealerProfile />} />
+                        <Route path="/cart" element={<CartPage />} />
+                        <Route path="/checkout/pay" element={<CheckoutPage />} />
+                        <Route path="/checkout/docs" element={<DocumentSigningPage />} />
+                        <Route path="/checkout/inspection" element={<CheckoutWithInspection />} />
+                        <Route path="/search/cars" element={<CarSearchPage />} />
+                        <Route path="/search/mechanics" element={<MechanicSearchPage />} />
+                        <Route path="/notifications" element={<NotificationsPage />} />
+                        <Route path="/home" element={<HomePage />} />
+                        <Route path="/*" element={<Navigate to="/home" />} />
                       </Route>
-                    )
-                  }* 
+                    )}
 
-                  {/* Wallet Routes */}
-                  <Route ErrorBoundary={ErrorBoundary} element={
-                    authUser?.user_type === 'dealer' ? <DealerDashboardLayout hideSidebar={true} hideFooter={true} />
-                    : authUser?.user_type === 'mechanic' ? <MechanicDashboardLayout hideFooter={true} hideSidebar={true} />
-                    : <Layout hideFooter={true} />
-                  }>
-                    <Route ErrorBoundary={ErrorBoundary} path={'/wallet'} element={<WalletLayout />}>
-                      <Route ErrorBoundary={ErrorBoundary} path='home' element={<WalletHomePage />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='transactions' element={<WalletTransactionsPage />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='savings' element={<ComingSoon />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='deposit' element={<WalletDepositPage />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='withdraw' element={<WalletWithdrawalPage />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='settings' element={<WalletHomePage />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='' element={<Navigate to='home' />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='*' element={<Navigate to='home' />} />
+                    {/* Wallet Routes */}
+                    <Route
+                      element={
+                        authUser.user_type === "dealer" ? (
+                          <DealerDashboardLayout hideSidebar hideFooter />
+                        ) : authUser.user_type === "mechanic" ? (
+                          <MechanicDashboardLayout hideSidebar hideFooter />
+                        ) : (
+                          <Layout hideFooter />
+                        )
+                      }
+                    >
+                      <Route path="/wallet" element={<WalletLayout />}>
+                        <Route path="home" element={<WalletHomePage />} />
+                        <Route path="transactions" element={<WalletTransactionsPage />} />
+                        <Route path="deposit" element={<WalletDepositPage />} />
+                        <Route path="withdraw" element={<WalletWithdrawalPage />} />
+                        <Route path="" element={<Navigate to="home" />} />
+                      </Route>
+
+                      <Route path="/chat" element={<ChatLayout />}>
+                        <Route path="/chat/:room" element={<ChatRoom />} />
+                      </Route>
                     </Route>
-                    <Route ErrorBoundary={ErrorBoundary} path={'/chat'} element={<ChatLayout />}>
-                      <Route ErrorBoundary={ErrorBoundary} path='/chat/:room' element={<ChatRoom />} />
-                    </Route>
+                  </Fragment>
+                ) : (
+                  /* Public Routes */
+                  <Route element={<Layout />}>
+                    <Route path="/login" element={<LoginView />} />
+                    <Route path="/signup" element={<SignupView />} />
+                    <Route path="/signup/business" element={<BusinessSignupView />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                    <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+                    <Route path="/*" element={<LandingPage />} />
                   </Route>
-                </Fragment>
-              ):(
-                <Route element={<Layout />}>
-                  <Route ErrorBoundary={ErrorBoundary} path='/login' element={<LoginView />} />
-                  <Route ErrorBoundary={ErrorBoundary} path='/signup' element={<SignupView />} />
-                  <Route ErrorBoundary={ErrorBoundary} path='/signup/business' element={<BusinessSignupView />} />
-                  <Route ErrorBoundary={ErrorBoundary} path='/privacy-policy' element={<PrivacyPolicyPage />} />
-                  <Route ErrorBoundary={ErrorBoundary} path='/terms-of-service' element={<TermsOfServicePage />} />
-                  <Route ErrorBoundary={ErrorBoundary} path='/*' element={<LandingPage />} />
-                </Route>      
-              )              
-            }
-          </Routes>
-          <ToastProvider />
-        </GlobalStore.Provider>
-      </Router>
-      </LoadScript>
-    </ErrorBoundary>                
-    </ChakraProvider>           
-  );  
-} 
+                )}
+              </Routes>
+            </Suspense>
+          </Router>
+        </LoadScript>
+      </GlobalStore.Provider>
+      </ErrorBoundary>
+    </ChakraProvider>
+  );
+}
 
 export default App;

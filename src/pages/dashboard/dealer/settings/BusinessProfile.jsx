@@ -13,6 +13,7 @@ import { Search, Bell, CloudUpload, ChevronDown, ArrowRight } from "lucide-react
 
 
 
+
 export const BusinessProfile = ({  }) => {
   const {axios, notify, authUser} = useContext(GlobalStore);
   const imageRef = useRef();
@@ -33,19 +34,6 @@ export const BusinessProfile = ({  }) => {
     contact_phone: '',
   });
 
-  const labelProps = { fontWeight: '600', color: 'gray.700' };
-  const fieldProps = {
-    bg: 'white',
-    color: 'black',
-    variant: 'outline',
-    borderWidth: '1px',
-    borderColor: 'gray.300',
-    _placeholder: { color: 'gray.600', opacity: 1 },
-    _hover: { borderColor: 'gray.500' },
-    focusBorderColor: 'blue.400',
-    _focusVisible: { borderColor: 'blue.400', boxShadow: '0 0 0 1px rgba(49,130,206,0.6)' },
-  };
-
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setDealership({
@@ -61,6 +49,7 @@ export const BusinessProfile = ({  }) => {
       return ''
     }
   }
+
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -78,37 +67,41 @@ export const BusinessProfile = ({  }) => {
     }
   }
 
+
   async function handleSubmit() {
-    try{
-      const payload = new FormData();
-      const keys = Object.keys(dealership);
+    const payload = new FormData();
+    const keys = Object.keys(dealership);
 
-      for (let key of keys){
-        if (key === 'logo'){
-          const logo = dealership['logo'];
-          if (logo && typeof logo !== 'string' && logo?.file){
-            payload.append('new-logo', logo.file, logo.file.name);
-          }
-        } else if (typeof dealership[key] === 'object' && !('append' in dealership[key])) {
-          payload.append(key, JSON.stringify(dealership[key]));
-        } else {
-          payload.append(key, dealership[key] ?? '');
+
+    for (let key of keys){
+      if (key === 'logo' && typeof dealership[key] !== 'string'){
+        const logo = dealership['logo'];
+        if(logo){
+          console.log('new-logo', logo.file.name, logo.file)
+          payload.append('new-logo', logo.file, logo.file.name)
         }
+      }else{
+        payload.append(key, dealership[key])
       }
+    }
 
-      const res = await axios.post('/admin/dealership/settings/', payload, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      const data = objectifyJSON(res.data);
-
-      if (res.status === 200){
-        notify({ title: 'Settings saved!', color: 'green' })
-        setDealership(data.data)
+    console.log("Payload", payload)
+    const res = await axios.post('/admin/dealership/settings/', payload, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
       }
-    }catch(error){
-      notify({ title: error?.message || 'Failed to save settings', color: 'red' })
+    });
+    const data = objectifyJSON(res.data);
+
+    if (res.status === 200){
+      notify({
+        title: 'Settings saved!',
+        color: 'green'
+      })
+      setDealership(data.data)
     }
   }
+
 
   let dealerServices = [
     'Car Leasing',
@@ -116,80 +109,74 @@ export const BusinessProfile = ({  }) => {
     'Drivers',
   ]
 
+
   useEffect(() => {
     getDealership();
   }, [])
 
   return (
     <VStack spacing={6} align="stretch" py={6} maxW="container.xl" w="100%">
-      {/* Brand Card */}
-      <Box bg="white" borderWidth={1} borderColor="gray.200" borderRadius="xl" p={6}>
+      {/* Logo Upload Card */}
+      <Box bg="white" border="1px solid" borderColor="#d0d5dd" borderRadius="xl" p={6} mb={6}>
         <VStack>
           {
             dealership?.logo?.file ? (
-              <Image src={dealership?.logo?.preview} w="88px" borderRadius="lg" />
+              <Image src={dealership?.logo?.preview} w="80px"  />
             ): (
-              <Image src={dealership?.logo} w="88px" borderRadius="lg" />
+              <Image src={dealership?.logo} w="80px"  />
             )
           }
 
           <Button onClick={e => imageRef.current.click()} variant="link" color="#0460cc" fontSize="sm" fontWeight="medium" leftIcon={<CloudUpload size={16} />}>
-            Upload logo
+            Upload image
           </Button>
           <Input type="file" hidden ref={imageRef} accept="image/*" onInput={handleImageUpload} />
           <VStack mt={4} spacing={0}>
             <Heading as="h3" fontSize="md" fontWeight="semibold" color="#101828">
-              {dealership?.business_name || 'Your Business Name'}
+              {dealership?.business_name}
             </Heading>
             <Text fontSize="xs" color="#667085">
-              {dealership?.location || 'Your location'}
+              {dealership?.location}
             </Text>
             <HStack flexWrap={{base: 'wrap', md: 'nowrap'}} justifyContent="center" mt={2} fontSize="sm" color="#667085">
-              <Text>{dealership?.contact_email || 'email@company.com'}</Text>
+              <Text>{dealership?.contact_email}</Text>
               <Text>•</Text>
-              <Text>{dealership?.contact_phone || '+234 800 000 0000'}</Text>
+              <Text>{dealership?.contact_phone}</Text>
             </HStack>
           </VStack>
         </VStack>
       </Box>
 
-      {/* Company Info */}
-      <Box bg="white" borderWidth={1} borderColor="gray.200" borderRadius="xl" p={6}>
-        <Heading size="sm" mb={4}>Company Information</Heading>
-        <Stack spacing={5}>
-          <FormControl>
-            <FormLabel {...labelProps}>Business Name</FormLabel>
-            <Input name="business_name" value={dealership?.business_name} onChange={handleChange} placeholder="Your registered business name" {...fieldProps} />
-            <Text size="xs" color="gray.500" mt={2}> @{slugify(dealership?.business_name)} </Text>
-          </FormControl>
+      <FormControl>
+        <FormLabel>Business Name</FormLabel>
+        <Input name="business_name" value={dealership?.business_name} onChange={handleChange} />
 
-          <FormControl>
-            <FormLabel {...labelProps}>Headline</FormLabel>
-            <Input name="headline" value={dealership?.headline} onChange={handleChange} placeholder="Short tagline customers see" {...fieldProps} />
-          </FormControl>
+        <Text size="xs" color="gray.500" mt={2}> @{slugify(dealership?.business_name)} </Text>
+      </FormControl>
+      
+      <FormControl>
+        <FormLabel>Headline</FormLabel>
+        <Input name="headline" value={dealership?.headline} onChange={handleChange} />
+      </FormControl>
 
-          <FormControl>
-            <FormLabel {...labelProps}>About</FormLabel>
-            <Textarea name="about" value={dealership?.about} onChange={handleChange} maxLength={400} placeholder="Describe your business, services, and what makes you stand out" {...fieldProps} />
-          </FormControl>
+      <FormControl>
+        <FormLabel>About</FormLabel>
+        <Textarea name="about" value={dealership?.about} onChange={handleChange} maxLength={400} />
+      </FormControl>
 
-          <Stack direction={{ base: 'column', md: 'row' }} spacing={5}>
-            <FormControl>
-              <FormLabel {...labelProps}>CAC Number</FormLabel>
-              <Input name="cac_number" disabled value={dealership?.cac_number} onChange={handleChange} placeholder="CAC" {...fieldProps} />
-            </FormControl>
+      <FormControl>
+        <FormLabel>CAC Number</FormLabel>
+        <Input name="cac_number" disabled value={dealership?.cac_number} onChange={handleChange} />
+      </FormControl>
 
-            <FormControl>
-              <FormLabel {...labelProps}>TIN Number</FormLabel>
-              <Input name="tin_number" disabled value={dealership?.tin_number} onChange={handleChange} placeholder="TIN" {...fieldProps} />
-            </FormControl>
-          </Stack>
-        </Stack>
-      </Box>
+      <FormControl>
+        <FormLabel>TIN Number</FormLabel>
+        <Input name="tin_number" disabled value={dealership?.tin_number} onChange={handleChange} />
+      </FormControl>
 
       {/* Services List Selector */}
-      <Box bg="white" borderWidth={1} borderColor="gray.200" borderRadius="xl" overflow="hidden">
-        <Box p={4} borderBottom="1px solid" borderColor="#d0d5dd">
+      <Box border="1px solid" borderColor="#d0d5dd" borderRadius="lg" overflow="hidden">
+        <Box p={3} borderBottom="1px solid" borderColor="#d0d5dd">
           <FormLabel fontWeight="medium" mb={2}> Choose services </FormLabel>
           <Flex flexWrap="wrap" gap={2}>
           {
@@ -210,7 +197,7 @@ export const BusinessProfile = ({  }) => {
                   onClick={() => 
                     setDealership({
                       ...dealership,
-                      services: [...(dealership?.services || []), service]
+                      services: [...dealership?.services, service]
                     })
                   }
                 >
@@ -222,10 +209,10 @@ export const BusinessProfile = ({  }) => {
           </Flex>
         </Box>
 
-        <Box p={4}>
+        <Box p={3}>
           <Flex flexWrap="wrap" gap={2}>
             {
-              (dealership?.services || [])?.map((service) => 
+              dealership?.services?.map((service) => 
                 <Tag
                   variant={"solid"}
                   cursor="pointer"
@@ -236,8 +223,9 @@ export const BusinessProfile = ({  }) => {
                   color={"white"}
                   borderColor={"#0460cc"}
                   _hover={{ bg: "#0354b4"}}
+                  // onClick={() => removeService(service)}
                   onClick={() => {
-                    const deals = [...(dealership?.services || [])];
+                    const deals = dealership.services;
                     deals.splice(deals.indexOf(service), 1);
                     setDealership({ ...dealership, services:[...deals] })
                   }}
@@ -246,34 +234,30 @@ export const BusinessProfile = ({  }) => {
                 </Tag>
               )
             }
-            {(!dealership?.services || dealership?.services.length < 1) && <Text> Select at least one service you offer </Text>}
+            {dealership?.services.length < 1 && <Text> Select at least one service you offer </Text>}
           </Flex>
         </Box>
       </Box>
 
-      {/* Contact Details */}
-      <Box bg="white" borderWidth={1} borderColor="gray.200" borderRadius="xl" p={6}>
-        <Heading size="sm" mb={4}>Contact Details</Heading>
-        <Stack spacing={5}>
-          <Stack direction={{ base: 'column', md: 'row' }} spacing={5}>
-            <FormControl>
-              <FormLabel {...labelProps}>Email</FormLabel>
-              <Input type="email" name="contact_email" value={dealership?.contact_email} onChange={handleChange} placeholder="support@company.com" {...fieldProps} />
-            </FormControl>
+      <Divider my={4} />
 
-            <FormControl>
-              <FormLabel {...labelProps}>Customer Care Phone Number</FormLabel>
-              <Input type="tel" name="contact_phone" value={dealership?.contact_phone} onChange={handleChange} placeholder="e.g. +234 800 000 0000" {...fieldProps} />
-            </FormControl>
-          </Stack>
+      {/* Customer Care Details */}
+      <Heading size="md"> Contact Details </Heading>
 
-          <HStack justify="flex-end">
-            <Button colorScheme="blue" onClick={handleSubmit}>Save Changes</Button>
-          </HStack>
-        </Stack>
-      </Box>
+      <FormControl>
+        <FormLabel>Email</FormLabel>
+        <Input type="email" name="contact_email" value={dealership?.contact_email} onChange={handleChange} />
+      </FormControl>
+
+      <FormControl>
+        <FormLabel>Customer Care Phone Number</FormLabel>
+        <Input type="tel" name="contact_phone" value={dealership?.contact_phone} onChange={handleChange} />
+      </FormControl>
+
+      <Button colorScheme="blue" onClick={handleSubmit}>Save Changes</Button>
     </VStack>
   );
 }
+
 
 export default BusinessProfile;

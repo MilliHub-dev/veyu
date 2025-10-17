@@ -173,6 +173,8 @@ function TrustedBy(){
     </Box>
   )
 }
+
+
 export const HomePage = ({ props }) => {
     const heroRef = useRef();
     const [isMobile] = useMediaQuery('(max-width: 760px)');
@@ -310,7 +312,7 @@ export const HomePage = ({ props }) => {
             <Accordion allowMultiple allowToggle border={'none'} textAlign={'left'}>
               {
                 faqs.map((faq, idx) => 
-                    <AccordionItem borderRadius={5} my={4} border={'1px solid lavender'}>
+                    <AccordionItem key={idx} borderRadius={5} my={4} border={'1px solid lavender'}>
                       {({ isExpanded }) => (
                         <Fragment key={idx}>
                         <AccordionButton as={Flex} wrap={'nowrap'} alignItems={'center'} justifyContent={'space-between'}>
@@ -383,6 +385,7 @@ function SearchHero(){
       setLocation(`${latitude.toFixed(5)},${longitude.toFixed(5)}`);
     });
   }
+
   return (
     <Box
       as={motion.section}

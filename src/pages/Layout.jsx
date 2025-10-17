@@ -34,9 +34,9 @@ export const Layout = ({ children, hideFooter, ...props }) => {
 
     const shouldHideFooter = footerVisibility();
 
-    useEffect(() => {
+    // useEffect(() => {
 
-    }, [window.location.pathname, hideFooter])
+    // }, [window.location.pathname, hideFooter])
 
     return(
         <Stack bgColor="#fff" gap={0} spacing={0}>
