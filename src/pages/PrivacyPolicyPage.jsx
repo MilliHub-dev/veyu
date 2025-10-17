@@ -1,4 +1,4 @@
-import { Box, Container, Heading, Text, VStack, Divider, UnorderedList, ListItem, Flex, Icon } from "@chakra-ui/react"
+import { Box, Container, Heading, Text, VStack, Divider, UnorderedList, ListItem, Flex, Icon, HStack, Tag, Link as CLink } from "@chakra-ui/react"
 import {
   BsShieldLock,
   BsInfoCircle,
@@ -22,24 +22,44 @@ import {
 const PrivacyPolicy = () => {
   return (
     <Container maxW="900px" py={8} px={4}>
+      {/* Hero Header */}
+      <Box bgGradient="linear(to-r, blue.500, cyan.500)" color="white" p={6} borderRadius="xl" mb={6} boxShadow="lg">
+        <Flex align="center" gap={3}>
+          <Icon as={BsShieldLock} boxSize={8} />
+          <Box id="use-of-info">
+            <Heading as="h1" size="lg">Privacy Policy</Heading>
+            <Text opacity={0.9}>LAST UPDATED: 17 OCT 2025</Text>
+          </Box>
+        </Flex>
+        <HStack spacing={3} mt={4} wrap="wrap">
+          <Tag colorScheme="whiteAlpha" variant="subtle">Data Security</Tag>
+          <Tag colorScheme="whiteAlpha" variant="subtle">Your Rights</Tag>
+          <Tag colorScheme="whiteAlpha" variant="subtle">Cookies</Tag>
+        </HStack>
+      </Box>
+
+      {/* Quick Nav */}
+      <Box bg="gray.50" borderWidth={1} borderColor="gray.200" p={4} borderRadius="md" mb={6}>
+        <HStack spacing={4} wrap="wrap">
+          <CLink href="#introduction" className="link">Introduction</CLink>
+          <CLink href="#info-we-collect" className="link">Information We Collect</CLink>
+          <CLink href="#use-of-info" className="link">How We Use Info</CLink>
+          <CLink href="#sharing" className="link">Sharing</CLink>
+          <CLink href="#security" className="link">Security</CLink>
+          <CLink href="#rights" className="link">Your Rights</CLink>
+          <CLink href="#retention" className="link">Retention</CLink>
+          <CLink href="#links" className="link">Third‑Party Links</CLink>
+          <CLink href="#changes" className="link">Changes</CLink>
+          <CLink href="#contact" className="link">Contact</CLink>
+        </HStack>
+      </Box>
+
       <VStack spacing={6} align="stretch">
-        {/* Header */}
-        <Box>
-          <Flex align="center" mb={2}>
-            <Icon as={BsShieldLock} boxSize={6} color="blue.500" mr={2} />
-            <Heading as="h1" size="xl">
-              Privacy Policy
-            </Heading>
-          </Flex>
-          <Text color="gray.500" fontWeight="medium">
-            LAST UPDATED: 17 OCT 2024
-          </Text>
-        </Box>
 
         <Divider />
 
         {/* Introduction */}
-        <Box>
+        <Box id="introduction">
           <Flex align="center" mb={4}>
             <Icon as={BsInfoCircle} boxSize={5} color="blue.500" mr={2} />
             <Heading as="h2" size="lg">
@@ -47,11 +67,11 @@ const PrivacyPolicy = () => {
             </Heading>
           </Flex>
           <Text mb={4}>
-            Welcome to Veyu Ltd ("Company," "we," "us," or "our"). We operate the website www.motaa.net, android and
-            IOS mobile apps and provide various services related to Automotive transactions, including car sales,
-            rentals, and mechanical services. This Privacy Policy explains how we collect, use, disclose, and safeguard
-            your information when you visit our website, explore our apps and use our services (collectively, the
-            "Services").
+            Welcome to Veyu Ltd ("Company," "we," "us," or "our"). We operate the website www.veyu.cc, Android and
+            iOS mobile apps, and provide services covering vehicle transactions and services across categories including
+            cars, motorcycles, boats, aircraft, UAVs and more. This Privacy Policy explains how we collect, use,
+            disclose, and safeguard your information when you visit our website, explore our apps, and use our services
+            (collectively, the "Services").
           </Text>
           <Text mb={4}>
             By using our Services, you agree to the terms of this Privacy Policy. If you do not agree with the terms,
@@ -60,7 +80,7 @@ const PrivacyPolicy = () => {
         </Box>
 
         {/* Numbered Sections */}
-        <Box>
+        <Box id="info-we-collect">
           <Flex align="center" mb={3}>
             <Icon as={BsDatabase} boxSize={5} color="blue.500" mr={2} />
             <Heading as="h2" size="md">
@@ -231,7 +251,7 @@ const PrivacyPolicy = () => {
               following the unsubscribe instructions in the emails.
             </ListItem>
           </UnorderedList>
-          <Text mb={4}>To exercise any of these rights, please contact us at support@motaa.net</Text>
+          <Text mb={4}>To exercise any of these rights, please contact us at support@veyu.cc</Text>
         </Box>
 
         <Box>
@@ -291,31 +311,31 @@ const PrivacyPolicy = () => {
             <Flex align="center">
               <Icon as={BsEnvelope} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>Email:</strong> support@veyu.net
+                <strong>Email:</strong> support@veyu.cc
               </Text>
             </Flex>
             <Flex align="center">
               <Icon as={BsTelephone} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>Phone:</strong> +2348104484364
+                <strong>Phone:</strong> +234 (0) 800 000 0000
               </Text>
             </Flex>
             <Flex align="center">
               <Icon as={BsGlobe} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>Website:</strong> www.veyu.net
+                <strong>Website:</strong> www.veyu.cc
               </Text>
             </Flex>
             <Flex align="center">
               <Icon as={BsInstagram} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>IG/X:</strong> @veyultd
+                <strong>IG/X:</strong> @veyu
               </Text>
             </Flex>
             <Flex align="center">
               <Icon as={BsGeoAlt} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>Address:</strong> I5 Kawo road, Kawo, Kaduna state, Nigeria.
+                <strong>Address:</strong> Lagos, Nigeria.
               </Text>
             </Flex>
           </VStack>
@@ -334,4 +354,3 @@ const PrivacyPolicy = () => {
 
 export default PrivacyPolicy
 
-// Note: All occurrences of 'motaa' have been replaced with 'Veyu' in the code above.

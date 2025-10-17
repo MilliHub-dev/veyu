@@ -1,4 +1,4 @@
-import { Box, Container, Heading, Text, VStack, Divider, UnorderedList, ListItem, Flex, Icon } from "@chakra-ui/react"
+import { Box, Container, Heading, Text, VStack, Divider, UnorderedList, ListItem, Flex, Icon, HStack, Tag, Link as CLink } from "@chakra-ui/react"
 import {
   BsFileEarmarkText,
   BsShieldCheck,
@@ -23,19 +23,45 @@ import {
 const TermsAndConditions = () => {
   return (
     <Container maxW="900px" py={8} px={4}>
+      {/* Hero Header */}
+      <Box bgGradient="linear(to-r, purple.600, pink.500)" color="white" p={6} borderRadius="xl" mb={6} boxShadow="lg">
+        <Flex align="center" gap={3}>
+          <Icon as={BsFileEarmarkText} boxSize={8} />
+          <Box>
+            <Heading as="h1" size="lg">Terms and Conditions</Heading>
+            <Text opacity={0.9}>LAST UPDATED: 17 OCT 2025</Text>
+          </Box>
+        </Flex>
+        <HStack spacing={3} mt={4} wrap="wrap">
+          <Tag colorScheme="whiteAlpha" variant="subtle">User Rights</Tag>
+          <Tag colorScheme="whiteAlpha" variant="subtle">Payments</Tag>
+          <Tag colorScheme="whiteAlpha" variant="subtle">Privacy</Tag>
+        </HStack>
+      </Box>
+
+      {/* Quick Nav */}
+      <Box bg="gray.50" borderWidth={1} borderColor="gray.200" p={4} borderRadius="md" mb={6}>
+        <HStack spacing={4} wrap="wrap">
+          <CLink href="#agreement" className="link">Agreement</CLink>
+          <CLink href="#services" className="link">Our Services</CLink>
+          <CLink href="#ip" className="link">IP Rights</CLink>
+          <CLink href="#user-representations" className="link">User Representations</CLink>
+          <CLink href="#registration" className="link">Registration</CLink>
+          <CLink href="#payments" className="link">Payments</CLink>
+          <CLink href="#subscriptions" className="link">Subscriptions</CLink>
+          <CLink href="#prohibited" className="link">Prohibited</CLink>
+          <CLink href="#privacy" className="link">Privacy</CLink>
+          <CLink href="#term" className="link">Term & Termination</CLink>
+          <CLink href="#modifications" className="link">Modifications</CLink>
+          <CLink href="#law" className="link">Governing Law</CLink>
+          <CLink href="#liability" className="link">Liability</CLink>
+          <CLink href="#indemnification" className="link">Indemnification</CLink>
+          <CLink href="#communications" className="link">Electronic Comms</CLink>
+          <CLink href="#contact" className="link">Contact</CLink>
+        </HStack>
+      </Box>
+
       <VStack spacing={6} align="stretch">
-        {/* Header */}
-        <Box>
-          <Flex align="center" mb={2}>
-            <Icon as={BsFileEarmarkText} boxSize={6} color="blue.500" mr={2} />
-            <Heading as="h1" size="xl">
-              Terms and Conditions
-            </Heading>
-          </Flex>
-          <Text color="gray.500" fontWeight="medium">
-            LAST UPDATED: 19 OCT 2024
-          </Text>
-        </Box>
 
         <Divider />
 
@@ -45,20 +71,18 @@ const TermsAndConditions = () => {
             AGREEMENT TO OUR LEGAL TERMS
           </Heading>
           <Text mb={4}>
-            We are Motaa Ltd ("Company," "we," "us," or "our"), a company registered in Nigeria with our principal
-            office at I5 Kawo road, Kawo, Kaduna state, Nigeria.
+            We are Veyu Ltd ("Company," "we," "us," or "our"), a company registered in Nigeria.
           </Text>
           <Text mb={4}>
-            We operate the website www.motaa.net (the "Site"), iOS and android apps as well as any related products and
-            services that refer to these terms (collectively, the "Services").
+            We operate the website www.veyu.cc (the "Site"), mobile applications, and related products and services
+            that refer to these terms (collectively, the "Services").
           </Text>
           <Text mb={4}>
-            You can contact us by phone at +2348104484364, email at support@motaa.net or by mail to I5 Kawo road, Kawo,
-            Kaduna state, Nigeria.
+            You can contact us by phone at +234 (0) 800 000 0000, email at support@veyu.cc.
           </Text>
           <Text mb={4}>
             These Terms and Conditions constitute a legally binding agreement between you, whether personally or on
-            behalf of an entity ("you"), and Motaa Ltd. concerning your access to and use of the Services. By accessing
+            behalf of an entity ("you"), and Veyu Ltd. concerning your access to and use of the Services. By accessing
             the Services, you agree that you have read, understood, and agree to be bound by all of these Terms and
             Conditions. IF YOU DO NOT AGREE WITH THESE TERMS, YOU ARE PROHIBITED FROM USING THE SERVICES.
           </Text>
@@ -79,7 +103,9 @@ const TermsAndConditions = () => {
             </Heading>
           </Flex>
           <Text mb={4}>
-            The Services include a platform for car sales, rentals, and access to mechanical services. The Services are
+            The Services include a platform for buying and selling vehicles, booking rentals, and accessing verified
+            mechanics and service providers across categories including cars, motorcycles, boats, aircraft, UAVs and more.
+            The Services are
             intended for users who are at least 18 years old. Persons under the age of 18 must have permission from and
             be directly supervised by a parent or guardian to use the Services.
           </Text>
@@ -93,7 +119,7 @@ const TermsAndConditions = () => {
             </Heading>
           </Flex>
           <Text mb={4}>
-            Motaa Ltd. owns all intellectual property rights in the Services, including the website design, logos, and
+            Veyu Ltd. owns all intellectual property rights in the Services, including the website design, logos, and
             other content provided through the Services. You are granted a non-exclusive, revocable license to access
             the Services for your personal or internal business use. You may not reproduce, distribute, or create
             derivative works without our express written permission.
@@ -138,9 +164,10 @@ const TermsAndConditions = () => {
             </Heading>
           </Flex>
           <Text mb={4}>
-            We accept payments for Services through the following methods: [Payment Methods]. You agree to provide
-            current, complete, and accurate payment information and authorize us to charge your chosen payment provider
-            for any purchases.
+            We accept payments for Services via card payments, bank transfer, and the Veyu Wallet (integrated via
+            Paystack). You agree to provide current, complete, and accurate payment information and authorize us to
+            charge your chosen payment method for any purchases. Transaction fees, where applicable, will be disclosed
+            at checkout. Refunds, if any, are processed per our applicable policy and applicable law.
           </Text>
         </Box>
 
@@ -152,8 +179,8 @@ const TermsAndConditions = () => {
             </Heading>
           </Flex>
           <Text mb={2}>
-            <strong>Subscription Billing:</strong> Subscriptions will automatically renew unless cancelled. You consent
-            to our charging your payment method on a recurring basis until cancellation.
+            <strong>Subscription Billing:</strong> If offered, subscriptions will automatically renew unless cancelled.
+            You consent to our charging your payment method on a recurring basis until cancellation.
           </Text>
           <Text mb={2}>
             <strong>Free Trial:</strong> We may offer a free trial for new users. Charges will apply at the end of the
@@ -241,7 +268,7 @@ const TermsAndConditions = () => {
             </Heading>
           </Flex>
           <Text mb={4}>
-            Motaa Ltd. shall not be liable for any direct, indirect, or consequential damages arising from your use of
+            Veyu Ltd. shall not be liable for any direct, indirect, or consequential damages arising from your use of
             the Services. Our liability to you for any cause whatsoever will be limited to the amount paid, if any, by
             you to us during the six-month period prior to the cause of action.
           </Text>
@@ -255,7 +282,7 @@ const TermsAndConditions = () => {
             </Heading>
           </Flex>
           <Text mb={4}>
-            You agree to indemnify and hold Motaa Ltd. harmless from any claims, damages, or losses resulting from your
+            You agree to indemnify and hold Veyu Ltd. harmless from any claims, damages, or losses resulting from your
             use of the Services or breach of these Terms.
           </Text>
         </Box>
@@ -286,31 +313,31 @@ const TermsAndConditions = () => {
             <Flex align="center">
               <Icon as={BsEnvelope} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>Email:</strong> support@motaa.net
+                <strong>Email:</strong> support@veyu.cc
               </Text>
             </Flex>
             <Flex align="center">
               <Icon as={BsTelephone} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>Phone:</strong> +2348104484364
+                <strong>Phone:</strong> +234 (0) 800 000 0000
               </Text>
             </Flex>
             <Flex align="center">
               <Icon as={BsGlobe} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>Website:</strong> www.motaa.net
+                <strong>Website:</strong> www.veyu.cc
               </Text>
             </Flex>
             <Flex align="center">
               <Icon as={BsInstagram} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>IG/X:</strong> @motaaltd
+                <strong>IG/X:</strong> @veyu
               </Text>
             </Flex>
             <Flex align="center">
               <Icon as={BsGeoAlt} boxSize={4} color="gray.500" mr={2} />
               <Text>
-                <strong>Address:</strong> I5 Kawo road, Kawo, Kaduna state, Nigeria.
+                <strong>Address:</strong> Lagos, Nigeria.
               </Text>
             </Flex>
           </VStack>
