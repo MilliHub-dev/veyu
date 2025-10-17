@@ -116,9 +116,9 @@ function App() {
   };
 
   const init = () => {
-    setLoading(true);
+    // setLoading(true);
+    // setLoading(false);
     getAuthUser();
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -141,10 +141,10 @@ function App() {
   return (
     <ChakraProvider theme={VeyuTheme}>
       <ErrorBoundary>
+      <GlobalStore.Provider value={context}>
         <LoadScript googleMapsApiKey="AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0" libraries={['places', 'maps']}>
-        <Router>
-          <GlobalStore.Provider value={context}>
-            <Suspense fallback={<LoadingSpinner fullscreen message="Loading page..." />}>
+          <Router>
+            <Suspense fallback={<LoadingSpinner fullscreen message="Veyu is Loading..." />}>
               <Routes>
                 {authUser ? (
                   <Fragment>
@@ -239,9 +239,9 @@ function App() {
                 )}
               </Routes>
             </Suspense>
-          </GlobalStore.Provider>
-        </Router>
-      </LoadScript>
+          </Router>
+        </LoadScript>
+      </GlobalStore.Provider>
       </ErrorBoundary>
     </ChakraProvider>
   );

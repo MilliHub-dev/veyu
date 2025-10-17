@@ -173,6 +173,8 @@ function TrustedBy(){
     </Box>
   )
 }
+
+
 export const HomePage = ({ props }) => {
     const heroRef = useRef();
     const [isMobile] = useMediaQuery('(max-width: 760px)');
@@ -383,6 +385,7 @@ function SearchHero(){
       setLocation(`${latitude.toFixed(5)},${longitude.toFixed(5)}`);
     });
   }
+
   return (
     <Box
       as={motion.section}

@@ -427,7 +427,7 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
      top={'0px'}
      bg={!authUser ? 'primary' : 'white'}
      as={motion.div}
-     color={!authUser ? "white": "black"}
+     color={!authUser ? "black": "black"}
      flex={1} w={'100%'}
      animate={{ opacity: 1, }}
      initial={{ opacity: 0.6, }}
@@ -460,16 +460,11 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
          gap={isMobile ? 3 : 5}
          alignItems={'center'}
         >
-          {/*{isMobile ? 
-            <Button px={0} onClick={toggleSearch} variant="unstyled">
-              <Icon className='icon'><TbSearch /></Icon>
-            </Button>
-            :
-            <DashboardSearchBar flex={1} />
-          }*/}
           {isMobile ? (
               <Button
-               as={RLink}
+               // as={RLink}
+                placeContent="center"
+                placeItems="center"
                to="/wallet"
                variant="ghost"
                borderColor="primary"
@@ -479,7 +474,9 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
               </Button> 
             ):(
               <Button
-               as={RLink}
+               // as={RLink}
+                placeContent="center"
+                placeItems="center"
                to="/wallet"
                borderRadius={'30px'}
                leftIcon={<Wallet size={16} />}
@@ -491,22 +488,29 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
               >E-Wallet</Button>
             )
           }
-          <Button px={2} as={RLink} variant="ghost" to={'/chat'}><Icon viewBox='45' className='icon' color="primary"><MessageCircleIcon size={18} /></Icon></Button>
-          <Button px={2} as={RLink} variant="ghost" to={'/notifications'}><Icon viewBox='45' className='icon' color="primary"><BellIcon size={18} /></Icon></Button>
+
+          <Button px={2} as={RLink} variant="ghost" to={'/chat'} bgColor="black" color="primary">
+            <Icon viewBox='45' className='icon'><MessageCircleIcon size={18} /></Icon>
+          </Button>
+          
+          <Button px={2} as={RLink} variant="ghost" to={'/notifications'} bgColor="black" color="primary">
+            <Icon viewBox='45' className='icon' color="primary"><BellIcon size={18} /></Icon>
+          </Button>
           
           <Menu zIndex={2} display="block">
             <MenuButton
               as={IconButton}
               icon={<UserIcon size={18} />}
-              colorScheme="blue"
-              color="primary"
+              bgColor='black' color="primary"
+              colorScheme="orange"
               variant="ghost"
               size="sm"
+              px={2}
               aria-label="Profile"
             />
 
             <MenuList py={3} px={3} zIndex={'2 !important'}>
-              <Box placeItems="center" placeContent="center" p={3}>
+              <Box alignItems="center" justifyContent="center" display="flex" flexDirection="column" p={3}>
                 <Avatar 
                  size="lg"
                  name={`${authUser?.first_name} ${authUser?.last_name}`}

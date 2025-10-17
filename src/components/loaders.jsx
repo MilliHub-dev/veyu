@@ -55,29 +55,29 @@ export const LoadingSpinner = ({message = "Loading...", fullscreen = false, size
         color="primary"
         size={size}
       />
-      {message && (
+      {/*{message && (
         <Text color="dark.100" fontSize="md" fontWeight="medium">
           {message}
         </Text>
-      )}
+      )}*/}
     </VStack>
   );
 };
 
 
 
-export const AppLoadingScreen = ({ loading }) => {
-  return (
-    <Center height="100vh" bg="gray.50">
-      <Box
-        w="80px"
-        h="80px"
-        borderRadius="full"
-        css={css`animation: ${pulse} 2s infinite`}
-      ></Box>
-    </Center>
-  );
-}
+// export const AppLoadingScreen = ({ loading }) => {
+//   return (
+//     <Center height="100vh" bg="gray.50">
+//       <Box
+//         w="80px"
+//         h="80px"
+//         borderRadius="full"
+//         css={css`animation: ${pulse} 2s infinite`}
+//       ></Box>
+//     </Center>
+//   );
+// }
 
 
 
