@@ -101,13 +101,13 @@ export const SignupView = ({...props }) => {
     const steps = [
         {
             title: `Create ${type === 'business'? 'a business' : 'your'} account`,
-            description: 'Start your 30-day free trial', 
+            description: 'Start Today!', 
             key: 'signup',
             component: <EmailStep type={type} signUpWithGoogle={signUpWithGoogle} />
         },
         {
             title: 'Create your account',
-            description: 'Start your 30-day free trial', 
+            description: 'Start Today!', 
             key: 'profile',
             component: <SignupStep type={type} />
         },
