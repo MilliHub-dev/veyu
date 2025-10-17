@@ -120,38 +120,62 @@ export default function AddListing() {
 
   const handleCreate = async () => {
     try{
+      const condition = formData?.condition || formData?.usage;
+      const vehicleType = formData?.vehicle_type || formData?.body;
+      const fuel = formData?.fuel_system || formData?.fuel;
+
+      // Swagger: expects nested vehicle object and top-level listing fields
       const payload = {
-        action: 'create-listing',
-        listing_type: formData?.listing_type,
+        listing_type: formData?.listing_type === 'rental' ? 'rental' : 'sale',
         title: formData?.title,
-        brand: formData?.brand,
-        model: formData?.model,
-        vin: formData?.vin,
-        year: formData?.year ? Number(formData.year) : undefined,
-        price: formData?.price ? Number(formData.price) : undefined,
-        // normalize condition/usage
-        condition: formData?.condition || formData?.usage,
-        usage: formData?.condition || formData?.usage,
-        // normalize vehicle type/body
-        vehicle_type: formData?.vehicle_type || formData?.body,
-        body: formData?.body || formData?.vehicle_type,
-        // normalize fuel system
-        fuel_system: formData?.fuel_system || formData?.fuel,
-        transmission: formData?.transmission,
-        registration: formData?.registration,
-        mileage: formData?.mileage ? Number(formData.mileage) : undefined,
-        drivetrain: formData?.drivetrain,
-        doors: formData?.doors,
-        seats: formData?.seats,
-        features: Array.isArray(formData?.features) ? formData.features : [],
+        price: (formData?.price ?? '').toString(),
+        payment_cycle: formData?.listing_type === 'rental' ? (formData?.payment_cycle || 'single') : 'single',
         notes: formData?.notes,
+        verified: false,
+        approved: false,
+        viewers: [],
+        offers: [],
+        testdrives: [],
+        vehicle: {
+          name: formData?.title,
+          brand: formData?.brand,
+          model: formData?.model,
+          images: [],
+          condition: condition,
+          fuel_system: fuel,
+          transmission: formData?.transmission,
+          mileage: (formData?.mileage ?? '').toString(),
+          color: formData?.color || 'unspecified',
+          // Optional helpers
+          tags: '',
+          features: Array.isArray(formData?.features) ? formData.features.join(', ') : '',
+          available: true,
+          for_sale: formData?.listing_type === 'sale',
+          for_rent: formData?.listing_type === 'rental',
+          // passthroughs if backend supports them
+          vin: formData?.vin,
+          year: formData?.year ? Number(formData.year) : undefined,
+          body: vehicleType,
+          drivetrain: formData?.drivetrain,
+          doors: formData?.doors,
+          seats: formData?.seats,
+          registration: formData?.registration,
+        }
       };
 
-      const res = await axios.post('/admin/dealership/listings/create/', jsonifyObject(payload));
+      const form = new FormData();
+      form.append('action', 'create-listing');
+      form.append('data', JSON.stringify(payload));
+      const res = await axios.post(
+        '/admin/dealership/listings/create/',
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
       const data = objectifyJSON(res.data)
 
       if (res.status === 200){
-        setFormData({ ...formData, uuid: data.data.uuid})
+        const newUuid = data?.data?.uuid || data?.uuid || data?.data?.vehicle?.uuid;
+        setFormData({ ...formData, uuid: newUuid})
         toast({
           title: "Listing submitted for review",
           description: "We'll notify you once the review is complete.",
@@ -163,8 +187,14 @@ export default function AddListing() {
         return setCurrentStep(currentStep+1);
       }
     }catch(error){
+      const raw = error?.response?.data;
+      try { console.error('Create listing failed RAW:', typeof raw === 'string' ? raw.slice(0, 1000) : raw); } catch {}
       console.error('Create listing failed:', error);
-      notify({ title: 'Unable to create listing', body: error?.response?.data?.message || error?.message, color: 'red' })
+      notify({
+        title: 'Unable to create listing',
+        body: (typeof raw === 'string' ? raw.slice(0, 220) : (raw?.message || error?.message)) || 'Server error (500) while creating listing',
+        color: 'red'
+      })
     }
   }
   
