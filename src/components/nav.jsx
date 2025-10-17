@@ -416,9 +416,9 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
     <Box
      position={'sticky'}
      top={'0px'}
-     bg={!authUser ? 'primary' : 'white'}
+     bg={'white'}
      as={motion.div}
-     color={!authUser ? "black": "black"}
+     color={'black'}
      flex={1} w={'100%'}
      animate={{ opacity: 1, }}
      initial={{ opacity: 0.6, }}
@@ -427,11 +427,14 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
      id='navbar'
      zIndex="20"
      mb={0}
+     borderBottomWidth={1}
+     borderColor="gray.200"
+     boxShadow="sm"
     >
       <Flex className='navbar-inner'
         alignItems={'center'}
         px={4}
-        py={4}
+        py={3}
         justifyContent={'space-between'}
         flex={1} w={'100%'}
         >
@@ -452,51 +455,44 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
          alignItems={'center'}
         >
           {isMobile ? (
-              <Button
-               // as={RLink}
-                placeContent="center"
-                placeItems="center"
-               to="/wallet"
-               variant="ghost"
-               borderColor="primary"
-               px={2}
-              >
-                <Wallet size={18} />
-              </Button> 
-            ):(
-              <Button
-               // as={RLink}
-                placeContent="center"
-                placeItems="center"
-               to="/wallet"
-               borderRadius={'30px'}
-               leftIcon={<Wallet size={16} />}
-               variant="outline"
-               bgColor="#d9ebf5"
-               fontWeight="600"
-               colorScheme="blue"
-               color="primary"
-              >E-Wallet</Button>
-            )
-          }
+            <IconButton
+              as={RLink}
+              to="/wallet"
+              aria-label="Wallet"
+              variant="ghost"
+              icon={<Wallet size={18} />}
+            />
+          ) : (
+            <Button
+              as={RLink}
+              to="/wallet"
+              borderRadius={'30px'}
+              leftIcon={<Wallet size={16} />}
+              variant="outline"
+              bgColor="#d9ebf5"
+              fontWeight="600"
+              colorScheme="blue"
+              color="primary"
+            >E-Wallet</Button>
+          )}
 
-          <Button px={2} as={RLink} variant="ghost" to={'/chat'} bgColor="black" color="primary">
-            <Icon viewBox='45' className='icon'><MessageCircleIcon size={18} /></Icon>
-          </Button>
-          
-          <Button px={2} as={RLink} variant="ghost" to={'/notifications'} bgColor="black" color="primary">
-            <Icon viewBox='45' className='icon' color="primary"><BellIcon size={18} /></Icon>
-          </Button>
-          
+          {/* {!isMobile && (
+            <HStack spacing={2}>
+              <Button as={RLink} to={'/dashboard/settings'} variant="outline" size="sm"></Button>
+              <Button as={RLink} to={'/inventory'} colorScheme="blue" size="sm"></Button>
+            </HStack>
+          )} */}
+
+          <IconButton as={RLink} to={'/chat'} aria-label="Chat" variant="ghost" icon={<MessageCircleIcon size={18} />} />
+          <IconButton as={RLink} to={'/notifications'} aria-label="Notifications" variant="ghost" icon={<BellIcon size={18} />} />
+
           <Menu zIndex={2} display="block">
             <MenuButton
               as={IconButton}
               icon={<UserIcon size={18} />}
-              bgColor='black' color="primary"
-              colorScheme="orange"
+              colorScheme="gray"
               variant="ghost"
               size="sm"
-              px={2}
               aria-label="Profile"
             />
 
@@ -515,11 +511,9 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
             </MenuList>
           </Menu>
 
-          {(isMobile || props.hideSidebar) &&
-            <Button onClick={sidebarOpen ? hideNav : showNav} colorScheme='transparent' px={0}>
-              <Icon sx={{ fill: 'black', '& *': {fill: 'black'}}} className='icon'><FcMenu /></Icon>
-            </Button>
-          }
+          {(isMobile || props.hideSidebar) && (
+            <IconButton onClick={sidebarOpen ? hideNav : showNav} aria-label="Menu" variant='ghost' icon={<FcMenu />} />
+          )}
         </Flex>          
       </Flex>
 

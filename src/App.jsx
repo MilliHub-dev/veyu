@@ -72,6 +72,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setAuthState] = useState(false);
   const [otherContext, setOtherContext] = useState({});
+  const commaInt = (n) => {
+    try { return Number(n || 0).toLocaleString(); } catch { return '0'; }
+  };
 
   const axiosClient = axios.create({
     baseURL: "https://dev.veyu.cc/api/v1",
@@ -136,6 +139,7 @@ function App() {
     onLogout,
     setOtherContext,
     otherContext,
+    commaInt,
   };
 
   return (
