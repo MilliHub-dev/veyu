@@ -28,6 +28,8 @@ import {
   Tr,
   Badge,
   Avatar,
+  Skeleton,
+  ButtonGroup,
 } from "@chakra-ui/react"
 import {
   MdSearch,
@@ -56,15 +58,42 @@ const OrderListAdmin = () => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchValue, setSearchValue] = useState("");
   const {axios} = useContext(GlobalStore);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   async function getData(){
+    setLoading(true);
     const res = await axios.get('/admin/dealership/orders/');
     const data = objectifyJSON(res.data)
     if (res.status === 200){
       setOrderList(data.data);
       setMatches(data.data);
+      setPage(1);
     }
-    console.log("Got orders:", data)
+    setLoading(false);
+  }
+
+  function exportOrdersCsv(){
+    const rows = [
+      ['Car', 'Order Type', 'Price', 'Status', 'Client', 'Last Updated'],
+      ...matches.map(o => [
+        o?.order_item?.vehicle?.name,
+        o?.order_type,
+        o?.order_item?.price,
+        o?.order_status,
+        o?.customer,
+        o?.last_updated,
+      ])
+    ];
+    const csv = rows.map(r => r.map(v => (v === undefined || v === null) ? '' : String(v).replace(/"/g,'""')).map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'orders.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   function handleSearch(e){
@@ -83,19 +112,78 @@ const OrderListAdmin = () => {
     setActiveFilter(filter);
 
     if(filter === 'All'){
-      return setMatches([ ...orderList ])
+      setMatches([ ...orderList ])
+      return setPage(1)
     }
     const filteredMatches = orderList.filter(item => item.order_status.toLowerCase() === filter.toLowerCase())
     setMatches([...filteredMatches]);
+    setPage(1);
   }
 
   useEffect(() => {
     getData();
   }, [])
 
+  const totalPages = Math.max(1, Math.ceil(matches.length / pageSize));
+  const paginated = matches.slice((page-1)*pageSize, page*pageSize);
+
+  if (loading){
+    return (
+      <Box flex={1} p={6} bg="white" color="black">
+        <Box py={5} borderBottom={'1px solid #e2e8f0'}> <Skeleton height='24px' width='160px' /></Box>
+        <Flex justify="space-between" my={4}>
+          <Skeleton height='36px' width='160px' />
+          <Skeleton height='36px' width='200px' />
+        </Flex>
+        <TableContainer borderWidth="1px" borderColor="gray.200" borderRadius="lg" overflow="hidden" minH={400} bg="white">
+          <Table>
+            <Thead bg="gray.50">
+              <Tr>
+                {[...Array(6)].map((_, i) => <Th key={i}><Skeleton height='16px' /></Th>)}
+              </Tr>
+            </Thead>
+            <Tbody>
+              {[...Array(6)].map((_, r) => (
+                <Tr key={r}>
+                  {[...Array(6)].map((__, c) => <Td key={c}><Skeleton height='16px' /></Td>)}
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
+      </Box>
+    )
+  }
+
   return (
-    <Box flex={1} p={6}>
-      <Box py={5} borderBottom={'1px solid lavendar'}> <Heading size="lg"> Orders </Heading> </Box>
+    <Box flex={1} p={6} bg="white" color="black">
+      <Box py={5} borderBottom={'1px solid #e2e8f0'}>
+        <Heading size="lg"> Orders </Heading>
+      </Box>
+
+      {/* Controls */}
+      <Flex justify="space-between" mt={4} mb={3} align="center">
+        <HStack spacing={2}>
+          <ButtonGroup size='sm' isAttached>
+            <Button variant={activeFilter === "All" ? "solid" : "outline"} onClick={() => filterMatches("All")} colorScheme={activeFilter === "All" ? 'blue' : undefined}>All</Button>
+            <Button variant={activeFilter === "Pending" ? "solid" : "outline"} onClick={() => filterMatches("Pending")} colorScheme={activeFilter === "Pending" ? 'blue' : undefined}>Pending</Button>
+            <Button variant={activeFilter === "awaiting-inspection" ? "solid" : "outline"} onClick={() => filterMatches("awaiting-inspection")} colorScheme={activeFilter === "awaiting-inspection" ? 'blue' : undefined}>Inspection</Button>
+            <Button variant={activeFilter === "completed" ? "solid" : "outline"} onClick={() => filterMatches("completed")} colorScheme={activeFilter === "completed" ? 'blue' : undefined}>Sold</Button>
+          </ButtonGroup>
+        </HStack>
+        <ButtonGroup size='sm'>
+          <Button variant='outline' onClick={exportOrdersCsv}>Export CSV</Button>
+          <Button colorScheme='blue' onClick={getData}>Refresh</Button>
+        </ButtonGroup>
+      </Flex>
+
+      {/* Status summary */}
+      <HStack spacing={4} mb={4}>
+        <Badge colorScheme='gray' px={3} py={1} borderRadius='full'>All: {orderList.length}</Badge>
+        <Badge colorScheme='blue' px={3} py={1} borderRadius='full'>Pending: {orderList.filter(o => o.order_status?.toLowerCase()==='pending').length}</Badge>
+        <Badge colorScheme='yellow' px={3} py={1} borderRadius='full'>Inspection: {orderList.filter(o => o.order_status?.toLowerCase()==='awaiting-inspection').length}</Badge>
+        <Badge colorScheme='green' px={3} py={1} borderRadius='full'>Sold: {orderList.filter(o => o.order_status?.toLowerCase()==='completed').length}</Badge>
+      </HStack>
 
       {/* Filter Tabs */}
       <Flex justify="space-between" mb={6}>
@@ -150,8 +238,13 @@ const OrderListAdmin = () => {
       </Flex>
 
       {/* Transactions Table */}
-      <TableContainer borderWidth="1px" borderColor="gray.200" borderRadius="lg" overflow="auto" pb={10} minH={400}>
-        <Table variant="simple">
+      <TableContainer borderWidth="1px" borderColor="gray.200" borderRadius="lg" overflow="auto" pb={4} minH={400} bg="white">
+        {(!paginated || paginated.length === 0) ? (
+          <Box p={8} textAlign='center'>
+            <Text color='gray.600'>No orders to display.</Text>
+          </Box>
+        ) : (
+        <Table variant="simple" color="black">
           <Thead bg="gray.50">
             <Tr columns={9}>
               <Th columns={3}>Car Listings</Th>
@@ -163,7 +256,7 @@ const OrderListAdmin = () => {
             </Tr>
           </Thead>
           <Tbody>
-            {matches?.map((order) => (
+            {paginated?.map((order) => (
               <Tr key={order?.uuid}>
                 <Td columnSpan={4}>
                   <Flex align="center">
@@ -214,10 +307,10 @@ const OrderListAdmin = () => {
                       variant="ghost"
                       size="sm"
                     />
-                    <MenuList>
-                      <MenuItem>View details</MenuItem>
-                      <MenuItem>Contact client</MenuItem>
-                      <MenuItem>Download invoice</MenuItem>
+                    <MenuList bg="white" color="black" borderColor="gray.200">
+                      <MenuItem color="black">View details</MenuItem>
+                      <MenuItem color="black">Contact client</MenuItem>
+                      <MenuItem color="black">Download invoice</MenuItem>
                     </MenuList>
                   </Menu>
                 </Td>
@@ -225,7 +318,17 @@ const OrderListAdmin = () => {
             ))}
           </Tbody>
         </Table>
+        )}
       </TableContainer>
+
+      {/* Pagination */}
+      <Flex justify='space-between' align='center' mt={3}>
+        <Text color='gray.600' fontSize='sm'>Page {page} of {totalPages}</Text>
+        <ButtonGroup size='sm'>
+          <Button variant='outline' isDisabled={page<=1} onClick={()=> setPage(p => Math.max(1, p-1))}>Previous</Button>
+          <Button variant='outline' isDisabled={page>=totalPages} onClick={()=> setPage(p => Math.min(totalPages, p+1))}>Next</Button>
+        </ButtonGroup>
+      </Flex>
     </Box>
   )
 }

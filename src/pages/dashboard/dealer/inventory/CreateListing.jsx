@@ -119,24 +119,52 @@ export default function AddListing() {
   }
 
   const handleCreate = async () => {
-    const res = await axios.post('/admin/dealership/listings/create/', jsonifyObject({
+    try{
+      const payload = {
         action: 'create-listing',
-        ...formData
-      })
-    )
-    const data = objectifyJSON(res.data)
+        listing_type: formData?.listing_type,
+        title: formData?.title,
+        brand: formData?.brand,
+        model: formData?.model,
+        vin: formData?.vin,
+        year: formData?.year ? Number(formData.year) : undefined,
+        price: formData?.price ? Number(formData.price) : undefined,
+        // normalize condition/usage
+        condition: formData?.condition || formData?.usage,
+        usage: formData?.condition || formData?.usage,
+        // normalize vehicle type/body
+        vehicle_type: formData?.vehicle_type || formData?.body,
+        body: formData?.body || formData?.vehicle_type,
+        // normalize fuel system
+        fuel_system: formData?.fuel_system || formData?.fuel,
+        transmission: formData?.transmission,
+        registration: formData?.registration,
+        mileage: formData?.mileage ? Number(formData.mileage) : undefined,
+        drivetrain: formData?.drivetrain,
+        doors: formData?.doors,
+        seats: formData?.seats,
+        features: Array.isArray(formData?.features) ? formData.features : [],
+        notes: formData?.notes,
+      };
 
-    if (res.status === 200){
-      setFormData({ ...formData, uuid: data.data.uuid})
-      toast({
-        title: "Listing submitted for review",
-        description: "We'll notify you once the review is complete.",
-        status: "success",
-        duration: 5000,
-        isClosable: true,
-      });
+      const res = await axios.post('/admin/dealership/listings/create/', jsonifyObject(payload));
+      const data = objectifyJSON(res.data)
 
-      return setCurrentStep(currentStep+1);
+      if (res.status === 200){
+        setFormData({ ...formData, uuid: data.data.uuid})
+        toast({
+          title: "Listing submitted for review",
+          description: "We'll notify you once the review is complete.",
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+
+        return setCurrentStep(currentStep+1);
+      }
+    }catch(error){
+      console.error('Create listing failed:', error);
+      notify({ title: 'Unable to create listing', body: error?.response?.data?.message || error?.message, color: 'red' })
     }
   }
   
@@ -161,20 +189,33 @@ export default function AddListing() {
   }
 
   return (
-    <Box>
+    <Box bg="gray.50" color="black">
       <Container maxW="9xl" pb={16}>
         <BackButton
           onClick={currentStep > 0 ? () => setCurrentStep(currentStep -1) : undefined}
         />
 
         <VStack spacing={8}>
-          <Box textAlign="center">
-            <Heading size="lg" className="bold">Add a Listing</Heading>
-            <Text color="gray.600">Upload your car in 3 easy steps!</Text>
+          <Box
+            bg="white"
+            borderWidth={1}
+            borderColor="gray.200"
+            borderRadius="xl"
+            boxShadow="sm"
+            p={{ base: 4, md: 6 }}
+          >
+            <Box textAlign="center">
+              <Heading size="lg" className="bold">Add a Listing</Heading>
+              <Text color="gray.600">Upload your car in 3 easy steps!</Text>
+            </Box>
           </Box>
 
-          <StepIndicator currentStep={currentStep} steps={steps} />
+          <Box bg="white" borderWidth={1} borderColor="gray.200" borderRadius="xl" boxShadow="sm" p={{ base: 4, md: 6 }} w="full">
+            <StepIndicator currentStep={currentStep} steps={steps} />
+          </Box>
+
           <Container maxW={{sm: '100%', lg: "85%"}}>
+            <Box bg="white" borderWidth={1} borderColor="gray.200" borderRadius="xl" boxShadow="sm" p={{ base: 4, md: 6 }}>
             <form style={{width:"100%", placeItems: 'center', placeContent: 'center'}} encType="multipart/form-data" ref={formRef} id="details-form" onSubmit={e => e.preventDefault()} method='post'>
               {currentStep === 0 && (
                   <VStack spacing={8} w="full">
@@ -247,6 +288,7 @@ export default function AddListing() {
                 </VStack>
               )}
             </form>
+            </Box>
           </Container>
         </VStack>
       </Container>

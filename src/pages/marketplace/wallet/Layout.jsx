@@ -58,8 +58,7 @@ function WalletLayout({ ...props }) {
   }
 
   function init(){
-    // getWallet();
-    // setTimeout(() => setLoadingState(false), 2000);
+    getWallet();
   }
 
   function hideNav(){
@@ -93,12 +92,9 @@ function WalletLayout({ ...props }) {
       ):(
         <Box
           w="280px"
-          position="fixed"
-          left="0"
-          h="100vh"
           bgColor="#fff"
-          zIndex="2"
           borderRightWidth={1}
+          borderColor="gray.200"
           p={6}
           boxShadow="sm"
         >
@@ -108,7 +104,7 @@ function WalletLayout({ ...props }) {
     }
 
       {/* Main Content */}
-      <Box flex={1} ml={!isMobile && "280px"}>
+      <Box flex={1}>
         <Container maxW="container.xl" pb={10}>
           {isMobile && 
             <Box pt={2}>
@@ -142,9 +138,9 @@ const Navigation = ({ authUser, wallet}) => (
       />
     </HStack>
 
-    <Box borderWidth={1} borderRadius="lg" p={4} bg="gray.50">
+    <Box borderWidth={1} borderRadius="lg" p={4} bg="white" borderColor="gray.200" boxShadow="sm">
       <Text fontSize="sm" color="gray.600">Current balance</Text>
-      <Heading size="md">₦{wallet?.balance ? `${wallet.balance.toLocaleString()}` : '0'}</Heading>
+      <Heading size="md">₦{wallet?.balance ? `${Number(wallet.balance).toLocaleString()}` : '0'}</Heading>
     </Box>
 
     <VStack align="stretch" spacing={2}>
@@ -157,8 +153,13 @@ const Navigation = ({ authUser, wallet}) => (
           variant={'ghost'}
           justifyContent="start"
           borderRadius="md"
-          _hover={{ bg: 'gray.50' }}
+          bg="transparent"
+          color="gray.700"
+          _hover={{ bg: 'gray.50', color: 'gray.900' }}
           _activeLink={{ bg: 'blue.50', color: 'blue.700', borderLeftWidth: 3, borderLeftColor: 'primary' }}
+          sx={{
+            '& svg': { color: 'currentColor' },
+          }}
         >
           {item.label}
         </Button>

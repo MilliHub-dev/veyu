@@ -29,7 +29,7 @@ function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
       w="300px"
       borderRightWidth={1}
       position="relative"
-      h="calc(100vh - 65px)"
+      h="100%"
       overflow="hidden"
       {...props}
     >
@@ -148,8 +148,8 @@ function ChatLayout() {
   }
 
   return (
-    <Box position="fixed" left={'0px'} width={'100%'} height="100%" bg="white">
-      <HStack spacing={0}>
+    <Box w="100%" bg="white">
+      <HStack spacing={0} align="stretch" minH={{ base: '70vh', md: '70vh' }}>
       {room && isMobile ? null :
         <ChatSidebar
           conversations={conversations}
@@ -159,7 +159,7 @@ function ChatLayout() {
         />
       }
 
-        <Box w={room && "calc(100vw - 300px)"} h="calc(100vh - 65px)" position="relative" bg="white">
+        <Box flex={1} w={room ? { base: '100%', md: 'calc(100% - 300px)' } : '100%'} h="100%" position="relative" bg="white">
           {
             room &&
             <Outlet />
@@ -167,7 +167,7 @@ function ChatLayout() {
         </Box>
 
         {(!room && !isMobile) && 
-          <Box flex={1} h="full">
+          <Box flex={1} h="100%">
             <VStack h="full" justify="center" spacing={4} color="gray.500">
               <Text>Select a conversation to start chatting</Text>
             </VStack>

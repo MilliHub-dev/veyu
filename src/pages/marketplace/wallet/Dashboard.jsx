@@ -106,7 +106,7 @@ function WalletHomePage() {
         </HStack>
 
         <SimpleGrid columns={{ base: 1, lg: 3 }} gap={5}>
-          <Box borderWidth={1} borderRadius="xl" p={6} bg={cardBg} borderColor={borderCol} boxShadow="md">
+          <Box borderWidth={1} borderRadius="xl" p={6} bg="white" borderColor="gray.200" boxShadow="sm">
             <Text color="gray.600">Current Balance</Text>
             <Heading size="2xl" my={2}>₦{commaInt(wallet?.balance)}</Heading>
             <HStack color="green.500" mb={4}>
@@ -121,13 +121,13 @@ function WalletHomePage() {
             </HStack>
           </Box>
 
-          <Box borderWidth={1} borderRadius="xl" p={6} bg={cardBg} borderColor={borderCol} boxShadow="sm">
+          <Box borderWidth={1} borderRadius="xl" p={6} bg="white" borderColor="gray.200" boxShadow="sm">
             <Text color="gray.600" mb={2}>Inflow</Text>
             <Heading size="lg" color="green.500">₦{commaInt(inflow)}</Heading>
             <Text mt={2} color="gray.500">Total deposits</Text>
           </Box>
 
-          <Box borderWidth={1} borderRadius="xl" p={6} bg={cardBg} borderColor={borderCol} boxShadow="sm">
+          <Box borderWidth={1} borderRadius="xl" p={6} bg="white" borderColor="gray.200" boxShadow="sm">
             <Text color="gray.600" mb={2}>Outflow</Text>
             <Heading size="lg" color="red.500">₦{commaInt(outflow)}</Heading>
             <Text mt={2} color="gray.500">Payments and withdrawals</Text>
@@ -142,19 +142,16 @@ function WalletHomePage() {
             bg="primary"
             color="white"
             borderRadius="15px"
-            backgroundImage={`url('')`}
-            backgroundRepeat={'no-repeat'}
-            backgroundSize="contain"
-            backgroundPosition="bottom"
+            borderWidth={1}
+            borderColor="primary"
             boxShadow="sm"
           >
-           
-            <Text fontSize="lg" fontWeight="medium">
+            <Text fontSize="lg" fontWeight="medium" color="white">
               Invite your friends to Veyu and get up to 3% cashback on payments with wallet.
             </Text>
           </Box>
 
-          <Box borderWidth={1} borderRadius="xl" p={6} bg={cardBg} borderColor={borderCol} boxShadow="sm">
+          <Box borderWidth={1} borderRadius="xl" p={6} bg="white" borderColor="gray.200" boxShadow="sm">
             <Heading size="sm" mb={4}>Quick Shortcuts</Heading>
             <HStack spacing={3} flexWrap="wrap">
               <Box as={Link} to='/rent'>

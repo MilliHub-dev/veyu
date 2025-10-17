@@ -57,6 +57,7 @@ import EditListingAdmin from './pages/dashboard/dealer/inventory/EditListing';
 import OrderListAdmin from './pages/dashboard/dealer/orders/OrderList';
 import AnalyticsDashboard from './pages/dashboard/dealer/analytics/AnalyticsOverview';
 import DealershipSettings from './pages/dashboard/dealer/settings/Settings';
+import DealerSupport from './pages/dashboard/dealer/Support';
 
 // Wallet
 import WalletLayout from './pages/marketplace/wallet/Layout';
@@ -68,8 +69,8 @@ import WalletWithdrawalPage from './pages/marketplace/wallet/Withdraw';
 
 const theme = extendTheme({
   config: {
-    initialColorMode: 'system',
-    useSystemColorMode: true,
+    initialColorMode: 'light',
+    useSystemColorMode: false,
   },
   colors: {
     'primary': '#f39f48',
@@ -281,7 +282,7 @@ function App() {
                       <Route ErrorBoundary={ErrorBoundary} path='/orders' element={<DealerDashboard />} />
                       <Route ErrorBoundary={ErrorBoundary} path='/analytics' element={<AnalyticsDashboard />} />
                       <Route ErrorBoundary={ErrorBoundary} path='/settings' element={<DealershipSettings />} />
-                      <Route ErrorBoundary={ErrorBoundary} path='/support' element={<DealerDashboard />} />
+                      <Route ErrorBoundary={ErrorBoundary} path='/support' element={<DealerSupport />} />
                       <Route ErrorBoundary={ErrorBoundary} path='/notifications' element={<NotificationsPage />} />
                       <Route ErrorBoundary={ErrorBoundary} path='/*' element={<Navigate to={'/dashboard'} />} />
                     </Route>

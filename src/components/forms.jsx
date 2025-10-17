@@ -18,6 +18,8 @@ import {
   FormControl,
   FormLabel,
   InputGroup,
+  InputLeftElement,
+  InputRightAddon,
   // FadeIn,
   Badge,
   useToast,
@@ -40,7 +42,7 @@ import { useState, useEffect, useContext, useRef } from "react";
 export function ListingReviewCard({ formData }) {
   return (
     <VStack spacing={6} align="stretch" maxW="600px" mx="auto">
-      <Box borderWidth={1} borderRadius="lg" overflow="hidden">
+      <Box borderWidth={1} borderRadius="lg" overflow="hidden" borderColor="gray.200" bg="white" boxShadow="sm">
         <Image
           src={formData?.images[0]?.previewUrl || "/placeholder.svg"}
           alt="Car preview"
@@ -216,6 +218,7 @@ export function DocumentUploader({ title, description, data, onUpload, maxFileSi
         onDragOver={handleDragOver}
         cursor="pointer"
         onClick={() => document.getElementById(`upload-${title}`).click()}
+        boxShadow="sm"
       >
         <VStack h="full" justify="center" spacing={2}>
           <Upload size={24} className="text-gray-400" />
@@ -233,9 +236,9 @@ export function DocumentUploader({ title, description, data, onUpload, maxFileSi
       </Box>
       <Box my={10} w="100%">
         {uploads?.map((file) => (
-          <Box key={file.file.name || file.previewUrl} my={2} px={3} as={Flex} justifyContent="space-between" alignItems={'center'} py={2} width={'full'} borderWidth="2px" borderRadius="10px" borderColor="primary">
-            <Text color="primary"> {file.file.name} </Text>
-            <IconButton onClick={() => removeItem(file)} color="red" borderColor="red" variant="outline" borderRadius="full" icon={<DeleteIcon />} />
+          <Box key={file.file.name || file.previewUrl} my={2} px={3} as={Flex} justifyContent="space-between" alignItems={'center'} py={2} width={'full'} borderWidth="1px" borderRadius="10px" borderColor="gray.200" bg="white" boxShadow="sm">
+            <Text> {file.file.name} </Text>
+            <IconButton onClick={() => removeItem(file)} colorScheme="red" variant="outline" borderRadius="full" icon={<DeleteIcon />} />
           </Box>
         ))}
       </Box>
@@ -329,10 +332,10 @@ export function ImageUploader({ title, description, data, onUpload, limit=12 }) 
         <Input multiple id={`upload-${title}`} type="file" hidden onChange={handleUpload} accept="image/*" />
       </Box>
       
-      <Flex gap={4} overflowX="auto" w="100%" flexWrap="nowrap" placeItems="center">
+      <Flex gap={4} overflowX="auto" w="100%" flexWrap="nowrap" placeItems="center" py={1}>
         {uploads?.map((image, idx) => (
-          <Box key={image.previewUrl} rounded={"lg"} minW={'200px'} maxW="200px" position="relative">
-            <Image h="120px" w={'100%'} mb={2} src={image?.previewUrl} borderRadius="10px" />
+          <Box key={image.previewUrl} rounded={"lg"} minW={'200px'} maxW="200px" position="relative" bg="white" borderWidth="1px" borderColor="gray.200" boxShadow="sm">
+            <Image h="140px" w={'100%'} mb={2} src={image?.previewUrl} borderRadius="10px" objectFit="cover" bg="gray.100" />
             <Badge bg="gray.200" color="primary" size="md" py="5px" px="12px" placeItems="center" position="absolute" top="5px" right="5px" borderRadius="full">{`${idx+1}`}</Badge>
             <IconButton onClick={() => removeItem(image)} colorScheme="red" position="absolute" bottom="15px" right="5px" borderRadius="full" size="sm" icon={<CloseIcon />} />
           </Box>
@@ -359,65 +362,84 @@ const CarBrands = [
 
 // Car Details Form Component
 export function CreateRentalForm({ formData, setFormData }) {
+  const labelProps = { fontWeight: '600', color: 'gray.700' };
+  const fieldProps = {
+    bg: 'white',
+    color: 'black',
+    variant: 'outline',
+    borderWidth: '1px',
+    borderColor: 'gray.400',
+    _placeholder: { color: 'gray.600', opacity: 1 },
+    _hover: { borderColor: 'gray.500' },
+    focusBorderColor: 'blue.400',
+    _focusVisible: { borderColor: 'blue.400', boxShadow: '0 0 0 1px rgba(49,130,206,0.6)' },
+  };
+  const selectProps = { ...fieldProps, sx: { option: { backgroundColor: 'white', color: 'black' } } };
 
   return (
     <VStack spacing={6} align="stretch" w="full">
       <FormControl isRequired>
-        <FormLabel>Listing Title</FormLabel>
+        <FormLabel {...labelProps}>Listing Title</FormLabel>
         <Input
           placeholder="eg Ford Focus Mini Edition"
           isRequired={true}
           name="title"
           value={formData.title}
           onInput={(e) => setFormData({ ...formData, title: e.target.value })}
+          {...fieldProps}
         />
       </FormControl>
 
       <SimpleGrid columns={{base: 1, md: 2}} spacing={6}>
         
         <FormControl isRequired>
-          <FormLabel>Car Brand</FormLabel>
+          <FormLabel {...labelProps}>Car Brand</FormLabel>
           <Select
             placeholder="Select brand"
             isRequired={true}
             name="brand"
             value={formData.brand}
             onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            {...selectProps}
           >
-            {CarBrands?.map(brand => <option value={brand}>{brand}</option>)}
+            {CarBrands?.map(brand => <option key={brand} value={brand}>{brand}</option>)}
           </Select>
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Model</FormLabel>
+          <FormLabel {...labelProps}>Model</FormLabel>
           <Input
             placeholder="Car model"
             isRequired={true}
             value={formData.model}
             onInput={(e) => setFormData({ ...formData, model: e.target.value })}
+            {...fieldProps}
           />
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Rental Price</FormLabel>
+          <FormLabel {...labelProps}>Rental Price</FormLabel>
           <InputGroup>
+            <InputLeftElement pointerEvents="none" color="gray.500">₦</InputLeftElement>
             <Input
               type="number"
               isRequired={true}
               placeholder="Enter price"
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              {...fieldProps}
             />
           </InputGroup>
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Payment Cycle</FormLabel>
+          <FormLabel {...labelProps}>Payment Cycle</FormLabel>
           <Select
            name="payment-cycle"
            isRequired
            value={formData.payment_cycle}
            onChange={(e) => setFormData({ ...formData, payment_cycle: e.target.value })}
+           {...selectProps}
           >
             <option value='day'>Daily</option>
             <option value='week'>Weekly</option>
@@ -427,13 +449,14 @@ export function CreateRentalForm({ formData, setFormData }) {
         </FormControl>
         
         <FormControl isRequired>
-          <FormLabel>Condition</FormLabel>
+          <FormLabel {...labelProps}>Condition</FormLabel>
           <Select
             placeholder="Choose condition"
             name="condition"
             isRequired={true}
-            value={formData.usage}
-            onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
+            value={formData.condition || formData.usage}
+            onChange={(e) => setFormData({ ...formData, condition: e.target.value, usage: e.target.value })}
+            {...selectProps}
           >
             <option value="new">New</option>
             <option value="local-used">Used (Local)</option>
@@ -443,21 +466,23 @@ export function CreateRentalForm({ formData, setFormData }) {
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>VIN/Chassis Number</FormLabel>
+          <FormLabel {...labelProps}>VIN/Chassis Number</FormLabel>
           <Input
             placeholder="Enter Number..."
             value={formData.vin}
             onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
+            {...fieldProps}
           />
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Vehicle Type</FormLabel>
+          <FormLabel {...labelProps}>Vehicle Type</FormLabel>
           <Select
             placeholder="Select Vehicle Type"
-            value={formData.body}
+            value={formData.vehicle_type || formData.body}
             name="vehicle_type"
-            onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value, body: e.target.value })}
+            {...selectProps}
           >
             <option value="sedan">Sedan</option>
             <option value="suv">SUV</option>
@@ -468,12 +493,13 @@ export function CreateRentalForm({ formData, setFormData }) {
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Fuel System</FormLabel>
+          <FormLabel {...labelProps}>Fuel System</FormLabel>
           <Select
             placeholder="Select fuel type"
-            value={formData.fuel}
+            value={formData.fuel_system || formData.fuel}
             name="fuel_system"
-            onChange={(e) => setFormData({ ...formData, fuel_system: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, fuel_system: e.target.value, fuel: e.target.value })}
+            {...selectProps}
           >
             <option value="petrol">Petrol</option>
             <option value="diesel">Diesel</option>
@@ -483,13 +509,14 @@ export function CreateRentalForm({ formData, setFormData }) {
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Transmission</FormLabel>
+          <FormLabel {...labelProps}>Transmission</FormLabel>
           <Select
             name="transmission"
             isRequired={true}
             placeholder="Select transmission"
             value={formData.transmission}
             onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}
+            {...selectProps}
           >
             <option value="auto">Automatic</option>
             <option value="manual">Manual</option>
@@ -497,12 +524,13 @@ export function CreateRentalForm({ formData, setFormData }) {
         </FormControl>
       
         <FormControl isRequired>
-          <FormLabel>Doors</FormLabel>
+          <FormLabel {...labelProps}>Doors</FormLabel>
           <Select
             placeholder="Select Door number"
             value={formData.doors}
             name="doors"
             onChange={(e) => setFormData({ ...formData, doors: e.target.value })}
+            {...selectProps}
           >
             <option>2</option>
             <option>3</option>
@@ -511,12 +539,13 @@ export function CreateRentalForm({ formData, setFormData }) {
         </FormControl>
         
         <FormControl isRequired>
-          <FormLabel>Seats</FormLabel>
+          <FormLabel {...labelProps}>Seats</FormLabel>
           <Select
             placeholder="Select seats number"
             value={formData.seats}
             name="seats"
             onChange={(e) => setFormData({ ...formData, seats: e.target.value })}
+            {...selectProps}
           >
             <option>2</option>
             <option>4</option>
@@ -526,25 +555,30 @@ export function CreateRentalForm({ formData, setFormData }) {
         </FormControl>
       
         <FormControl isRequired>
-          <FormLabel>Mileage</FormLabel>
-          <Input
-            name="mileage"
-            isRequired={true}
-            type="number"
-            min={0}
-            placeholder="0 miles"
-            value={formData.mileage}
-            onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
-          />
+          <FormLabel {...labelProps}>Mileage</FormLabel>
+          <InputGroup>
+            <Input
+              name="mileage"
+              isRequired={true}
+              type="number"
+              min={0}
+              placeholder="0"
+              value={formData.mileage}
+              onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+              {...fieldProps}
+            />
+            <InputRightAddon>mi</InputRightAddon>
+          </InputGroup>
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Drive train</FormLabel>
+          <FormLabel {...labelProps}>Drive train</FormLabel>
           <Select
             placeholder="Choose an option"
             value={formData.drivetrain}
             name="drivetrain"
             onChange={(e) => setFormData({ ...formData, drivetrain: e.target.value })}
+            {...selectProps}
           >
             <option value="4WD">4WD (4 Wheel drive)</option>
             <option value="AWD">AWD (All Wheel drive)</option>
@@ -554,7 +588,7 @@ export function CreateRentalForm({ formData, setFormData }) {
       </SimpleGrid>
 
       <FormControl isRequired>
-        <FormLabel>Features</FormLabel>
+        <FormLabel {...labelProps}>Features</FormLabel>
         <Flex gap={3} w="full" flexWrap="wrap">
           {
             CarFeatures?.map((feature) => 
@@ -598,13 +632,14 @@ export function CreateRentalForm({ formData, setFormData }) {
       </FormControl>
 
       <FormControl>
-        <FormLabel>Seller Notes <small>(optional)</small></FormLabel>
+        <FormLabel {...labelProps}>Seller Notes <small>(optional)</small></FormLabel>
         <Textarea
           placeholder="Enter a description or any information that might be relevant to the customer..."
           value={formData.notes}
           name="notes"
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           maxLength={700}
+          {...fieldProps}
         />
         <Text fontSize="xs" color="gray.500" mt={1}>
           Maximum of 700 characters
@@ -617,24 +652,38 @@ export function CreateRentalForm({ formData, setFormData }) {
 
 // Car Details Form Component
 export function EditListingForm({ formData, setFormData }) {
+  const labelProps = { fontWeight: '600', color: 'gray.700' };
+  const fieldProps = {
+    bg: 'white',
+    color: 'black',
+    variant: 'outline',
+    borderWidth: '1px',
+    borderColor: 'gray.400',
+    _placeholder: { color: 'gray.600', opacity: 1 },
+    _hover: { borderColor: 'gray.500' },
+    focusBorderColor: 'blue.400',
+    _focusVisible: { borderColor: 'blue.400', boxShadow: '0 0 0 1px rgba(49,130,206,0.6)' },
+  };
+  const selectProps = { ...fieldProps, sx: { option: { backgroundColor: 'white', color: 'black' } } };
 
   return (
     <VStack spacing={6} align="stretch" w="full">
       <FormControl isRequired>
-        <FormLabel>Listing Title</FormLabel>
+        <FormLabel {...labelProps}>Listing Title</FormLabel>
         <Input
           placeholder="eg Ford Focus Mini Edition"
           isRequired={true}
           name="title"
           value={formData?.title}
           onInput={(e) => setFormData({ ...formData, title: e.target.value })}
+          {...fieldProps}
         />
       </FormControl>
 
       <SimpleGrid columns={{base: 1, md: 2}} spacing={6}>
         
         <FormControl isRequired>
-          <FormLabel>Car Brand</FormLabel>
+          <FormLabel {...labelProps}>Car Brand</FormLabel>
           <Select
             placeholder="Select brand"
             isRequired={true}
@@ -645,30 +694,34 @@ export function EditListingForm({ formData, setFormData }) {
                 { ...formData, vehicle: {...formData?.vehicle, brand: e.target.value}
               })
             }
+            {...selectProps}
           >
             {CarBrands?.map(brand => <option value={brand}>{brand}</option>)}
           </Select>
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Model</FormLabel>
+          <FormLabel {...labelProps}>Model</FormLabel>
           <Input
             placeholder="Car model"
             isRequired={true}
             value={formData?.vehicle?.model}
             onInput={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, model: e.target.value} })}
+            {...fieldProps}
           />
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Rental Price</FormLabel>
+          <FormLabel {...labelProps}>Rental Price</FormLabel>
           <InputGroup>
+            <InputLeftElement pointerEvents="none" color="gray.500">₦</InputLeftElement>
             <Input
               type="number"
               isRequired={true}
               placeholder="Enter price"
               value={formData?.price}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              {...fieldProps}
             />
           </InputGroup>
         </FormControl>
@@ -676,12 +729,13 @@ export function EditListingForm({ formData, setFormData }) {
         {
           formData?.listing_type === 'rental' &&
           <FormControl isRequired>
-            <FormLabel>Payment Cycle</FormLabel>
+            <FormLabel {...labelProps}>Payment Cycle</FormLabel>
             <Select
              name="payment-cycle"
              isRequired
              value={formData?.payment_cycle}
              onChange={(e) => setFormData({ ...formData, payment_cycle: e.target.value })}
+             {...selectProps}
             >
               <option value='day'>Daily</option>
               <option value='week'>Weekly</option>
@@ -692,13 +746,14 @@ export function EditListingForm({ formData, setFormData }) {
         }
         
         <FormControl isRequired>
-          <FormLabel>Condition</FormLabel>
+          <FormLabel {...labelProps}>Condition</FormLabel>
           <Select
             placeholder="Choose condition"
             name="condition"
             isRequired={true}
             value={formData?.vehicle?.condition}
             onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, condition: e.target.value} })}
+            {...selectProps}
           >
             <option value="new">New</option>
             <option value="used-local">Local Used</option>
@@ -707,21 +762,23 @@ export function EditListingForm({ formData, setFormData }) {
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>VIN/Chassis Number</FormLabel>
+          <FormLabel {...labelProps}>VIN/Chassis Number</FormLabel>
           <Input
             placeholder="Enter Number..."
             value={formData?.vehicle?.vin}
             onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, vin: e.target.value} })}
+            {...fieldProps}
           />
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Vehicle Type</FormLabel>
+          <FormLabel {...labelProps}>Vehicle Type</FormLabel>
           <Select
             placeholder="Select Vehicle Type"
             value={formData?.vehicle?.type}
             name="vehicle_type"
             onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, vehicle_type: e.target.value} })}
+            {...selectProps}
           >
             <option value="sedan">Sedan</option>
             <option value="suv">SUV</option>
@@ -732,12 +789,13 @@ export function EditListingForm({ formData, setFormData }) {
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Fuel System</FormLabel>
+          <FormLabel {...labelProps}>Fuel System</FormLabel>
           <Select
             placeholder="Select fuel type"
             value={formData?.vehicle?.fuel_system}
             name="fuel_system"
             onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, fuel_system: e.target.value} })}
+            {...selectProps}
           >
             <option>Petrol</option>
             <option>Diesel</option>
@@ -747,13 +805,14 @@ export function EditListingForm({ formData, setFormData }) {
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Transmission</FormLabel>
+          <FormLabel {...labelProps}>Transmission</FormLabel>
           <Select
             name="transmission"
             isRequired={true}
             placeholder="Select transmission"
             value={formData?.vehicle?.transmission}
             onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, transmission: e.target.value} })}
+            {...selectProps}
           >
             <option>Automatic</option>
             <option>Manual</option>
@@ -761,12 +820,13 @@ export function EditListingForm({ formData, setFormData }) {
         </FormControl>
       
         <FormControl isRequired>
-          <FormLabel>Doors</FormLabel>
+          <FormLabel {...labelProps}>Doors</FormLabel>
           <Select
             placeholder="Select Door number"
             value={formData?.vehicle?.doors}
             name="doors"
             onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, doors: e.target.value} })}
+            {...selectProps}
           >
             <option>2</option>
             <option>3</option>
@@ -775,12 +835,13 @@ export function EditListingForm({ formData, setFormData }) {
         </FormControl>
         
         <FormControl isRequired>
-          <FormLabel>Seats</FormLabel>
+          <FormLabel {...labelProps}>Seats</FormLabel>
           <Select
             placeholder="Select seats number"
             value={formData?.vehicle?.seats}
             name="seats"
             onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, seats: e.target.value} })}
+            {...selectProps}
           >
             <option>2</option>
             <option>4</option>
@@ -790,7 +851,7 @@ export function EditListingForm({ formData, setFormData }) {
         </FormControl>
       
         <FormControl isRequired>
-          <FormLabel>Mileage</FormLabel>
+          <FormLabel {...labelProps}>Mileage</FormLabel>
           <Input
             name="mileage"
             isRequired={true}
@@ -799,16 +860,18 @@ export function EditListingForm({ formData, setFormData }) {
             placeholder="0 miles"
             value={formData?.vehicle?.mileage}
             onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, mileage: e.target.value} })}
+            {...fieldProps}
           />
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Drive train</FormLabel>
+          <FormLabel {...labelProps}>Drive train</FormLabel>
           <Select
             placeholder="Choose an option"
             value={formData?.vehicle?.drivetrain}
             name="drivetrain"
             onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, drivetrain: e.target.value} })}
+            {...selectProps}
           >
             <option value="4WD">4WD (4 Wheel drive)</option>
             <option value="AWD">AWD (All Wheel drive)</option>
@@ -818,7 +881,7 @@ export function EditListingForm({ formData, setFormData }) {
       </SimpleGrid>
 
       <FormControl isRequired>
-        <FormLabel>Features</FormLabel>
+        <FormLabel {...labelProps}>Features</FormLabel>
         <Flex gap={3} w="full" flexWrap="wrap">
           {
             CarFeatures?.map((feature) => 
@@ -864,13 +927,14 @@ export function EditListingForm({ formData, setFormData }) {
       </FormControl>
 
       <FormControl>
-        <FormLabel>Seller Notes <small>(optional)</small></FormLabel>
+        <FormLabel {...labelProps}>Seller Notes <small>(optional)</small></FormLabel>
         <Textarea
           placeholder="Enter a description or any information that might be relevant to the customer..."
           value={formData?.notes}
           name="notes"
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           maxLength={700}
+          {...fieldProps}
         />
         <Text fontSize="xs" color="gray.500" mt={1}>
           Maximum of 700 characters
@@ -882,60 +946,80 @@ export function EditListingForm({ formData, setFormData }) {
 
 // Car Details Form Component
 export function CreateSaleForm({ formData, setFormData }) {
+  const labelProps = { fontWeight: '600', color: 'gray.700' };
+  const fieldProps = {
+    bg: 'white',
+    color: 'black',
+    variant: 'outline',
+    borderWidth: '1px',
+    borderColor: 'gray.400',
+    _placeholder: { color: 'gray.600', opacity: 1 },
+    _hover: { borderColor: 'gray.500' },
+    focusBorderColor: 'blue.400',
+    _focusVisible: { borderColor: 'blue.400', boxShadow: '0 0 0 1px rgba(49,130,206,0.6)' },
+  };
+  const selectProps = { ...fieldProps, sx: { option: { backgroundColor: 'white', color: 'black' } } };
+
   return (
     <VStack spacing={6} align="stretch" w="full">
       <FormControl isRequired>
-        <FormLabel>Listing Title</FormLabel>
+        <FormLabel {...labelProps}>Listing Title</FormLabel>
         <Input
           placeholder="eg Ford Focus Mini Edition"
           isRequired={true}
           name="title"
           value={formData.title}
           onInput={(e) => setFormData({ ...formData, title: e.target.value })}
+          {...fieldProps}
         />
       </FormControl>
 
       <SimpleGrid columns={{base: 1, md: 2}} spacing={6}>
+        
         <FormControl isRequired>
-          <FormLabel>Car Brand</FormLabel>
+          <FormLabel {...labelProps}>Car Brand</FormLabel>
           <Select
             placeholder="Select brand"
             isRequired={true}
             name="brand"
             value={formData.brand}
             onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            {...selectProps}
           >
             {CarBrands?.map(brand => <option key={brand} value={brand}>{brand}</option>)}
           </Select>
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Model</FormLabel>
+          <FormLabel {...labelProps}>Model</FormLabel>
           <Input
             placeholder="Car model"
             isRequired={true}
             value={formData.model}
             onInput={(e) => setFormData({ ...formData, model: e.target.value })}
+            {...fieldProps}
           />
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>VIN/Chassis Number</FormLabel>
+          <FormLabel {...labelProps}>VIN/Chassis Number</FormLabel>
           <Input
             placeholder="Enter Number..."
             value={formData.vin}
             onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
+            {...fieldProps}
           />
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Year of Manufacture</FormLabel>
+          <FormLabel {...labelProps}>Year of Manufacture</FormLabel>
           <Select
             placeholder="Select year"
             isRequired={true}
             name="year"
             value={formData.year}
             onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+            {...selectProps}
           >
             {Array.from({ length: 30 }, (_, i) => (
               <option key={i} value={new Date().getFullYear() - i}>
@@ -946,26 +1030,29 @@ export function CreateSaleForm({ formData, setFormData }) {
         </FormControl>
         
         <FormControl isRequired>
-          <FormLabel>Price</FormLabel>
+          <FormLabel {...labelProps}>Price</FormLabel>
           <InputGroup>
+            <InputLeftElement pointerEvents="none" color="gray.500">₦</InputLeftElement>
             <Input
               type="number"
               isRequired={true}
               placeholder="Enter price"
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              {...fieldProps}
             />
           </InputGroup>
         </FormControl>
         
         <FormControl isRequired>
-          <FormLabel>Condition</FormLabel>
+          <FormLabel {...labelProps}>Condition</FormLabel>
           <Select
             placeholder="Choose condition"
             name="condition"
             isRequired={true}
             value={formData.usage}
-            onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, condition: e.target.value, usage: e.target.value })}
+            {...selectProps}
           >
             <option value="new">New</option>
             <option value="local-used">Used (Local)</option>
@@ -975,12 +1062,13 @@ export function CreateSaleForm({ formData, setFormData }) {
         </FormControl>
       
         <FormControl isRequired>
-          <FormLabel>Vehicle Type</FormLabel>
+          <FormLabel {...labelProps}>Vehicle Type</FormLabel>
           <Select
             placeholder="Select Vehicle Type"
             value={formData.body}
             name="vehicle_type"
-            onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value, body: e.target.value })}
+            {...selectProps}
           >
             <option value="sedan">Sedan</option>
             <option value="suv">SUV</option>
@@ -991,12 +1079,13 @@ export function CreateSaleForm({ formData, setFormData }) {
         </FormControl>
         
         <FormControl isRequired>
-          <FormLabel>Fuel System</FormLabel>
+          <FormLabel {...labelProps}>Fuel System</FormLabel>
           <Select
             placeholder="Select fuel type"
             value={formData.fuel}
             name="fuel_system"
-            onChange={(e) => setFormData({ ...formData, fuel_system: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, fuel_system: e.target.value, fuel: e.target.value })}
+            {...selectProps}
           >
             <option value="petrol">Petrol</option>
             <option value="diesel">Diesel</option>
@@ -1006,13 +1095,14 @@ export function CreateSaleForm({ formData, setFormData }) {
         </FormControl>
       
         <FormControl isRequired>
-          <FormLabel>Transmission</FormLabel>
+          <FormLabel {...labelProps}>Transmission</FormLabel>
           <Select
             name="transmission"
             isRequired={true}
             placeholder="Select transmission"
             value={formData.transmission}
             onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}
+            {...selectProps}
           >
             <option value="auto">Automatic</option>
             <option value="manual">Manual</option>
@@ -1020,12 +1110,13 @@ export function CreateSaleForm({ formData, setFormData }) {
         </FormControl>
         
         <FormControl isRequired>
-          <FormLabel>Registration</FormLabel>
+          <FormLabel {...labelProps}>Registration</FormLabel>
           <Select
             placeholder="Select registration"
             value={formData.registration}
             name="registration"
             onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
+            {...selectProps}
           >
             <option>Registered</option>
             <option>Unregistered</option>
@@ -1033,7 +1124,7 @@ export function CreateSaleForm({ formData, setFormData }) {
         </FormControl>
       
         <FormControl isRequired>
-          <FormLabel>Mileage</FormLabel>
+          <FormLabel {...labelProps}>Mileage</FormLabel>
           <Input
             name="mileage"
             isRequired={true}
@@ -1042,16 +1133,18 @@ export function CreateSaleForm({ formData, setFormData }) {
             placeholder="0 miles"
             value={formData.mileage}
             onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+            {...fieldProps}
           />
         </FormControl>
         
         <FormControl isRequired>
-          <FormLabel>Drive train</FormLabel>
+          <FormLabel {...labelProps}>Drive train</FormLabel>
           <Select
             placeholder="Choose an option"
             value={formData.drivetrain}
             name="drivetrain"
             onChange={(e) => setFormData({ ...formData, drivetrain: e.target.value })}
+            {...selectProps}
           >
             <option value="4WD">4WD (4 Wheel drive)</option>
             <option value="AWD">AWD (All Wheel drive)</option>
@@ -1060,12 +1153,13 @@ export function CreateSaleForm({ formData, setFormData }) {
         </FormControl>
       
         <FormControl isRequired>
-          <FormLabel>Doors</FormLabel>
+          <FormLabel {...labelProps}>Doors</FormLabel>
           <Select
             placeholder="Select"
             value={formData.doors}
             name="doors"
             onChange={(e) => setFormData({ ...formData, doors: e.target.value })}
+            {...selectProps}
           >
             <option>2</option>
             <option>3</option>
@@ -1074,12 +1168,13 @@ export function CreateSaleForm({ formData, setFormData }) {
         </FormControl>
         
         <FormControl isRequired>
-          <FormLabel>Seats</FormLabel>
+          <FormLabel {...labelProps}>Seats</FormLabel>
           <Select
             placeholder="Select seats number"
             value={formData.seats}
             name="seats"
             onChange={(e) => setFormData({ ...formData, seats: e.target.value })}
+            {...selectProps}
           >
             <option>2</option>
             <option>4</option>
@@ -1090,13 +1185,14 @@ export function CreateSaleForm({ formData, setFormData }) {
       </SimpleGrid>
 
       <FormControl>
-        <FormLabel>Seller Notes <small>(optional)</small></FormLabel>
+        <FormLabel {...labelProps}>Seller Notes <small>(optional)</small></FormLabel>
         <Textarea
           placeholder="Enter a description or any information that might be relevant to the customer..."
           value={formData.notes}
           name="notes"
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           maxLength={400}
+          {...fieldProps}
         />
         <Text fontSize="xs" color="gray.500" mt={1}>
           Maximum of 400 characters
@@ -1105,4 +1201,3 @@ export function CreateSaleForm({ formData, setFormData }) {
     </VStack>
   )
 }
-
