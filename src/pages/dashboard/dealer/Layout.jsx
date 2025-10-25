@@ -74,59 +74,6 @@ function DealerDashboardLayout({children, hideSidebar, ...props}) {
   }
 
 
-  async function onVerification(type, data){
-    try{
-      if(type === 'success'){
-        const payload = {
-          verification_ref: data?.referenceId,
-          scope: [
-            'verified_id',
-            'verified_tin',
-            'verified_business',
-            'user.verified_email',
-            'verified_phone_number',
-          ],
-          object: 'dealership',
-          object_id: dealership.uuid,
-        }
-
-        const res = await axios.post(`/accounts/verify-business/`, jsonifyObject(payload));
-        const data = objectifyJSON(res.data);
-        if (res.status === 200){
-          notify({
-            title: data?.message || 'Verification success!',
-            color: 'green',
-            timeout: 2500,
-          });
-
-          return init();
-        }else{
-          notify({
-            title: data?.message || 'An error occurred, we could not verify your business.',
-            color: 'red',
-            timeout: 5000,
-          })
-        }
-      }else if(type === 'error'){
-        notify({
-          title: data?.message || 'An error occurred, we could not verify your business.',
-          color: 'red',
-          timeout: 5000,
-        })
-      }else if(type === 'begin'){
-      }else if(type === 'close'){
-        console.log("Verification Close")
-        // close of the modal
-      }else if(type === 'loading'){
-      }
-    }catch(error){
-      notify({
-        title: error?.message || 'An error occurred, we could not verify your business.',
-        color: 'red',
-        timeout: 5000,
-      })
-    }
-  }
 
   useEffect(() => {
     init();
@@ -157,7 +104,6 @@ function DealerDashboardLayout({children, hideSidebar, ...props}) {
 
   const context = {
     dealership,
-    onVerification,
   }
 
   return (
@@ -217,7 +163,7 @@ function DealerDashboardLayout({children, hideSidebar, ...props}) {
               </Box>
               {
                 !hideSidebar && !dealership?.verified_business && 
-                <VerificationNotice user={authUser} onVerification={onVerification} businessType={'dealer'} />
+                <VerificationNotice user={authUser} onRefresh={init} businessType={'dealer'} />
               }
               <Outlet />
             </Container>

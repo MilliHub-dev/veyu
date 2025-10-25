@@ -85,7 +85,8 @@ export const BusinessProfile = ({  }) => {
     const res = await axios.post('/admin/dealership/settings/', payload, {
       headers: {
         'Content-Type': 'multipart/form-data'
-      }
+      },
+      withCredentials: false  // Temporary workaround for CORS issue
     });
     const data = objectifyJSON(res.data);
 

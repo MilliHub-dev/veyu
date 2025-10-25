@@ -11,13 +11,16 @@ import {
     HStack,
     Image,
     Input,
+    InputGroup,
+    InputRightElement,
+    IconButton,
     Stack,
     Text
 } from "@chakra-ui/react";
 import { useContext, useState } from "react";
 import { GlobalStore } from "../../App";
 import {motion} from 'framer-motion';
-import { FaGoogle, FaFacebook, FaArrowRight } from "react-icons/fa";
+import { FaGoogle, FaFacebook, FaArrowRight, FaEye, FaEyeSlash } from "react-icons/fa";
 import { CenteredLayout } from "../../components";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../firebase";
@@ -26,15 +29,24 @@ import firebase from 'firebase/compat/app';
 export const LoginView = ({ ...props }) => {
     const self = this;
 
-    const {onAuthenticated, axios, notify,} = useContext(GlobalStore)
+    const context = useContext(GlobalStore);
+    const {onAuthenticated, axios, notify} = context;
+    
+    // Debug: Check if notify exists
+    console.log('GlobalStore context:', context);
+    console.log('notify function:', notify);
+    
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [provider, setProvider] = useState('veyu');
     const [rememberMe, setRemeberMe] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const redirect = useNavigate();
 
     async function handleLogin(e){
         e.preventDefault();
+        
+        console.log('Login attempt with:', { email, provider }); // Debug log
 
         try{
             const res = await axios.post('/accounts/login/', {
@@ -42,12 +54,18 @@ export const LoginView = ({ ...props }) => {
                 password,
                 provider,
             }, { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' } });
+            
+            console.log('Login response:', res); // Debug log
+            console.log('Response status:', res.status); // Debug log
+            console.log('Response data:', res.data); // Debug log
+            
             let data = res.data;
             if (typeof data === 'string'){
                 try { data = JSON.parse(data) } catch { data = { message: data } }
             }
 
             if (res.status === 200 && !data?.error){
+                console.log('Login successful, authenticating...'); // Debug log
                 onAuthenticated(data)
                 notify({
                     'title': 'Success',
@@ -60,9 +78,13 @@ export const LoginView = ({ ...props }) => {
                     default: redirect(`/home?user=${data.email}`); break;
                 }
             }else{
+                console.log('Login failed:', data); // Debug log
                 return onError(data?.message, true)
             }
         }catch(error){
+            console.error('Login error:', error); // Debug log
+            console.error('Error response:', error.response?.data); // Debug log
+            
             const serverMsg = error?.response?.data?.message
                 || (typeof error?.response?.data === 'string' ? error?.response?.data : null)
                 || error.message;
@@ -82,9 +104,8 @@ export const LoginView = ({ ...props }) => {
             const user = result.user;
             if (user){
                 const res = await axios.post('/accounts/login/', {
-                    provider: 'google',
                     email: user.email,
-                    password: ''
+                    provider: 'google',
                 }, { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' } });
                 let data = res.data;
                 if (typeof data === 'string'){
@@ -114,11 +135,15 @@ export const LoginView = ({ ...props }) => {
     };
     
     function onError(message, reload=false){
-        notify({
-            'title': 'Error!',
-            'body': message || 'Something went wrong!',
-            'color': 'red'
-        });
+        if (notify && typeof notify === 'function') {
+            notify({
+                'title': 'Error!',
+                'body': message || 'Something went wrong!',
+                'color': 'red'
+            });
+        } else {
+            console.error('Notify function not available:', message);
+        }
         if (reload){
             refresh();
         }
@@ -127,7 +152,6 @@ export const LoginView = ({ ...props }) => {
     function refresh(){
         setEmail('');
         setPassword('');
-        setProvider('veyu');
         setRemeberMe(false);
     }
 
@@ -168,14 +192,25 @@ export const LoginView = ({ ...props }) => {
 
                                         <FormControl name={'password'} my={2} isRequired>
                                             <FormLabel> Password </FormLabel>
-                                            <Input
-                                                type="password"
-                                                required={true}
-                                                value={password}
-                                                name="password"
-                                                onInput={e => setPassword(e.target.value)}
-                                                placeholder="Enter your password"
-                                            />
+                                            <InputGroup>
+                                                <Input
+                                                    type={showPassword ? "text" : "password"}
+                                                    required={true}
+                                                    value={password}
+                                                    name="password"
+                                                    onInput={e => setPassword(e.target.value)}
+                                                    placeholder="Enter your password"
+                                                />
+                                                <InputRightElement>
+                                                    <IconButton
+                                                        aria-label={showPassword ? "Hide password" : "Show password"}
+                                                        icon={showPassword ? <FaEyeSlash /> : <FaEye />}
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        variant="ghost"
+                                                        size="sm"
+                                                    />
+                                                </InputRightElement>
+                                            </InputGroup>
                                         </FormControl>
 
                                         <HStack justify="space-between" align="center" my={1}>

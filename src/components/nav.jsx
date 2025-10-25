@@ -169,10 +169,13 @@ export const UnauthenticatedNavbar = ({ props }) => {
     const isLoggedIn = Boolean(authUser);
 
     window.onscroll = (ev) => {
-      if(window.scrollY > 1000){
-        document.getElementById('navbar').classList.add('scrolled');
-      }else{
-        document.getElementById('navbar').classList.remove('scrolled');
+      const navbar = document.getElementById('navbar');
+      if(navbar){
+        if(window.scrollY > 1000){
+          navbar.classList.add('scrolled');
+        }else{
+          navbar.classList.remove('scrolled');
+        }
       }
     }
 
@@ -244,10 +247,13 @@ export const CustomerNavbar = ({ props }) => {
     const navColor = useColorModeValue('black', 'white');
 
     window.onscroll = (ev) => {
-      if(window.scrollY > 1000){
-        document.getElementById('navbar').classList.add('scrolled');
-      }else{
-        document.getElementById('navbar').classList.remove('scrolled');
+      const navbar = document.getElementById('navbar');
+      if(navbar){
+        if(window.scrollY > 1000){
+          navbar.classList.add('scrolled');
+        }else{
+          navbar.classList.remove('scrolled');
+        }
       }
     }
 
@@ -336,15 +342,15 @@ export const CustomerNavbar = ({ props }) => {
                 >{"Wallet"}</Button>
               }
 
-              <RLink to={'/chat'}><Icon viewBox='45' className='icon' color="primary"><MessageCircleIcon size={18} /></Icon></RLink>
-              <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color="primary"><BellIcon size={18} /></Icon></RLink>
-              <RLink to={'/cart'}><Icon viewBox='45' className='icon' color="primary"><ShoppingCartIcon size={18} /></Icon></RLink>
+              <RLink to={'/chat'}><Icon viewBox='45' className='icon' color="white"><MessageCircleIcon size={18} /></Icon></RLink>
+              <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color="white"><BellIcon size={18} /></Icon></RLink>
+              <RLink to={'/cart'}><Icon viewBox='45' className='icon' color="white"><ShoppingCartIcon size={18} /></Icon></RLink>
               {!isLaptop && 
                 <Menu to={`/dashboard`}>
                 {({ isOpen, onClose }) =>
                 <Fragment>
                   <MenuButton onClose={onClose} isOpen={isOpen}>
-                    <Icon viewBox='45' className='icon' color="primary"><UserIcon size={18} /></Icon>
+                    <Icon viewBox='45' className='icon' color="white"><UserIcon size={18} /></Icon>
                   </MenuButton>
                   <MenuList px={2}>
                     <Box my={3} placeItems="center">
@@ -1024,9 +1030,9 @@ export const Footer = ({ props }) => {
     {
       title: 'Product',
       links: [
-        {label: 'Buy a car', url: '/signup' }, 
-        {label: 'Sell your car', url: '/signup' },
-        {label: 'Rent a car', url: '/signup'},
+        {label: 'Buy a Vehicle', url: '/signup' }, 
+        {label: 'Sell your Vehicle', url: '/signup' },
+        {label: 'Rent a Vehicle', url: '/signup'},
         {label: 'Find Mechanic', url: '/signup'}
       ],
     },
@@ -1059,90 +1065,257 @@ export const Footer = ({ props }) => {
   ]
 
   return (
-    <Box bgGradient="linear(to-br, gray.900, gray.800)" color="white" pt={16} pb={8}>
-      <Container maxW="7xl">
+    <Box as="footer" bg="gray.900" color="white">
+      {/* CTA Section */}
+      <Box bg="primary" py={{ base: 12, md: 16 }}>
+        <Container maxW="7xl">
+          <Flex 
+            direction={{ base: 'column', md: 'row' }}
+            justify="space-between" 
+            align="center"
+            gap={6}
+          >
+            <VStack align={{ base: 'center', md: 'flex-start' }} spacing={3} flex={1}>
+              <Heading 
+                size={{ base: 'lg', md: 'xl' }} 
+                fontWeight="bold"
+                color="white"
+              >
+                Ready to get started?
+              </Heading>
+              <Text 
+                fontSize={{ base: 'md', md: 'lg' }} 
+                color="whiteAlpha.900"
+                textAlign={{ base: 'center', md: 'left' }}
+              >
+                Join thousands of dealers, mechanics, and Vehicle enthusiasts on Veyu.
+              </Text>
+            </VStack>
 
-        <Box pb={8}>
-          <Flex justifyContent="space-between" flexWrap="wrap" gap={6} align="center">
-            <Box>
-              <Heading size="lg" fontWeight="700">Grow with Veyu</Heading>
-              <Text fontSize="md" mt={2} color="whiteAlpha.800">Join a community of dealers, rentals, mechanics, and fleets.</Text>
-            </Box>
-
-            <Flex gap={3}>
-              <Button size="md" colorScheme="yellow" bg="tertiary" color="primary">Get Started</Button>
-              <Button size="md" variant="outline" borderColor="whiteAlpha.600">Learn More</Button>
-            </Flex>
-          </Flex>
-        </Box>
-
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 6 }} spacing={8} py={6} borderTopWidth={1} borderColor="whiteAlpha.200">
-          <Box gridColumn={{ base: 'span 1', lg: 'span 2' }}>
-            <Box width="150px" height="70px">
-              <Image src="/assets/images/VEYU MOBILE APP ICON1.jpg" mb={5} w="65px" alt="Veyu" />
-            </Box>
-
-            <Text fontSize="sm" color="whiteAlpha.800" maxW="xs">
-              Transactions made on Veyu are between you and the service provider. Veyu is not liable for third‑party transactions.
-            </Text>
-          </Box>
-          
-          {sections.map((section) => (
-            <Stack key={section.title} spacing={3}>
-              <Text fontWeight="bold">{section.title}</Text>
-              {section.links.map(({ label, url, coming}) => (
-                <Text
-                  key={label}
-                  as={url && RLink}
-                  to={url}
-                  fontSize="sm"
-                  color="whiteAlpha.800"
-                  cursor="pointer"
-                  _hover={{ color: 'primary' }}
-                >
-                  {label} {coming ? <Tag colorScheme="green" size="sm">coming soon</Tag> : null}
-                </Text>
-              ))}
-            </Stack>
-          ))}
-
-          <Stack spacing={3}>
-            <Text fontWeight="bold">Newsletter</Text>
-            <Text fontSize="sm" color="whiteAlpha.800">Get product updates and tips.</Text>
-            <HStack>
-              <Input placeholder="Your email" bg="whiteAlpha.100" borderColor="whiteAlpha.300" _placeholder={{ color: 'whiteAlpha.600' }} />
-              <Button colorScheme="blue">Subscribe</Button>
+            <HStack spacing={4}>
+              <Button 
+                size="lg" 
+                bg="white" 
+                color="primary"
+                _hover={{ bg: 'gray.100' }}
+                fontWeight="semibold"
+                px={8}
+              >
+                Get Started
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                borderColor="white"
+                color="white"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                fontWeight="semibold"
+                px={8}
+              >
+                Learn More
+              </Button>
             </HStack>
-          </Stack>
-        </SimpleGrid>
+          </Flex>
+        </Container>
+      </Box>
 
-        <Box pt={6} borderTopWidth={1} borderColor="whiteAlpha.200">
-          <Stack
+      {/* Main Footer Content */}
+      <Box py={{ base: 12, md: 16 }}>
+        <Container maxW="7xl">
+          <SimpleGrid 
+            columns={{ base: 1, sm: 2, md: 3, lg: 6 }} 
+            spacing={{ base: 8, md: 6 }}
+            mb={12}
+          >
+            {/* Brand Column */}
+            <VStack 
+              align={{ base: 'center', sm: 'flex-start' }}
+              spacing={4}
+              gridColumn={{ base: 'span 1', sm: 'span 2', lg: 'span 2' }}
+            >
+              <Image 
+                src="/assets/images/VEYU MOBILE APP ICON1.jpg" 
+                w="80px" 
+                alt="Veyu Logo"
+                borderRadius="md"
+              />
+              <Text 
+                fontSize="sm" 
+                color="gray.400" 
+                maxW="sm"
+                textAlign={{ base: 'center', sm: 'left' }}
+                lineHeight="tall"
+              >
+                Africa's largest vehicle marketplace. Buy, sell, rent vehicles and find trusted mechanics all in one platform.
+              </Text>
+              
+              {/* Social Media Icons */}
+              <HStack spacing={3} pt={2}>
+                {[Facebook, Twitter, Instagram, Linkedin, Youtube].map(
+                  (SocialIcon, index) => (
+                    <Box
+                      key={index}
+                      as="button"
+                      p={2}
+                      borderRadius="md"
+                      bg="whiteAlpha.100"
+                      _hover={{ bg: 'primary', transform: 'translateY(-2px)' }}
+                      transition="all 0.2s"
+                    >
+                      <Icon
+                        as={SocialIcon}
+                        boxSize="18px"
+                        color="white"
+                      />
+                    </Box>
+                  )
+                )}
+              </HStack>
+            </VStack>
+            
+            {/* Link Sections */}
+            {sections.map((section) => (
+              <VStack 
+                key={section.title} 
+                align={{ base: 'center', sm: 'flex-start' }}
+                spacing={3}
+              >
+                <Text 
+                  fontWeight="bold" 
+                  fontSize="md"
+                  color="white"
+                  mb={1}
+                >
+                  {section.title}
+                </Text>
+                {section.links.map(({ label, url, coming}) => (
+                  <HStack key={label} spacing={2}>
+                    <Text
+                      as={url ? RLink : 'span'}
+                      to={url}
+                      fontSize="sm"
+                      color="gray.400"
+                      cursor={url ? "pointer" : "default"}
+                      _hover={url ? { color: 'primary' } : {}}
+                      transition="color 0.2s"
+                    >
+                      {label}
+                    </Text>
+                    {coming && (
+                      <Tag 
+                        size="sm" 
+                        colorScheme="green" 
+                        variant="subtle"
+                        fontSize="xs"
+                      >
+                        Soon
+                      </Tag>
+                    )}
+                  </HStack>
+                ))}
+              </VStack>
+            ))}
+          </SimpleGrid>
+
+          {/* Newsletter Section */}
+          <Box 
+            bg="whiteAlpha.50" 
+            borderRadius="xl" 
+            p={{ base: 6, md: 8 }}
+            mb={12}
+          >
+            <Flex 
+              direction={{ base: 'column', md: 'row' }}
+              justify="space-between"
+              align={{ base: 'flex-start', md: 'center' }}
+              gap={6}
+            >
+              <VStack align="flex-start" spacing={2} flex={1}>
+                <Heading size="md" color="white">
+                  Subscribe to our newsletter
+                </Heading>
+                <Text fontSize="sm" color="gray.400">
+                  Get the latest updates, tips, and exclusive offers delivered to your inbox.
+                </Text>
+              </VStack>
+              
+              <HStack 
+                spacing={2} 
+                w={{ base: 'full', md: 'auto' }}
+                maxW={{ md: '400px' }}
+              >
+                <Input 
+                  placeholder="Enter your email" 
+                  bg="whiteAlpha.100" 
+                  borderColor="whiteAlpha.300"
+                  _placeholder={{ color: 'gray.500' }}
+                  _hover={{ borderColor: 'whiteAlpha.400' }}
+                  _focus={{ borderColor: 'primary', boxShadow: '0 0 0 1px var(--chakra-colors-primary)' }}
+                  size="lg"
+                />
+                <Button 
+                  colorScheme="orange" 
+                  bg="primary"
+                  size="lg"
+                  px={8}
+                  _hover={{ bg: 'orange.600' }}
+                >
+                  Subscribe
+                </Button>
+              </HStack>
+            </Flex>
+          </Box>
+
+          {/* Bottom Bar */}
+          <Divider borderColor="whiteAlpha.200" mb={6} />
+          
+          <Flex
             direction={{ base: 'column', md: 'row' }}
             justify="space-between"
             align="center"
-            spacing={4}
+            gap={4}
           >
-            <Text fontSize="sm" color="whiteAlpha.800">
+            <Text fontSize="sm" color="gray.400" textAlign={{ base: 'center', md: 'left' }}>
               © {new Date().getFullYear()} Veyu Limited. All rights reserved.
             </Text>
-            <HStack spacing={3}>
-              {[Facebook, Twitter, Instagram, Linkedin, Youtube].map(
-                (SocialIcon, index) => (
-                  <Icon
-                    key={index}
-                    as={SocialIcon}
-                    boxSize={'22px'}
-                    color="whiteAlpha.800"
-                    cursor="pointer"
-                    _hover={{ color: 'primary' }}
-                  />
-                )
-              )}
+            
+            <HStack 
+              spacing={6} 
+              fontSize="sm"
+              flexWrap="wrap"
+              justify="center"
+            >
+              <Text 
+                as={RLink} 
+                to="/terms-of-service"
+                color="gray.400"
+                _hover={{ color: 'primary' }}
+                cursor="pointer"
+              >
+                Terms
+              </Text>
+              <Text 
+                as={RLink} 
+                to="/privacy-policy"
+                color="gray.400"
+                _hover={{ color: 'primary' }}
+                cursor="pointer"
+              >
+                Privacy
+              </Text>
+              <Text 
+                as={RLink} 
+                to="/cookies"
+                color="gray.400"
+                _hover={{ color: 'primary' }}
+                cursor="pointer"
+              >
+                Cookies
+              </Text>
             </HStack>
-          </Stack>
-        </Box>
-      </Container>
+          </Flex>
+        </Container>
+      </Box>
     </Box>
   )
 }

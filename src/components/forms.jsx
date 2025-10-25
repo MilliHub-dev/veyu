@@ -33,6 +33,7 @@ import {
 import {CloseIcon} from "@chakra-ui/icons";
 import {BackButton} from './nav';
 import {GlobalStore} from '../App';
+import { getBrandNames, getModelsForBrand } from '../data/vehicleBrands';
 import {objectifyJSON} from '../utils';
 import { ArrowLeft, DeleteIcon, Upload, AlertTriangle, Zap, Clock, Settings, MessageCircle, Bell } from "lucide-react"
 import { useState, useEffect, useContext, useRef } from "react";
@@ -361,7 +362,8 @@ const CarBrands = [
 ]
 
 // Car Details Form Component
-export function CreateRentalForm({ formData, setFormData }) {
+export function CreateRentalForm({ formData, setFormData, vehicleCategory = 'car' }) {
+  const [availableModels, setAvailableModels] = useState([]);
   const labelProps = { fontWeight: '600', color: 'gray.700' };
   const fieldProps = {
     bg: 'white',
@@ -376,12 +378,35 @@ export function CreateRentalForm({ formData, setFormData }) {
   };
   const selectProps = { ...fieldProps, sx: { option: { backgroundColor: 'white', color: 'black' } } };
 
+  const vehicleLabels = {
+    car: { brand: 'Car Brand', model: 'Car Model', placeholder: 'eg Ford Focus Mini Edition' },
+    bike: { brand: 'Bike Brand', model: 'Bike Model', placeholder: 'eg Yamaha R15 V3' },
+    boat: { brand: 'Boat Brand', model: 'Boat Model', placeholder: 'eg Sea Ray Sundancer' },
+    aircraft: { brand: 'Aircraft Brand', model: 'Aircraft Model', placeholder: 'eg Cessna 172' },
+  };
+
+  const labels = vehicleLabels[vehicleCategory] || vehicleLabels.car;
+  const brandNames = getBrandNames(vehicleCategory);
+
+  // Update available models when brand changes
+  useEffect(() => {
+    if (formData.brand) {
+      const models = getModelsForBrand(vehicleCategory, formData.brand);
+      setAvailableModels(models);
+      if (formData.model && !models.includes(formData.model)) {
+        setFormData({ ...formData, model: '' });
+      }
+    } else {
+      setAvailableModels([]);
+    }
+  }, [formData.brand, vehicleCategory]);
+
   return (
     <VStack spacing={6} align="stretch" w="full">
       <FormControl isRequired>
         <FormLabel {...labelProps}>Listing Title</FormLabel>
         <Input
-          placeholder="eg Ford Focus Mini Edition"
+          placeholder={labels.placeholder}
           isRequired={true}
           name="title"
           value={formData.title}
@@ -393,28 +418,36 @@ export function CreateRentalForm({ formData, setFormData }) {
       <SimpleGrid columns={{base: 1, md: 2}} spacing={6}>
         
         <FormControl isRequired>
-          <FormLabel {...labelProps}>Car Brand</FormLabel>
+          <FormLabel {...labelProps}>{labels.brand}</FormLabel>
           <Select
-            placeholder="Select brand"
+            placeholder={`Select ${labels.brand.toLowerCase()}`}
             isRequired={true}
             name="brand"
             value={formData.brand}
-            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, brand: e.target.value, model: '' })}
             {...selectProps}
           >
-            {CarBrands?.map(brand => <option key={brand} value={brand}>{brand}</option>)}
+            {brandNames.map((brand) => (
+              <option key={brand} value={brand}>{brand}</option>
+            ))}
           </Select>
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel {...labelProps}>Model</FormLabel>
-          <Input
-            placeholder="Car model"
+          <FormLabel {...labelProps}>{labels.model}</FormLabel>
+          <Select
+            placeholder={formData.brand ? `Select ${labels.model.toLowerCase()}` : `Select brand first`}
             isRequired={true}
+            name="model"
             value={formData.model}
-            onInput={(e) => setFormData({ ...formData, model: e.target.value })}
-            {...fieldProps}
-          />
+            onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+            isDisabled={!formData.brand}
+            {...selectProps}
+          >
+            {availableModels.map((model) => (
+              <option key={model} value={model}>{model}</option>
+            ))}
+          </Select>
         </FormControl>
 
         <FormControl isRequired>
@@ -465,126 +498,388 @@ export function CreateRentalForm({ formData, setFormData }) {
           </Select>
         </FormControl>
 
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>VIN/Chassis Number</FormLabel>
-          <Input
-            placeholder="Enter Number..."
-            value={formData.vin}
-            onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
-            {...fieldProps}
-          />
-        </FormControl>
-
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Vehicle Type</FormLabel>
-          <Select
-            placeholder="Select Vehicle Type"
-            value={formData.vehicle_type || formData.body}
-            name="vehicle_type"
-            onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value, body: e.target.value })}
-            {...selectProps}
-          >
-            <option value="sedan">Sedan</option>
-            <option value="suv">SUV</option>
-            <option value="coupe">Coupe</option>
-            <option value="convertible">Convertible</option>
-            <option value="truck">Truck</option>
-          </Select>
-        </FormControl>
-
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Fuel System</FormLabel>
-          <Select
-            placeholder="Select fuel type"
-            value={formData.fuel_system || formData.fuel}
-            name="fuel_system"
-            onChange={(e) => setFormData({ ...formData, fuel_system: e.target.value, fuel: e.target.value })}
-            {...selectProps}
-          >
-            <option value="petrol">Petrol</option>
-            <option value="diesel">Diesel</option>
-            <option value="hybrid">Hybrid</option>
-            <option value="electric">Electric</option>
-          </Select>
-        </FormControl>
-
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Transmission</FormLabel>
-          <Select
-            name="transmission"
-            isRequired={true}
-            placeholder="Select transmission"
-            value={formData.transmission}
-            onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}
-            {...selectProps}
-          >
-            <option value="auto">Automatic</option>
-            <option value="manual">Manual</option>
-          </Select>
-        </FormControl>
-      
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Doors</FormLabel>
-          <Select
-            placeholder="Select Door number"
-            value={formData.doors}
-            name="doors"
-            onChange={(e) => setFormData({ ...formData, doors: e.target.value })}
-            {...selectProps}
-          >
-            <option>2</option>
-            <option>3</option>
-            <option>4</option>
-          </Select>
-        </FormControl>
-        
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Seats</FormLabel>
-          <Select
-            placeholder="Select seats number"
-            value={formData.seats}
-            name="seats"
-            onChange={(e) => setFormData({ ...formData, seats: e.target.value })}
-            {...selectProps}
-          >
-            <option>2</option>
-            <option>4</option>
-            <option>5</option>
-            <option>7</option>
-          </Select>
-        </FormControl>
-      
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Mileage</FormLabel>
-          <InputGroup>
+        {vehicleCategory === 'car' && (
+          <FormControl isRequired>
+            <FormLabel {...labelProps}>VIN/Chassis Number</FormLabel>
             <Input
-              name="mileage"
-              isRequired={true}
-              type="number"
-              min={0}
-              placeholder="0"
-              value={formData.mileage}
-              onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+              placeholder="Enter Number..."
+              value={formData.vin}
+              onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
               {...fieldProps}
             />
-            <InputRightAddon>mi</InputRightAddon>
-          </InputGroup>
-        </FormControl>
+          </FormControl>
+        )}
 
         <FormControl isRequired>
-          <FormLabel {...labelProps}>Drive train</FormLabel>
+          <FormLabel {...labelProps}>Year of Manufacture</FormLabel>
           <Select
-            placeholder="Choose an option"
-            value={formData.drivetrain}
-            name="drivetrain"
-            onChange={(e) => setFormData({ ...formData, drivetrain: e.target.value })}
+            placeholder="Select year"
+            isRequired={true}
+            name="year"
+            value={formData.year}
+            onChange={(e) => setFormData({ ...formData, year: e.target.value })}
             {...selectProps}
           >
-            <option value="4WD">4WD (4 Wheel drive)</option>
-            <option value="AWD">AWD (All Wheel drive)</option>
-            <option value="FWD">FWD (Front Wheel drive)</option>
+            {Array.from({ length: 30 }, (_, i) => (
+              <option key={i} value={new Date().getFullYear() - i}>
+                {new Date().getFullYear() - i}
+              </option>
+            ))}
           </Select>
         </FormControl>
+
+        {/* Car-specific fields */}
+        {vehicleCategory === 'car' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Vehicle Type</FormLabel>
+              <Select
+                placeholder="Select Vehicle Type"
+                value={formData.vehicle_type || formData.body}
+                name="vehicle_type"
+                onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value, body: e.target.value })}
+                {...selectProps}
+              >
+                <option value="sedan">Sedan</option>
+                <option value="suv">SUV</option>
+                <option value="coupe">Coupe</option>
+                <option value="convertible">Convertible</option>
+                <option value="truck">Truck</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Fuel System</FormLabel>
+              <Select
+                placeholder="Select fuel type"
+                value={formData.fuel_system || formData.fuel}
+                name="fuel_system"
+                onChange={(e) => setFormData({ ...formData, fuel_system: e.target.value, fuel: e.target.value })}
+                {...selectProps}
+              >
+                <option value="petrol">Petrol</option>
+                <option value="diesel">Diesel</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="electric">Electric</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Transmission</FormLabel>
+              <Select
+                name="transmission"
+                isRequired={true}
+                placeholder="Select transmission"
+                value={formData.transmission}
+                onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}
+                {...selectProps}
+              >
+                <option value="auto">Automatic</option>
+                <option value="manual">Manual</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Mileage</FormLabel>
+              <InputGroup>
+                <Input
+                  name="mileage"
+                  isRequired={true}
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={formData.mileage}
+                  onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+                  {...fieldProps}
+                />
+                <InputRightAddon>mi</InputRightAddon>
+              </InputGroup>
+            </FormControl>
+
+            <FormControl>
+              <FormLabel {...labelProps}>Registration</FormLabel>
+              <Select
+                placeholder="Select registration"
+                value={formData.registration}
+                name="registration"
+                onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
+                {...selectProps}
+              >
+                <option>Registered</option>
+                <option>Unregistered</option>
+              </Select>
+            </FormControl>
+          </>
+        )}
+
+        {/* Bike-specific fields */}
+        {vehicleCategory === 'bike' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Engine Capacity (cc)</FormLabel>
+              <Input
+                placeholder="eg 150cc"
+                value={formData.engine_capacity}
+                onChange={(e) => setFormData({ ...formData, engine_capacity: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Bike Type</FormLabel>
+              <Select
+                placeholder="Select bike type"
+                value={formData.bike_type}
+                onChange={(e) => setFormData({ ...formData, bike_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="sport">Sport</option>
+                <option value="cruiser">Cruiser</option>
+                <option value="touring">Touring</option>
+                <option value="off-road">Off-Road</option>
+                <option value="scooter">Scooter</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Fuel System</FormLabel>
+              <Select
+                placeholder="Select fuel type"
+                value={formData.fuel}
+                onChange={(e) => setFormData({ ...formData, fuel_system: e.target.value, fuel: e.target.value })}
+                {...selectProps}
+              >
+                <option value="petrol">Petrol</option>
+                <option value="electric">Electric</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Transmission</FormLabel>
+              <Select
+                placeholder="Select transmission"
+                value={formData.transmission}
+                onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}
+                {...selectProps}
+              >
+                <option value="manual">Manual</option>
+                <option value="automatic">Automatic</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Mileage</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="0 km"
+                value={formData.mileage}
+                onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+          </>
+        )}
+
+        {/* Boat-specific fields */}
+        {vehicleCategory === 'boat' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Boat Type</FormLabel>
+              <Select
+                placeholder="Select boat type"
+                value={formData.boat_type}
+                onChange={(e) => setFormData({ ...formData, boat_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="sailboat">Sailboat</option>
+                <option value="motorboat">Motorboat</option>
+                <option value="yacht">Yacht</option>
+                <option value="fishing">Fishing Boat</option>
+                <option value="speedboat">Speedboat</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Length (feet)</FormLabel>
+              <Input
+                type="number"
+                placeholder="eg 25"
+                value={formData.length}
+                onChange={(e) => setFormData({ ...formData, length: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Engine Type</FormLabel>
+              <Select
+                placeholder="Select engine type"
+                value={formData.engine_type}
+                onChange={(e) => setFormData({ ...formData, engine_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="outboard">Outboard</option>
+                <option value="inboard">Inboard</option>
+                <option value="sterndrive">Sterndrive</option>
+                <option value="jet">Jet Drive</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Hull Material</FormLabel>
+              <Select
+                placeholder="Select hull material"
+                value={formData.hull_material}
+                onChange={(e) => setFormData({ ...formData, hull_material: e.target.value })}
+                {...selectProps}
+              >
+                <option value="fiberglass">Fiberglass</option>
+                <option value="aluminum">Aluminum</option>
+                <option value="wood">Wood</option>
+                <option value="steel">Steel</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Passenger Capacity</FormLabel>
+              <Input
+                type="number"
+                min={1}
+                placeholder="eg 8"
+                value={formData.capacity}
+                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+          </>
+        )}
+
+        {/* Aircraft-specific fields */}
+        {vehicleCategory === 'aircraft' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Aircraft Type</FormLabel>
+              <Select
+                placeholder="Select aircraft type"
+                value={formData.aircraft_type}
+                onChange={(e) => setFormData({ ...formData, aircraft_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="single-engine">Single Engine</option>
+                <option value="multi-engine">Multi Engine</option>
+                <option value="jet">Jet</option>
+                <option value="helicopter">Helicopter</option>
+                <option value="ultralight">Ultralight</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Engine Type</FormLabel>
+              <Select
+                placeholder="Select engine type"
+                value={formData.engine_type}
+                onChange={(e) => setFormData({ ...formData, engine_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="piston">Piston</option>
+                <option value="turboprop">Turboprop</option>
+                <option value="turbojet">Turbojet</option>
+                <option value="turbofan">Turbofan</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Total Flight Hours</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 1500"
+                value={formData.total_hours}
+                onChange={(e) => setFormData({ ...formData, total_hours: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Passenger Capacity</FormLabel>
+              <Input
+                type="number"
+                min={1}
+                placeholder="eg 4"
+                value={formData.passenger_capacity}
+                onChange={(e) => setFormData({ ...formData, passenger_capacity: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel {...labelProps}>Registration Number</FormLabel>
+              <Input
+                placeholder="eg N12345"
+                value={formData.registration}
+                onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+          </>
+        )}
+
+        {/* Car-specific additional fields */}
+        {vehicleCategory === 'car' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Drivetrain</FormLabel>
+              <Select
+                placeholder="Choose drivetrain"
+                value={formData.drivetrain}
+                name="drivetrain"
+                onChange={(e) => setFormData({ ...formData, drivetrain: e.target.value })}
+                {...selectProps}
+              >
+                <option value="FWD">FWD (Front Wheel Drive)</option>
+                <option value="RWD">RWD (Rear Wheel Drive)</option>
+                <option value="AWD">AWD (All Wheel Drive)</option>
+                <option value="4WD">4WD (Four Wheel Drive)</option>
+              </Select>
+            </FormControl>
+          
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Doors</FormLabel>
+              <Select
+                placeholder="Select number of doors"
+                value={formData.doors}
+                name="doors"
+                onChange={(e) => setFormData({ ...formData, doors: e.target.value })}
+                {...selectProps}
+              >
+                <option value="2">2 Doors</option>
+                <option value="3">3 Doors</option>
+                <option value="4">4 Doors</option>
+                <option value="5">5 Doors</option>
+              </Select>
+            </FormControl>
+            
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Seating Capacity</FormLabel>
+              <Select
+                placeholder="Select seating capacity"
+                value={formData.seats}
+                name="seats"
+                onChange={(e) => setFormData({ ...formData, seats: e.target.value })}
+                {...selectProps}
+              >
+                <option value="2">2 Seats</option>
+                <option value="4">4 Seats</option>
+                <option value="5">5 Seats</option>
+                <option value="6">6 Seats</option>
+                <option value="7">7 Seats</option>
+                <option value="8">8 Seats</option>
+                <option value="9+">9+ Seats</option>
+              </Select>
+            </FormControl>
+          </>
+        )}
       </SimpleGrid>
 
       <FormControl isRequired>
@@ -945,7 +1240,8 @@ export function EditListingForm({ formData, setFormData }) {
 }
 
 // Car Details Form Component
-export function CreateSaleForm({ formData, setFormData }) {
+export function CreateSaleForm({ formData, setFormData, vehicleCategory = 'car' }) {
+  const [availableModels, setAvailableModels] = useState([]);
   const labelProps = { fontWeight: '600', color: 'gray.700' };
   const fieldProps = {
     bg: 'white',
@@ -960,12 +1256,36 @@ export function CreateSaleForm({ formData, setFormData }) {
   };
   const selectProps = { ...fieldProps, sx: { option: { backgroundColor: 'white', color: 'black' } } };
 
+  const vehicleLabels = {
+    car: { brand: 'Car Brand', model: 'Car Model', placeholder: 'eg Ford Focus Mini Edition' },
+    bike: { brand: 'Bike Brand', model: 'Bike Model', placeholder: 'eg Yamaha R15 V3' },
+    boat: { brand: 'Boat Brand', model: 'Boat Model', placeholder: 'eg Sea Ray Sundancer' },
+    aircraft: { brand: 'Aircraft Brand', model: 'Aircraft Model', placeholder: 'eg Cessna 172' },
+  };
+
+  const labels = vehicleLabels[vehicleCategory] || vehicleLabels.car;
+  const brandNames = getBrandNames(vehicleCategory);
+
+  // Update available models when brand changes
+  useEffect(() => {
+    if (formData.brand) {
+      const models = getModelsForBrand(vehicleCategory, formData.brand);
+      setAvailableModels(models);
+      // Clear model if it's not in the new brand's models
+      if (formData.model && !models.includes(formData.model)) {
+        setFormData({ ...formData, model: '' });
+      }
+    } else {
+      setAvailableModels([]);
+    }
+  }, [formData.brand, vehicleCategory]);
+
   return (
     <VStack spacing={6} align="stretch" w="full">
       <FormControl isRequired>
         <FormLabel {...labelProps}>Listing Title</FormLabel>
         <Input
-          placeholder="eg Ford Focus Mini Edition"
+          placeholder={labels.placeholder}
           isRequired={true}
           name="title"
           value={formData.title}
@@ -977,39 +1297,49 @@ export function CreateSaleForm({ formData, setFormData }) {
       <SimpleGrid columns={{base: 1, md: 2}} spacing={6}>
         
         <FormControl isRequired>
-          <FormLabel {...labelProps}>Car Brand</FormLabel>
+          <FormLabel {...labelProps}>{labels.brand}</FormLabel>
           <Select
-            placeholder="Select brand"
+            placeholder={`Select ${labels.brand.toLowerCase()}`}
             isRequired={true}
             name="brand"
             value={formData.brand}
-            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, brand: e.target.value, model: '' })}
             {...selectProps}
           >
-            {CarBrands?.map(brand => <option key={brand} value={brand}>{brand}</option>)}
+            {brandNames.map((brand) => (
+              <option key={brand} value={brand}>{brand}</option>
+            ))}
           </Select>
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel {...labelProps}>Model</FormLabel>
-          <Input
-            placeholder="Car model"
+          <FormLabel {...labelProps}>{labels.model}</FormLabel>
+          <Select
+            placeholder={formData.brand ? `Select ${labels.model.toLowerCase()}` : `Select brand first`}
             isRequired={true}
+            name="model"
             value={formData.model}
-            onInput={(e) => setFormData({ ...formData, model: e.target.value })}
-            {...fieldProps}
-          />
+            onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+            isDisabled={!formData.brand}
+            {...selectProps}
+          >
+            {availableModels.map((model) => (
+              <option key={model} value={model}>{model}</option>
+            ))}
+          </Select>
         </FormControl>
 
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>VIN/Chassis Number</FormLabel>
-          <Input
-            placeholder="Enter Number..."
-            value={formData.vin}
-            onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
-            {...fieldProps}
-          />
-        </FormControl>
+        {vehicleCategory === 'car' && (
+          <FormControl isRequired>
+            <FormLabel {...labelProps}>VIN/Chassis Number</FormLabel>
+            <Input
+              placeholder="Enter Number..."
+              value={formData.vin}
+              onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
+              {...fieldProps}
+            />
+          </FormControl>
+        )}
 
         <FormControl isRequired>
           <FormLabel {...labelProps}>Year of Manufacture</FormLabel>
@@ -1061,127 +1391,355 @@ export function CreateSaleForm({ formData, setFormData }) {
           </Select>
         </FormControl>
       
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Vehicle Type</FormLabel>
-          <Select
-            placeholder="Select Vehicle Type"
-            value={formData.body}
-            name="vehicle_type"
-            onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value, body: e.target.value })}
-            {...selectProps}
-          >
-            <option value="sedan">Sedan</option>
-            <option value="suv">SUV</option>
-            <option value="coupe">Coupe</option>
-            <option value="convertible">Convertible</option>
-            <option value="truck">Truck</option>
-          </Select>
-        </FormControl>
+        {/* Car-specific fields */}
+        {vehicleCategory === 'car' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Vehicle Type</FormLabel>
+              <Select
+                placeholder="Select Vehicle Type"
+                value={formData.body}
+                name="vehicle_type"
+                onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value, body: e.target.value })}
+                {...selectProps}
+              >
+                <option value="sedan">Sedan</option>
+                <option value="suv">SUV</option>
+                <option value="coupe">Coupe</option>
+                <option value="convertible">Convertible</option>
+                <option value="truck">Truck</option>
+              </Select>
+            </FormControl>
+            
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Fuel System</FormLabel>
+              <Select
+                placeholder="Select fuel type"
+                value={formData.fuel}
+                name="fuel_system"
+                onChange={(e) => setFormData({ ...formData, fuel_system: e.target.value, fuel: e.target.value })}
+                {...selectProps}
+              >
+                <option value="petrol">Petrol</option>
+                <option value="diesel">Diesel</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="electric">Electric</option>
+              </Select>
+            </FormControl>
+          
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Transmission</FormLabel>
+              <Select
+                name="transmission"
+                isRequired={true}
+                placeholder="Select transmission"
+                value={formData.transmission}
+                onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}
+                {...selectProps}
+              >
+                <option value="auto">Automatic</option>
+                <option value="manual">Manual</option>
+              </Select>
+            </FormControl>
+            
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Mileage</FormLabel>
+              <Input
+                name="mileage"
+                isRequired={true}
+                type="number"
+                min={0}
+                placeholder="0 miles"
+                value={formData.mileage}
+                onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel {...labelProps}>Registration</FormLabel>
+              <Select
+                placeholder="Select registration"
+                value={formData.registration}
+                name="registration"
+                onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
+                {...selectProps}
+              >
+                <option>Registered</option>
+                <option>Unregistered</option>
+              </Select>
+            </FormControl>
+          </>
+        )}
+
+        {/* Bike-specific fields */}
+        {vehicleCategory === 'bike' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Engine Capacity (cc)</FormLabel>
+              <Input
+                placeholder="eg 150cc"
+                value={formData.engine_capacity}
+                onChange={(e) => setFormData({ ...formData, engine_capacity: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Bike Type</FormLabel>
+              <Select
+                placeholder="Select bike type"
+                value={formData.bike_type}
+                onChange={(e) => setFormData({ ...formData, bike_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="sport">Sport</option>
+                <option value="cruiser">Cruiser</option>
+                <option value="touring">Touring</option>
+                <option value="off-road">Off-Road</option>
+                <option value="scooter">Scooter</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Fuel System</FormLabel>
+              <Select
+                placeholder="Select fuel type"
+                value={formData.fuel}
+                onChange={(e) => setFormData({ ...formData, fuel_system: e.target.value, fuel: e.target.value })}
+                {...selectProps}
+              >
+                <option value="petrol">Petrol</option>
+                <option value="electric">Electric</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Transmission</FormLabel>
+              <Select
+                placeholder="Select transmission"
+                value={formData.transmission}
+                onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}
+                {...selectProps}
+              >
+                <option value="manual">Manual</option>
+                <option value="automatic">Automatic</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Mileage</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="0 km"
+                value={formData.mileage}
+                onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+          </>
+        )}
+
+        {/* Boat-specific fields */}
+        {vehicleCategory === 'boat' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Boat Type</FormLabel>
+              <Select
+                placeholder="Select boat type"
+                value={formData.boat_type}
+                onChange={(e) => setFormData({ ...formData, boat_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="sailboat">Sailboat</option>
+                <option value="motorboat">Motorboat</option>
+                <option value="yacht">Yacht</option>
+                <option value="fishing">Fishing Boat</option>
+                <option value="speedboat">Speedboat</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Length (feet)</FormLabel>
+              <Input
+                type="number"
+                placeholder="eg 25"
+                value={formData.length}
+                onChange={(e) => setFormData({ ...formData, length: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Engine Type</FormLabel>
+              <Select
+                placeholder="Select engine type"
+                value={formData.engine_type}
+                onChange={(e) => setFormData({ ...formData, engine_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="outboard">Outboard</option>
+                <option value="inboard">Inboard</option>
+                <option value="sterndrive">Sterndrive</option>
+                <option value="jet">Jet Drive</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Hull Material</FormLabel>
+              <Select
+                placeholder="Select hull material"
+                value={formData.hull_material}
+                onChange={(e) => setFormData({ ...formData, hull_material: e.target.value })}
+                {...selectProps}
+              >
+                <option value="fiberglass">Fiberglass</option>
+                <option value="aluminum">Aluminum</option>
+                <option value="wood">Wood</option>
+                <option value="steel">Steel</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Passenger Capacity</FormLabel>
+              <Input
+                type="number"
+                min={1}
+                placeholder="eg 8"
+                value={formData.capacity}
+                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+          </>
+        )}
+
+        {/* Aircraft-specific fields */}
+        {vehicleCategory === 'aircraft' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Aircraft Type</FormLabel>
+              <Select
+                placeholder="Select aircraft type"
+                value={formData.aircraft_type}
+                onChange={(e) => setFormData({ ...formData, aircraft_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="single-engine">Single Engine</option>
+                <option value="multi-engine">Multi Engine</option>
+                <option value="jet">Jet</option>
+                <option value="helicopter">Helicopter</option>
+                <option value="ultralight">Ultralight</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Engine Type</FormLabel>
+              <Select
+                placeholder="Select engine type"
+                value={formData.engine_type}
+                onChange={(e) => setFormData({ ...formData, engine_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="piston">Piston</option>
+                <option value="turboprop">Turboprop</option>
+                <option value="turbojet">Turbojet</option>
+                <option value="turbofan">Turbofan</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Total Flight Hours</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 1500"
+                value={formData.total_hours}
+                onChange={(e) => setFormData({ ...formData, total_hours: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Passenger Capacity</FormLabel>
+              <Input
+                type="number"
+                min={1}
+                placeholder="eg 4"
+                value={formData.passenger_capacity}
+                onChange={(e) => setFormData({ ...formData, passenger_capacity: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel {...labelProps}>Registration Number</FormLabel>
+              <Input
+                placeholder="eg N12345"
+                value={formData.registration}
+                onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+          </>
+        )}
         
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Fuel System</FormLabel>
-          <Select
-            placeholder="Select fuel type"
-            value={formData.fuel}
-            name="fuel_system"
-            onChange={(e) => setFormData({ ...formData, fuel_system: e.target.value, fuel: e.target.value })}
-            {...selectProps}
-          >
-            <option value="petrol">Petrol</option>
-            <option value="diesel">Diesel</option>
-            <option value="hybrid">Hybrid</option>
-            <option value="electric">Electric</option>
-          </Select>
-        </FormControl>
-      
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Transmission</FormLabel>
-          <Select
-            name="transmission"
-            isRequired={true}
-            placeholder="Select transmission"
-            value={formData.transmission}
-            onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}
-            {...selectProps}
-          >
-            <option value="auto">Automatic</option>
-            <option value="manual">Manual</option>
-          </Select>
-        </FormControl>
-        
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Registration</FormLabel>
-          <Select
-            placeholder="Select registration"
-            value={formData.registration}
-            name="registration"
-            onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
-            {...selectProps}
-          >
-            <option>Registered</option>
-            <option>Unregistered</option>
-          </Select>
-        </FormControl>
-      
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Mileage</FormLabel>
-          <Input
-            name="mileage"
-            isRequired={true}
-            type="number"
-            min={0}
-            placeholder="0 miles"
-            value={formData.mileage}
-            onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
-            {...fieldProps}
-          />
-        </FormControl>
-        
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Drive train</FormLabel>
-          <Select
-            placeholder="Choose an option"
-            value={formData.drivetrain}
-            name="drivetrain"
-            onChange={(e) => setFormData({ ...formData, drivetrain: e.target.value })}
-            {...selectProps}
-          >
-            <option value="4WD">4WD (4 Wheel drive)</option>
-            <option value="AWD">AWD (All Wheel drive)</option>
-            <option value="FWD">FWD (Front Wheel drive)</option>
-          </Select>
-        </FormControl>
-      
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Doors</FormLabel>
-          <Select
-            placeholder="Select"
-            value={formData.doors}
-            name="doors"
-            onChange={(e) => setFormData({ ...formData, doors: e.target.value })}
-            {...selectProps}
-          >
-            <option>2</option>
-            <option>3</option>
-            <option>4</option>
-          </Select>
-        </FormControl>
-        
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Seats</FormLabel>
-          <Select
-            placeholder="Select seats number"
-            value={formData.seats}
-            name="seats"
-            onChange={(e) => setFormData({ ...formData, seats: e.target.value })}
-            {...selectProps}
-          >
-            <option>2</option>
-            <option>4</option>
-            <option>5</option>
-            <option>7</option>
-          </Select>
-        </FormControl>
+        {/* Car-specific additional fields */}
+        {vehicleCategory === 'car' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Drivetrain</FormLabel>
+              <Select
+                placeholder="Choose drivetrain"
+                value={formData.drivetrain}
+                name="drivetrain"
+                onChange={(e) => setFormData({ ...formData, drivetrain: e.target.value })}
+                {...selectProps}
+              >
+                <option value="FWD">FWD (Front Wheel Drive)</option>
+                <option value="RWD">RWD (Rear Wheel Drive)</option>
+                <option value="AWD">AWD (All Wheel Drive)</option>
+                <option value="4WD">4WD (Four Wheel Drive)</option>
+              </Select>
+            </FormControl>
+          
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Doors</FormLabel>
+              <Select
+                placeholder="Select number of doors"
+                value={formData.doors}
+                name="doors"
+                onChange={(e) => setFormData({ ...formData, doors: e.target.value })}
+                {...selectProps}
+              >
+                <option value="2">2 Doors</option>
+                <option value="3">3 Doors</option>
+                <option value="4">4 Doors</option>
+                <option value="5">5 Doors</option>
+              </Select>
+            </FormControl>
+            
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Seating Capacity</FormLabel>
+              <Select
+                placeholder="Select seating capacity"
+                value={formData.seats}
+                name="seats"
+                onChange={(e) => setFormData({ ...formData, seats: e.target.value })}
+                {...selectProps}
+              >
+                <option value="2">2 Seats</option>
+                <option value="4">4 Seats</option>
+                <option value="5">5 Seats</option>
+                <option value="6">6 Seats</option>
+                <option value="7">7 Seats</option>
+                <option value="8">8 Seats</option>
+                <option value="9+">9+ Seats</option>
+              </Select>
+            </FormControl>
+          </>
+        )}
       </SimpleGrid>
 
       <FormControl>

@@ -61,6 +61,7 @@ import { TbManualGearbox } from 'react-icons/tb';
 import { BsFillPatchCheckFill } from 'react-icons/bs';
 import { GlobalStore } from '../App';
 import { FcCheckmark } from 'react-icons/fc';
+import VerificationFormModal from './VerificationFormModal';
 import { Leaf, Star } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ChevronLeftIcon, StarIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons';
@@ -187,55 +188,120 @@ export const ComboBox = ({ defaultOptions, onSelect }) => {
 }
 
 
-export const VerificationNotice = ({ businessType, user, onVerification, ...props })=>{
-  const [beginVerification, setVerificationState] = useState(false);
-  const appIds = {
-    'dealership': "6790a5a3a5a0229a0a5c0839",
-    'dealer': "6790a5a3a5a0229a0a5c0839",
-    'mechanic': "682932fdd3eb2aebd3716885",
-  }
+export const VerificationNotice = ({ businessType, user, onRefresh, ...props }) => {
+  const { axios } = useContext(GlobalStore);
+  const [showForm, setShowForm] = useState(false);
+  const [status, setStatus] = useState('not_submitted');
+  const [rejectionReason, setRejectionReason] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  return(
-    <Alert my={4} colorScheme="yellow" rounded="lg" as={Stack} alignItems="start" placeItems="start">
-      <AlertIcon as={MdWarning} w={30} h={30} />
-      <Flex width="100%" alignItems="center" flexWrap="wrap" justify="space-between" gap={2}>
-        <AlertTitle size="sm"> You have not completed your business verification. 
-         You must complete your verification before you can {
-          businessType === 'dealership' ? 'add listings' : 'add services'
-        }.
-        </AlertTitle>
-        <Button onClick={() => setVerificationState(true)} colorScheme="yellow" variant="outline" borderColor="tertiary"> Complete verification </Button>
-        {beginVerification && (
-          <Box display="none">
-            {(() => {
-              try{
-                onVerification && onVerification('begin');
-              }catch(e){}
-              const appId = appIds[businessType] || appIds['dealership'];
-              const openWidget = () => {
-                const sdk = (window && window.Dojah) ? window.Dojah : null;
-                if (!sdk){ return; }
-                if (typeof sdk.init === 'function'){
-                  const instance = sdk.init({
-                    app_id: appId,
-                    type: 'verification',
-                    user_data: { email: user?.email, name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim() },
-                    onSuccess: (data) => { try{ onVerification && onVerification('success', data); }catch(e){} },
-                    onClose: () => { try{ onVerification && onVerification('close'); }catch(e){} },
-                    onError: (err) => { try{ onVerification && onVerification('error', err); }catch(e){} },
-                  });
-                  if (instance && typeof instance.open === 'function'){
-                    instance.open();
-                  }
-                }
-              };
-              setTimeout(openWidget, 0);
-            })()}
-          </Box>
-        )}
-      </Flex>
-    </Alert>
-  )
+  const fetchVerificationStatus = async () => {
+    try {
+      const res = await axios.get('/accounts/verify-business/');
+      setStatus(res.data.status || 'not_submitted');
+      setRejectionReason(res.data.rejection_reason);
+    } catch (error) {
+      console.error('Error fetching verification status:', error);
+      setStatus('not_submitted');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVerificationStatus();
+  }, []);
+
+  const handleSuccess = () => {
+    setShowForm(false);
+    fetchVerificationStatus();
+    if (onRefresh) onRefresh();
+  };
+
+  // Don't show if verified
+  if (status === 'verified' || loading) return null;
+
+  const getAlertConfig = () => {
+    switch (status) {
+      case 'pending':
+        return {
+          colorScheme: 'orange',
+          title: 'Verification Pending',
+          message: 'Your business verification is currently under review by our admin team. You will be notified once approved.',
+          buttonText: null,
+          icon: '⏳'
+        };
+      case 'rejected':
+        return {
+          colorScheme: 'red',
+          title: 'Verification Rejected',
+          message: rejectionReason || 'Your verification was rejected. Please review and resubmit with correct information.',
+          buttonText: 'Resubmit Verification',
+          icon: '❌'
+        };
+      default: // not_submitted
+        return {
+          colorScheme: 'yellow',
+          title: 'Complete Your Business Verification',
+          message: `You must complete your verification before you can ${businessType === 'dealership' || businessType === 'dealer' ? 'add listings' : 'add services'}.`,
+          buttonText: 'Submit Verification',
+          icon: '⚠️'
+        };
+    }
+  };
+
+  const config = getAlertConfig();
+
+  return (
+    <>
+      <Alert my={4} colorScheme={config.colorScheme} rounded="lg" as={Stack} alignItems="start" placeItems="start">
+        <AlertIcon as={MdWarning} w={30} h={30} />
+        <Flex width="100%" alignItems="start" flexDirection="column" gap={2}>
+          <Flex width="100%" alignItems="center" flexWrap="wrap" justify="space-between" gap={2}>
+            <Box>
+              <AlertTitle size="sm" display="flex" alignItems="center" gap={2}>
+                <span>{config.icon}</span>
+                {config.title}
+              </AlertTitle>
+              <Text fontSize="sm" mt={1}>{config.message}</Text>
+            </Box>
+            {config.buttonText && (
+              <Button 
+                onClick={() => setShowForm(true)} 
+                colorScheme={config.colorScheme} 
+                variant="outline"
+                size="sm"
+              >
+                {config.buttonText}
+              </Button>
+            )}
+          </Flex>
+          {status === 'rejected' && rejectionReason && (
+            <Box 
+              w="100%" 
+              p={3} 
+              bg="red.50" 
+              borderRadius="md" 
+              borderLeft="4px solid" 
+              borderColor="red.500"
+            >
+              <Text fontSize="sm" fontWeight="semibold" mb={1}>Rejection Reason:</Text>
+              <Text fontSize="sm">{rejectionReason}</Text>
+            </Box>
+          )}
+        </Flex>
+      </Alert>
+
+      {showForm && (
+        <VerificationFormModal
+          isOpen={showForm}
+          onClose={() => setShowForm(false)}
+          businessType={businessType}
+          onSuccess={handleSuccess}
+        />
+      )}
+    </>
+  );
 }
 
 // Status Badge Component
@@ -1088,112 +1154,264 @@ export const ListingItemCard = ({ listing, ...props }) => {
     }
 
     return(
-        <Box position="relative" {...props}>
-            <Card shadow={'lg'} p={0} w={'100%'} rounded={'10px'}>
-                <CardHeader p={0}>
+        <Box 
+            position="relative" 
+            as={motion.div}
+            whileHover={{ y: -8 }}
+            transition="0.3s ease"
+            {...props}
+        >
+            <Card 
+                shadow={'xl'} 
+                p={0} 
+                w={'100%'} 
+                rounded={'2xl'}
+                overflow="hidden"
+                borderWidth="1px"
+                borderColor="gray.100"
+                _hover={{
+                    shadow: '2xl',
+                    borderColor: 'primary'
+                }}
+                transition="all 0.3s ease"
+            >
+                <CardHeader p={0} position="relative">
+                    {/* Condition Badge */}
+                    <Badge 
+                        position="absolute" 
+                        top={3} 
+                        right={3} 
+                        zIndex={2}
+                        bg="white"
+                        color="gray.700"
+                        px={3}
+                        py={1}
+                        borderRadius="full"
+                        fontWeight="bold"
+                        fontSize="xs"
+                        textTransform="uppercase"
+                        boxShadow="md"
+                    >
+                        {listing?.vehicle?.condition}
+                    </Badge>
+
+                    {/* Heart Icon for Favorites */}
+                    <IconButton
+                        position="absolute"
+                        top={3}
+                        left={3}
+                        zIndex={2}
+                        icon={<RiHeart2Line />}
+                        size="sm"
+                        bg="white"
+                        color="gray.600"
+                        borderRadius="full"
+                        boxShadow="md"
+                        _hover={{ 
+                            bg: 'red.50',
+                            color: 'red.500',
+                            transform: 'scale(1.1)'
+                        }}
+                        aria-label="Add to favorites"
+                    />
+
                     <Box
                         width={'100%'}
-                        minH={'170px'}
-                        maxH={'270px'}
-                        borderRadius={'10px'}
+                        height={'240px'}
                         position={'relative'}
+                        overflow="hidden"
                     >
                         <NavLink to={`/${type}/${listing?.uuid}`}>
                           <LinkBox
-                            flex={1} w={'100%'} height={'200px'}
+                            flex={1} 
+                            w={'100%'} 
+                            height={'240px'}
                             position={'relative'}
                             sx={{
                               backgroundImage: `url(${image?.url})`,
-                              borderRadius: '10px',
                               backgroundRepeat: 'no-repeat',
                               backgroundSize: 'cover',
-                              backgroundPositionX: '70%',
-                              backgroundPositionY: '37.5%',
+                              backgroundPosition: 'center',
+                              transition: 'transform 0.3s ease',
+                              '&:hover': {
+                                transform: 'scale(1.05)'
+                              }
                             }}
                           />
                         </NavLink>
-                        {
-                            vehicle?.images?.length > 1 &&
+                        
+                        {/* Image Navigation Arrows */}
+                        {vehicle?.images?.length > 1 && (
                             <Flex
-                             position={'absolute'}
-                             w={'100%'}
-                             justifyContent="space-between"
-                             px={'20px'}
-                             top={'45%'}
-                             gap={2} left={'0px'}
+                                position={'absolute'}
+                                w={'100%'}
+                                justifyContent="space-between"
+                                px={3}
+                                top={'50%'}
+                                transform="translateY(-50%)"
+                                gap={2}
                             >
-                                <Icon
-                                 cursor={'pointer'}
-                                 rounded={'5px'}
-                                 bg={'#00000066'}
-                                 color={'#fff'}
-                                 p={'5px'}
-                                 onClick={() => nextImage(-1)}
-                                 className='icon'
-                                > <FaCaretLeft /> </Icon>
-                                <Icon
-                                 cursor={'pointer'}
-                                 rounded={'5px'}
-                                 bg={'#00000066'}
-                                 color={'#fff'}
-                                 p={'5px'}
-                                 onClick={() => nextImage(1)} 
-                                 className='icon'
-                                > <FaCaretRight /> </Icon>
+                                <IconButton
+                                    icon={<RxCaretLeft />}
+                                    onClick={() => nextImage(-1)}
+                                    size="sm"
+                                    borderRadius="full"
+                                    bg="whiteAlpha.900"
+                                    color="gray.800"
+                                    _hover={{ bg: 'white', transform: 'scale(1.1)' }}
+                                    boxShadow="lg"
+                                    aria-label="Previous image"
+                                />
+                                <IconButton
+                                    icon={<RxCaretRight />}
+                                    onClick={() => nextImage(1)}
+                                    size="sm"
+                                    borderRadius="full"
+                                    bg="whiteAlpha.900"
+                                    color="gray.800"
+                                    _hover={{ bg: 'white', transform: 'scale(1.1)' }}
+                                    boxShadow="lg"
+                                    aria-label="Next image"
+                                />
                             </Flex>
-                        }
+                        )}
+
+                        {/* Image Counter */}
+                        {vehicle?.images?.length > 1 && (
+                            <Badge
+                                position="absolute"
+                                bottom={3}
+                                right={3}
+                                bg="blackAlpha.700"
+                                color="white"
+                                px={2}
+                                py={1}
+                                borderRadius="md"
+                                fontSize="xs"
+                            >
+                                {index + 1} / {vehicle?.images?.length}
+                            </Badge>
+                        )}
                     </Box>
                 </CardHeader>
 
-                <CardBody p={3}>
-                    <Flex justifyContent={'space-between'} alignItems={'center'}>
-                        <Heading size="md" className="subtitle" textTransform="capitalize"> {listing?.title} </Heading>
-                        <Badge color="grey.500" className="bold"> {listing?.vehicle?.condition} </Badge>
+                <CardBody p={4}>
+                    {/* Title */}
+                    <Heading 
+                        size="md" 
+                        fontWeight="bold" 
+                        textTransform="capitalize"
+                        mb={3}
+                        noOfLines={1}
+                        color="gray.900"
+                    >
+                        {listing?.title}
+                    </Heading>
+
+                    {/* Vehicle Specs */}
+                    {listing?.listing_type === 'sale' ? (
+                        <HStack spacing={3} mb={3} fontSize="sm" color="gray.600" flexWrap="wrap">
+                            <HStack spacing={1}>
+                                <Icon as={RxTimer} />
+                                <Text>{commaInt(listing?.vehicle?.mileage) || 0}mi</Text>
+                            </HStack>
+                            <HStack spacing={1}>
+                                <Icon as={TbManualGearbox} />
+                                <Text>{listing?.vehicle?.transmission}</Text>
+                            </HStack>
+                            <HStack spacing={1}>
+                                <Icon as={RiGasStationLine} />
+                                <Text>{listing?.vehicle?.fuel_system}</Text>
+                            </HStack>
+                        </HStack>
+                    ) : (
+                        <HStack spacing={3} mb={3} fontSize="sm" color="gray.600">
+                            <HStack spacing={1}>
+                                <Text fontWeight="semibold">{(listing?.vehicle?.dealer?.rating) || 0}</Text>
+                                <StarIcon color="yellow.400" boxSize={3} />
+                            </HStack>
+                            <Text>({listing?.vehicle?.trips} Trips)</Text>
+                            <Badge colorScheme="blue">{listing?.vehicle?.dealer?.level}</Badge>
+                        </HStack>
+                    )}
+
+                    {/* Price Section */}
+                    <Flex alignItems="center" justifyContent="space-between" mb={3}>
+                        <VStack align="start" spacing={0}>
+                            <Text fontSize="2xl" fontWeight="bold" color="primary">
+                                ₦{commaInt(listing?.price)}
+                            </Text>
+                            {listing?.listing_type === 'rental' && (
+                                <Text fontSize="xs" color="gray.500">
+                                    per {listing?.payment_cycle}
+                                </Text>
+                            )}
+                        </VStack>
+                        {listing?.listing_type === 'sale' && (
+                            <Tag 
+                                size="sm" 
+                                colorScheme="orange" 
+                                borderRadius="full"
+                                px={3}
+                            >
+                                <HStack spacing={1}>
+                                    <Icon as={HiMiniReceiptPercent} />
+                                    <Text fontSize="xs">+0.5% fee</Text>
+                                </HStack>
+                            </Tag>
+                        )}
                     </Flex>
 
-                    {
-                      listing?.listing_type === 'sale'?
-                    <Flex justifyContent={'flex-start'} alignItems={'center'} gap={2} my={2}>
-                      <Text as={Flex} gap={1} alignItems={'center'} className=""> <RxTimer /> {commaInt(listing?.vehicle?.mileage) || 0} miles</Text>
-                      <Text as={Flex} gap={1} alignItems={'center'} className=""> <TbManualGearbox /> {listing?.vehicle?.transmission}</Text>
-                      <Text as={Flex} gap={1} alignItems={'center'} className=""> <RiGasStationLine /> {listing?.vehicle?.fuel_system}</Text>
-                    </Flex>
-                    :
-                    <Flex justifyContent={'flex-start'} alignItems={'center'} gap={2} my={2}>
-                      <Text as={Flex} gap={1} alignItems={'center'} className=""> {(listing?.vehicle?.dealer?.rating) || 0} <StarIcon color="yellow" /> </Text>
-                      <Text as={Flex} gap={1} alignItems={'center'} className=""> ({listing?.vehicle?.trips} Trips) </Text>
-                      <Text as={Flex} gap={1} alignItems={'center'} className=""> {listing?.vehicle?.dealer?.level}</Text>
-                    </Flex>
-                    }
+                    <Divider mb={3} />
 
-                    <Flex alignItems="center" gap={1}>
-                        <Text fontWeight="600" fontSize="22px"> ₦{commaInt(listing?.price)}
-                            <Text as='span' className="small" color="gray.500">{listing?.listing_type === 'rental' && `/${listing?.payment_cycle}`} </Text>
-                        </Text>
-                        {listing?.listing_type === 'sale' &&
-                          <Tag as={Flex} ml="auto" size="sm" alignItems="center" gap={1.25}>
-                              <Icon> <HiMiniReceiptPercent size={25} /> </Icon>
-                              <Text>+0.5% fee</Text>
-                          </Tag>
-                        }
-                    </Flex>
-
-                    <Divider my={3} />
-
-                    <Flex justifyContent={'space-between'} alignItems={'center'} my={2}>
-                        <Text className="small-text" as={Flex} alignItems="center" gap={1.25}> <Icon> <LuMapPin size={25} /> </Icon> {listing?.vehicle?.dealer?.location} </Text>
-                        {
-                          listing?.listing_type === 'sale' ?
-                           <Flex gap={2}>
-                            <Badge fontWeight={'600'} gap={1.5}> <span> Verified </span> <Icon color="blue"> <BsFillPatchCheckFill size={25} /> </Icon> </Badge>
-
-                            {listing?.vehicle?.custom_duty &&
-                              <Badge fontWeight={'600'} gap={1.5}> <span> Custom Duty </span> <Icon color="purple"> <BsFillPatchCheckFill size={25} /> </Icon> </Badge>
-                            }
-                           </Flex>
-                          :
-                          <Tag fontWeight={'bold'} gap={1.5}><Icon> <Leaf size={25} /> </Icon> <span> {listing?.vehicle?.fuel_system} </span> </Tag>
-                        }
+                    {/* Location and Badges */}
+                    <Flex justifyContent={'space-between'} alignItems={'center'} gap={2}>
+                        <HStack spacing={1} fontSize="sm" color="gray.600" flex={1} minW={0}>
+                            <Icon as={LuMapPin} flexShrink={0} />
+                            <Text noOfLines={1}>{listing?.vehicle?.dealer?.location}</Text>
+                        </HStack>
+                        
+                        {listing?.listing_type === 'sale' ? (
+                            <HStack spacing={1} flexShrink={0}>
+                                <Badge 
+                                    colorScheme="blue" 
+                                    display="flex" 
+                                    alignItems="center" 
+                                    gap={1}
+                                    px={2}
+                                    py={1}
+                                    borderRadius="md"
+                                >
+                                    <Icon as={BsFillPatchCheckFill} boxSize={3} />
+                                    <Text fontSize="xs">Verified</Text>
+                                </Badge>
+                                {listing?.vehicle?.custom_duty && (
+                                    <Badge 
+                                        colorScheme="purple" 
+                                        display="flex" 
+                                        alignItems="center" 
+                                        gap={1}
+                                        px={2}
+                                        py={1}
+                                        borderRadius="md"
+                                    >
+                                        <Icon as={BsFillPatchCheckFill} boxSize={3} />
+                                        <Text fontSize="xs">Duty</Text>
+                                    </Badge>
+                                )}
+                            </HStack>
+                        ) : (
+                            <Tag 
+                                colorScheme="green" 
+                                display="flex" 
+                                alignItems="center" 
+                                gap={1}
+                                borderRadius="full"
+                            >
+                                <Icon as={Leaf} boxSize={3} />
+                                <Text fontSize="xs">{listing?.vehicle?.fuel_system}</Text>
+                            </Tag>
+                        )}
                     </Flex>
                 </CardBody>
             </Card>

@@ -38,8 +38,10 @@ import {RxArrowRight} from 'react-icons/rx';
 import faqs from '../data/faqs.json';
 import '../assets/Home.css';
 import ScrollAnimation from 'react-animate-on-scroll';
-import { DashboardSearchBar } from '../components';
+import { DashboardSearchBar, ListingItemCard } from '../components';
 import { MdHeight } from 'react-icons/md';
+import { GlobalStore } from '../App';
+import { objectifyJSON } from '../utils';
 
 const featureList = [
   {
@@ -287,7 +289,7 @@ export const HomePage = ({ props }) => {
         <Container maxW="container.xl" px={4} py={10}>
           <Heading my={5} textAlign="center" size="lg" textColor='primary'> Browse all Vehicles </Heading>
 
-          <Tabs colorScheme="blue"  align="center" mb={8}>
+         {/* <Tabs colorScheme="blue"  align="center" mb={8}>
             <TabList align="center" mx="auto" as={ButtonGroup} size='md' border="none" isAttached variant='outline' mt={3}>
               <Tab as={Button}
                 color="primary"
@@ -315,7 +317,7 @@ export const HomePage = ({ props }) => {
                borderRadius="30px" px={'35px'}
               >Rent</Tab>
             </TabList>
-          </Tabs>
+          </Tabs> */}
 
           <Stack px={4}>
             <Heading size="md" textColor='primary'> Popular Brands & Types </Heading>
@@ -400,32 +402,96 @@ export const HomePage = ({ props }) => {
         <Partnership />
 
         {/* FAQs */}
-        <Container maxW={{md: '75%'}} py={'100px'} textAlign={'center'}>
-          <Text my={2} className='title' textColor='primary'> Frequently Asked Questions </Text>
-          <Text my={2} className='text' textColor='primary'> Still not convinced? <a href={'/'} className='link'>Chat with our team here.</a> </Text>
+        <Box bg="gray.50" py={{ base: 16, md: 20 }}>
+          <Container maxW="container.xl">
+            <VStack spacing={3} mb={12} textAlign="center">
+              <Heading 
+                fontSize={{ base: '3xl', md: '4xl', lg: '5xl' }} 
+                fontWeight="bold"
+                color="gray.900"
+              >
+                Frequently Asked Questions
+              </Heading>
+              <Text fontSize={{ base: 'md', md: 'lg' }} color="gray.600" maxW="2xl">
+                Still not convinced?{' '}
+                <Text as="span" color="primary" fontWeight="semibold" cursor="pointer" _hover={{ textDecoration: 'underline' }}>
+                  Chat with our team here.
+                </Text>
+              </Text>
+            </VStack>
 
-          <Stack mt={10} maxW={{md: '500px'}} mx={'auto'}>
-            <Accordion allowMultiple allowToggle border={'none'} textAlign={'left'}>
-              {
-                faqs.map((faq, idx) => 
-                    <AccordionItem key={idx} borderRadius={5} my={4} border={'1px solid lavender'}>
-                      {({ isExpanded }) => (
-                        <Fragment key={idx}>
-                        <AccordionButton as={Flex} wrap={'nowrap'} alignItems={'center'} justifyContent={'space-between'}>
-                          <Text flex={1} className='' size="md" textAlign={'left'}> {faq?.question} </Text>
-                          <Icon className='icon' fontSize={'20px'}>{isExpanded ? <FaCircleMinus /> : <FaCirclePlus /> }</Icon>
+            <Box maxW="4xl" mx="auto">
+              <Accordion allowMultiple allowToggle>
+                {faqs.map((faq, idx) => (
+                  <AccordionItem 
+                    key={idx} 
+                    border="none"
+                    mb={4}
+                  >
+                    {({ isExpanded }) => (
+                      <Box
+                        bg="white"
+                        borderRadius="xl"
+                        overflow="hidden"
+                        boxShadow={isExpanded ? 'lg' : 'md'}
+                        transition="all 0.3s"
+                        _hover={{ boxShadow: 'lg' }}
+                      >
+                        <AccordionButton
+                          py={6}
+                          px={6}
+                          _hover={{ bg: 'gray.50' }}
+                          transition="all 0.2s"
+                        >
+                          <HStack flex={1} spacing={4} align="center">
+                            <Box
+                              w={10}
+                              h={10}
+                              borderRadius="full"
+                              bg={isExpanded ? 'primary' : 'gray.100'}
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              transition="all 0.3s"
+                            >
+                              <Icon 
+                                fontSize="20px" 
+                                color={isExpanded ? 'white' : 'gray.600'}
+                              >
+                                {isExpanded ? <FaCircleMinus /> : <FaCirclePlus />}
+                              </Icon>
+                            </Box>
+                            <Text 
+                              flex={1} 
+                              fontSize={{ base: 'md', md: 'lg' }}
+                              fontWeight="semibold"
+                              textAlign="left"
+                              color="gray.900"
+                            >
+                              {faq?.question}
+                            </Text>
+                          </HStack>
                         </AccordionButton>
 
-                        <AccordionPanel px={3} py={3}>
-                          <Text className=''>{faq?.answer}</Text>
+                        <AccordionPanel pb={6} px={6}>
+                          <Box pl={14}>
+                            <Text 
+                              fontSize={{ base: 'sm', md: 'md' }}
+                              color="gray.600"
+                              lineHeight="tall"
+                            >
+                              {faq?.answer}
+                            </Text>
+                          </Box>
                         </AccordionPanel>
-                        </Fragment>
-                      )}
-                    </AccordionItem>
-              )}
-            </Accordion>
-          </Stack>
-        </Container>
+                      </Box>
+                    )}
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </Box>
+          </Container>
+        </Box>
       </div>
     )
 }
@@ -600,32 +666,80 @@ function SearchHero(){
 }
 
 function FeaturedDeals(){
-  const cards = [
-    { title: 'Toyota Camry 2021', price: '₦12,500,000', img: '/assets/images/sell_car.jpg', meta: '45k km • Automatic • Petrol' },
-    { title: 'Honda Accord 2020', price: '₦11,200,000', img: '/assets/images/list_car.jpg', meta: '38k km • Automatic • Petrol' },
-    { title: 'Mercedes C300 2019', price: '₦22,800,000', img: '/assets/images/hero-image.jpg', meta: '25k km • Automatic • Petrol' },
-    { title: 'Lexus RX350 2018', price: '₦27,000,000', img: '/assets/images/image.jpg', meta: '60k km • Automatic • Petrol' },
-  ];
+  const { axios } = useContext(GlobalStore);
+  const [featuredListings, setFeaturedListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function getFeaturedDeals() {
+    try {
+      setLoading(true);
+      const res = await axios.get('/listings/my-listings/?scope=top-deals');
+      const data = objectifyJSON(res.data);
+      
+      // Combine all top deals (sales, rentals, services)
+      const allDeals = [
+        ...(data.top_deals?.sales || []),
+        ...(data.top_deals?.rentals || []),
+        ...(data.top_deals?.services || [])
+      ];
+      
+      // Limit to 8 items for featured section
+      setFeaturedListings(allDeals.slice(0, 8));
+    } catch (error) {
+      console.error('Error fetching featured deals:', error);
+      setFeaturedListings([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    getFeaturedDeals();
+  }, []);
 
   return (
     <Box py={12} bg="gray.50">
       <Container maxW="7xl" px={{ base: 4, md: 8 }}>
-        <Heading size="lg" mb={6} textAlign={{ base: 'left', md: 'center' }} textColor='primary'>
+        <Heading size="lg" mb={8} textAlign={{ base: 'left', md: 'center' }} textColor='primary'>
           Featured deals near you
         </Heading>
-        <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={6}>
-          {cards.map((c, i) => (
-            <Box key={i} bg="white" borderRadius="lg" overflow="hidden" boxShadow="sm" _hover={{ boxShadow: 'md', transform: 'translateY(-2px)' }} transition="all .2s">
-              <Image src={c.img} alt={c.title} h="180px" w="100%" objectFit="cover" />
-              <Box p={4}>
-                <Text fontWeight="bold">{c.title}</Text>
-                <Text color="primary" fontWeight="800" mt={1}>{c.price}</Text>
-                <Text fontSize="sm" color="gray.600" mt={1}>{c.meta}</Text>
-                <Button mt={3} size="sm" rightIcon={<RxArrowRight />}>View details</Button>
+        
+        {loading ? (
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
+            {[1, 2, 3, 4].map((i) => (
+              <Box key={i} bg="white" borderRadius="2xl" overflow="hidden" boxShadow="lg" h="400px">
+                <Box bg="gray.200" h="240px" />
+                <Box p={4}>
+                  <Box bg="gray.200" h="20px" mb={3} borderRadius="md" />
+                  <Box bg="gray.200" h="16px" mb={2} borderRadius="md" w="60%" />
+                  <Box bg="gray.200" h="16px" borderRadius="md" w="40%" />
+                </Box>
               </Box>
-            </Box>
-          ))}
-        </SimpleGrid>
+            ))}
+          </SimpleGrid>
+        ) : featuredListings.length > 0 ? (
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
+            {featuredListings.map((listing, index) => (
+              <ListingItemCard key={listing.uuid || index} listing={listing} />
+            ))}
+          </SimpleGrid>
+        ) : (
+          <Box textAlign="center" py={12}>
+            <Text fontSize="lg" color="gray.500">
+              No featured deals available at the moment
+            </Text>
+            <Button 
+              as={Link} 
+              to="/buy" 
+              mt={4} 
+              colorScheme="blue" 
+              bg="primary"
+              rightIcon={<RxArrowRight />}
+            >
+              Browse all vehicles
+            </Button>
+          </Box>
+        )}
       </Container>
     </Box>
   )

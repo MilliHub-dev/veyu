@@ -47,6 +47,7 @@ export default function AddListing() {
   const [formData, setFormData] = useState({
     uuid: null,
     listing_type: 'sale',
+    vehicle_category: 'car', // car, bike, boat, aircraft
     features: [],
   });
   const [form, setForm] = useState(null);
@@ -120,52 +121,98 @@ export default function AddListing() {
 
   const handleCreate = async () => {
     try{
+      // Validate required fields
+      if (!formData?.brand || !formData?.model) {
+        notify({
+          title: "Missing Required Fields",
+          body: "Please select both brand and model for your vehicle",
+          color: "red",
+          duration: 5000,
+        });
+        return;
+      }
+
       const condition = formData?.condition || formData?.usage;
       const vehicleType = formData?.vehicle_type || formData?.body;
       const fuel = formData?.fuel_system || formData?.fuel;
 
-      // Swagger: expects nested vehicle object and top-level listing fields
-      const payload = {
-        listing_type: formData?.listing_type === 'rental' ? 'rental' : 'sale',
-        title: formData?.title,
-        price: (formData?.price ?? '').toString(),
-        payment_cycle: formData?.listing_type === 'rental' ? (formData?.payment_cycle || 'single') : 'single',
-        notes: formData?.notes,
-        verified: false,
-        approved: false,
-        viewers: [],
-        offers: [],
-        testdrives: [],
-        vehicle: {
-          name: formData?.title,
-          brand: formData?.brand,
-          model: formData?.model,
-          images: [],
-          condition: condition,
-          fuel_system: fuel,
-          transmission: formData?.transmission,
-          mileage: (formData?.mileage ?? '').toString(),
-          color: formData?.color || 'unspecified',
-          // Optional helpers
-          tags: '',
-          features: Array.isArray(formData?.features) ? formData.features.join(', ') : '',
-          available: true,
-          for_sale: formData?.listing_type === 'sale',
-          for_rent: formData?.listing_type === 'rental',
-          // passthroughs if backend supports them
-          vin: formData?.vin,
-          year: formData?.year ? Number(formData.year) : undefined,
-          body: vehicleType,
-          drivetrain: formData?.drivetrain,
-          doors: formData?.doors,
-          seats: formData?.seats,
-          registration: formData?.registration,
-        }
-      };
-
+      // Create FormData with individual fields (not nested JSON)
       const form = new FormData();
       form.append('action', 'create-listing');
-      form.append('data', JSON.stringify(payload));
+      
+      // Top-level listing fields
+      form.append('listing_type', formData?.listing_type === 'rental' ? 'rental' : 'sale');
+      if (formData?.title) form.append('title', formData.title);
+      if (formData?.price) form.append('price', formData.price.toString());
+      form.append('payment_cycle', formData?.listing_type === 'rental' ? (formData?.payment_cycle || 'daily') : 'single');
+      if (formData?.notes) form.append('notes', formData.notes);
+      
+      // Vehicle category (car, bike, boat, aircraft)
+      form.append('vehicle_category', formData?.vehicle_category || 'car');
+      
+      // Vehicle fields (flattened)
+      if (formData?.title) form.append('name', formData.title);
+      form.append('brand', formData?.brand);
+      form.append('model', formData?.model);
+      form.append('condition', condition || 'used');
+      if (formData?.year) form.append('year', formData.year);
+      if (formData?.color) form.append('color', formData.color);
+      
+      // Category-specific fields
+      const category = formData?.vehicle_category || 'car';
+      
+      if (category === 'car') {
+        // Required car fields
+        if (fuel) form.append('fuel_system', fuel);
+        if (formData?.transmission) form.append('transmission', formData.transmission);
+        form.append('mileage', (formData?.mileage ?? '0').toString());
+        if (vehicleType) {
+          form.append('body', vehicleType);
+          form.append('vehicle_type', vehicleType); // Backend requires this
+        }
+        
+        // Required car-specific fields (backend expects these)
+        form.append('vin', formData?.vin || '');
+        form.append('drivetrain', formData?.drivetrain || '');
+        form.append('doors', formData?.doors || '');
+        form.append('seats', formData?.seats || '');
+        
+        // Optional car fields
+        if (formData?.registration) form.append('registration', formData.registration);
+      } else if (category === 'bike' || category === 'motorcycle') {
+        form.append('engine_capacity', formData?.engine_capacity || '');
+        form.append('fuel_system', fuel || '');
+        form.append('transmission', formData?.transmission || '');
+        form.append('mileage', (formData?.mileage ?? '0').toString());
+        if (formData?.bike_type) form.append('bike_type', formData.bike_type);
+      } else if (category === 'boat') {
+        form.append('length', formData?.length || '');
+        form.append('engine_type', formData?.engine_type || '');
+        form.append('hull_material', formData?.hull_material || '');
+        form.append('capacity', formData?.capacity || '');
+        if (formData?.boat_type) form.append('boat_type', formData.boat_type);
+      } else if (category === 'aircraft') {
+        form.append('aircraft_type', formData?.aircraft_type || '');
+        form.append('engine_type', formData?.engine_type || '');
+        form.append('total_hours', formData?.total_hours || '0');
+        form.append('passenger_capacity', formData?.passenger_capacity || '');
+        if (formData?.registration) form.append('registration', formData.registration);
+      }
+      
+      // Features as comma-separated string
+      if (Array.isArray(formData?.features) && formData.features.length > 0) {
+        form.append('features', formData.features.join(', '));
+      }
+
+      // Debug: Log all FormData entries
+      console.log('=== LISTING CREATION DEBUG ===');
+      console.log('FormData state:', formData);
+      console.log('FormData entries:');
+      for (let [key, value] of form.entries()) {
+        console.log(`  ${key}: ${value}`);
+      }
+      console.log('=== END DEBUG ===');
+
       const res = await axios.post(
         '/admin/dealership/listings/create/',
         form,
@@ -173,12 +220,12 @@ export default function AddListing() {
       );
       const data = objectifyJSON(res.data)
 
-      if (res.status === 200){
+      if (res.status === 200 || res.status === 201){
         const newUuid = data?.data?.uuid || data?.uuid || data?.data?.vehicle?.uuid;
         setFormData({ ...formData, uuid: newUuid})
         toast({
-          title: "Listing submitted for review",
-          description: "We'll notify you once the review is complete.",
+          title: "Listing created successfully",
+          description: "Now upload images for your listing.",
           status: "success",
           duration: 5000,
           isClosable: true,
@@ -190,10 +237,31 @@ export default function AddListing() {
       const raw = error?.response?.data;
       try { console.error('Create listing failed RAW:', typeof raw === 'string' ? raw.slice(0, 1000) : raw); } catch {}
       console.error('Create listing failed:', error);
+      
+      // Better error message extraction
+      let errorMessage = 'Server error while creating listing';
+      let errorTitle = 'Unable to create listing';
+      
+      // Handle CORS/Network errors
+      if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
+        errorTitle = 'Network Error';
+        errorMessage = 'Unable to connect to the server. Please check your internet connection or try again later.';
+      } else if (error?.code === 'ECONNABORTED' || error?.message?.includes('timeout')) {
+        errorTitle = 'Request Timeout';
+        errorMessage = 'The request took too long. Please try again.';
+      } else if (typeof raw === 'object' && raw?.message) {
+        errorMessage = raw.message;
+      } else if (typeof raw === 'string' && !raw.includes('<!DOCTYPE')) {
+        errorMessage = raw.slice(0, 220);
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
       notify({
-        title: 'Unable to create listing',
-        body: (typeof raw === 'string' ? raw.slice(0, 220) : (raw?.message || error?.message)) || 'Server error (500) while creating listing',
-        color: 'red'
+        title: errorTitle,
+        body: errorMessage,
+        color: 'red',
+        duration: 7000
       })
     }
   }
@@ -236,7 +304,7 @@ export default function AddListing() {
           >
             <Box textAlign="center">
               <Heading size="lg" className="bold">Add a Listing</Heading>
-              <Text color="gray.600">Upload your car in 3 easy steps!</Text>
+              <Text color="gray.600">Upload your vehicle in 3 easy steps!</Text>
             </Box>
           </Box>
 
@@ -250,7 +318,48 @@ export default function AddListing() {
               {currentStep === 0 && (
                   <VStack spacing={8} w="full">
                     <FormControl isRequired mx={'auto'} width="100%">
-                      <FormLabel>Lisiting Type</FormLabel>
+                      <FormLabel fontWeight="600" color="gray.700">Vehicle Category</FormLabel>
+                      <SimpleGrid columns={{base: 2, md: 4}} gap={3} mt={3}>
+                        <Button onClick={() => setFormData({...formData, vehicle_category: 'car'})} 
+                         bgColor={formData?.vehicle_category === 'car' ? 'primary' : 'white'}
+                         color={formData?.vehicle_category === 'car' ? 'white' : 'primary'}
+                         borderWidth={2}
+                         colorScheme={'blue'}
+                         borderColor="cornflowerblue"
+                         borderRadius="10px" py={5}
+                        >🚗 Car</Button>
+
+                        <Button onClick={() => setFormData({...formData, vehicle_category: 'bike'})}
+                         bgColor={formData?.vehicle_category === 'bike' ? 'primary' : 'white'}
+                         color={formData?.vehicle_category === 'bike' ? 'white' : 'primary'}
+                         borderWidth={2}
+                         colorScheme={'blue'}
+                         borderColor="cornflowerblue"
+                         borderRadius="10px" py={5}
+                        >🏍️ Bike</Button>
+
+                        <Button onClick={() => setFormData({...formData, vehicle_category: 'boat'})}
+                         bgColor={formData?.vehicle_category === 'boat' ? 'primary' : 'white'}
+                         color={formData?.vehicle_category === 'boat' ? 'white' : 'primary'}
+                         borderWidth={2}
+                         colorScheme={'blue'}
+                         borderColor="cornflowerblue"
+                         borderRadius="10px" py={5}
+                        >⛵ Boat</Button>
+
+                        <Button onClick={() => setFormData({...formData, vehicle_category: 'aircraft'})}
+                         bgColor={formData?.vehicle_category === 'aircraft' ? 'primary' : 'white'}
+                         color={formData?.vehicle_category === 'aircraft' ? 'white' : 'primary'}
+                         borderWidth={2}
+                         colorScheme={'blue'}
+                         borderColor="cornflowerblue"
+                         borderRadius="10px" py={5}
+                        >✈️ Aircraft</Button>
+                      </SimpleGrid>
+                    </FormControl>
+
+                    <FormControl isRequired mx={'auto'} width="100%">
+                      <FormLabel fontWeight="600" color="gray.700">Listing Type</FormLabel>
                       <ButtonGroup size='md' isAttached variant='outline' mt={3} width="full">
                         <Button onClick={() => setFormData({...formData, listing_type: 'sale'})} 
                          bgColor={formData?.listing_type === 'sale' ? 'primary' : 'transparent'}
@@ -275,9 +384,9 @@ export default function AddListing() {
                     </FormControl>
 
                     { formData?.listing_type === 'rental' ?
-                      <CreateRentalForm formData={formData} setFormData={setFormData} />
+                      <CreateRentalForm formData={formData} setFormData={setFormData} vehicleCategory={formData?.vehicle_category} />
                       :
-                      <CreateSaleForm formData={formData} setFormData={setFormData} />
+                      <CreateSaleForm formData={formData} setFormData={setFormData} vehicleCategory={formData?.vehicle_category} />
                     }
                     <Button colorScheme="blue" form="details-form" type="submit" size="lg" w="full" maxW="600px" onClick={handleContinue}>
                       Continue

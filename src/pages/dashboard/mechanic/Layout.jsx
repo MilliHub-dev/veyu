@@ -66,59 +66,6 @@ function MechanicDashboardLayout({children, hideSidebar, ...props}) {
     }
   }
 
-  async function onVerification(type, data){
-    try{
-      if(type === 'success'){
-        const payload = {
-          verification_ref: data?.referenceId,
-          scope: [
-            'verified_id',
-            'verified_tin',
-            'verified_business',
-            'user.verified_email',
-            'verified_phone_number',
-          ],
-          object: 'mechanic',
-          object_id: mechanic?.uuid,
-        }
-
-        const res = await axios.post(`/accounts/verify-business/`, jsonifyObject(payload));
-        const data = objectifyJSON(res.data);
-        if (res.status === 200){
-          notify({
-            title: data?.message || 'Verification success!',
-            color: 'green',
-            timeout: 2500,
-          });
-
-          return init();
-        }else{
-          notify({
-            title: data?.message || 'An error occurred, we could not verify your business.',
-            color: 'red',
-            timeout: 5000,
-          })
-        }
-      }else if(type === 'error'){
-        notify({
-          title: data?.message || 'An error occurred, we could not verify your business.',
-          color: 'red',
-          timeout: 5000,
-        })
-      }else if(type === 'begin'){
-      }else if(type === 'close'){
-        console.log("Verification Close")
-        // close of the modal
-      }else if(type === 'loading'){
-      }
-    }catch(error){
-      notify({
-        title: error?.message || 'An error occurred, we could not verify your business.',
-        color: 'red',
-        timeout: 5000,
-      })
-    }
-  }
   useEffect(() => {
     init();
 
@@ -156,7 +103,7 @@ function MechanicDashboardLayout({children, hideSidebar, ...props}) {
             <Container pb={10} maxW="container.xl">
               {
                 !hideSidebar && !mechanic?.verified_business && 
-                <VerificationNotice user={authUser} onVerification={onVerification} businessType={'mechanic'} />
+                <VerificationNotice user={authUser} onRefresh={init} businessType={'mechanic'} />
               }
               <Outlet />
             </Container>

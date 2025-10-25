@@ -70,7 +70,7 @@ function BusinessProfile({onSubmit, ...props }) {
       place_id: '',
       street_address: '',
     },
-    business_type: '',
+    business_type: 'business', // business | individual
     about: '',
     headline: '',
     contact_phone: '',
@@ -129,7 +129,20 @@ function BusinessProfile({onSubmit, ...props }) {
     }
 
     try{
-      const authUser = objectifyJSON(localStorage.getItem('motaa-auth-user'));
+      // Check both possible localStorage keys
+      const authUser = objectifyJSON(localStorage.getItem('veyu-auth-user')) 
+                    || objectifyJSON(localStorage.getItem('motaa-auth-user'));
+      
+      console.log('Auth user for business setup:', authUser); // Debug log
+      
+      if (!authUser) {
+        return notify({
+          title: 'Error',
+          body: 'Please log in first to set up your business profile',
+          color: 'red'
+        });
+      }
+
       const payload = new FormData();
       payload.append('action', 'setup-business-profile')
       payload.append('user_type', user_type)
@@ -142,35 +155,63 @@ function BusinessProfile({onSubmit, ...props }) {
       payload.append('contact_email', businessProfile.contact_email)
       payload.append('services', businessProfile.services)
       payload.append('location', JSON.stringify(businessProfile.location))
+      
+      // Use api_token or token field
+      const token = authUser?.api_token || authUser?.token;
+      console.log('Using token:', token ? 'Token found' : 'No token'); // Debug log
+      
       const res = await axios.post('/accounts/register/', payload, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Token ${authUser?.token}`
+          'Authorization': `Token ${token}`
         }
       })
+      
+      console.log('Business profile response:', res); // Debug log
+      console.log('Response status:', res.status); // Debug log
+      console.log('Response data:', res.data); // Debug log
+      
       const data = objectifyJSON(res.data);
 
-      if (res.status === 200){
+      if (res.status === 200 || res.status === 201){
         console.log("New business data:", data);
-        localStorage.removeItem('motaa-auth-user');
-        redirect('/login', 200)
-        setTimeout(() => notify({
+        
+        notify({
           title: 'Success',
-          body: "Welcome to Motaa, Please log in to continue."
-        }), 1200)
+          body: "Business profile created successfully! Redirecting to dashboard..."
+        });
+        
+        // Update localStorage with new data if returned
+        if (data.data || data.user) {
+          localStorage.setItem('veyu-auth-user', JSON.stringify(data.data || data.user || data));
+        }
+        
+        // Redirect to dashboard after short delay
+        setTimeout(() => {
+          redirect('/dashboard');
+        }, 1500);
       }else{
+        console.log('Business setup failed:', data); // Debug log
         notify({
           title: 'Error',
           timeout: 5000,
-          body: data.message,
+          body: data.message || 'Failed to set up business profile',
           color: 'red'
         })
       }
     }catch(error){
+        console.error('Business profile error:', error); // Debug log
+        console.error('Error response:', error.response?.data); // Debug log
+        
+        const errorMessage = error.response?.data?.message 
+          || error.response?.data?.error
+          || (typeof error.response?.data === 'object' ? JSON.stringify(error.response?.data) : error.response?.data)
+          || error.message;
+        
         notify({
           title: 'Error',
           timeout: 5000,
-          body: error.message,
+          body: errorMessage,
           color: 'red'
         })
 
@@ -238,6 +279,28 @@ function BusinessProfile({onSubmit, ...props }) {
                 />
               </FormControl>
             </SimpleGrid>
+
+            <FormControl mt={4} isRequired>
+              <FormLabel> Business Type </FormLabel>
+              <ButtonGroup isAttached w="100%">
+                <Button
+                  flex={1}
+                  variant={businessProfile.business_type === 'business' ? 'solid' : 'outline'}
+                  colorScheme={businessProfile.business_type === 'business' ? 'blue' : 'gray'}
+                  onClick={() => changeValue('business_type', 'business')}
+                >
+                  Registered Business
+                </Button>
+                <Button
+                  flex={1}
+                  variant={businessProfile.business_type === 'individual' ? 'solid' : 'outline'}
+                  colorScheme={businessProfile.business_type === 'individual' ? 'blue' : 'gray'}
+                  onClick={() => changeValue('business_type', 'individual')}
+                >
+                  Individual
+                </Button>
+              </ButtonGroup>
+            </FormControl>
           </VStack>
         </Box>
 

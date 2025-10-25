@@ -83,6 +83,8 @@ function App() {
   const axiosClient = axios.create({
     baseURL: "https://dev.veyu.cc/api/v1",
     headers: { "Content-Type": "application/json" },
+    withCredentials: false, // Disabled due to backend CORS wildcard (*) config
+    timeout: 30000, // 30 second timeout
   });
 
   // Sync axios auth header
@@ -111,6 +113,7 @@ function App() {
     setAuthState(false);
     setAuthUser(null);
     localStorage.removeItem("veyu-auth-user");
+    window.location.href = '/login';
   };
 
   const getAuthUser = () => {
@@ -141,6 +144,7 @@ function App() {
     onAuthenticated,
     isAuthenticated,
     onLogout,
+    logout: onLogout, // Alias for backward compatibility
     setOtherContext,
     otherContext,
     commaInt,

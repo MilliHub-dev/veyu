@@ -12,6 +12,9 @@ import {
     Icon,
     Image,
     Input,
+    InputGroup,
+    InputRightElement,
+    IconButton,
     Link,
     ButtonGroup,
     PinInput,
@@ -28,7 +31,7 @@ import { CenteredLayout, OTPField } from "../../components";
 import { redirect, useNavigate, useSearchParams, useParams, Link as RLink } from "react-router-dom";
 import { RiCircleFill, RiCircleLine, RiMailCloseFill, RiMailFill, RiMessage2Line, RiMessage3Line, RiMessageLine } from "react-icons/ri";
 import { FcSms, FcVoicemail } from "react-icons/fc";
-import { FaGoogle, FaFacebook, FaArrowRight } from "react-icons/fa";
+import { FaGoogle, FaFacebook, FaArrowRight, FaEye, FaEyeSlash } from "react-icons/fa";
 import { RxChatBubble, RxEnvelopeOpen } from "react-icons/rx";
 import { jsonifyObject, objectifyJSON } from "../../utils";
 import {ArrowRight} from 'lucide-react';
@@ -39,7 +42,7 @@ import BusinessProfile from './BusinessProfile';
 export const SignupContext = createContext({});
 
 export const SignupView = ({...props }) => {
-    const {redirect, axios, notify, onError} = useContext(GlobalStore)
+    const {redirect, axios, notify} = useContext(GlobalStore)
     const [params] = useSearchParams();
     const type = params.get('type') || 'customer'
     const [step, setStepValue] = useState(0);
@@ -88,8 +91,8 @@ export const SignupView = ({...props }) => {
             const newUser = await checkEmail(_user.email);
 
             if (newUser){
-                await setPayload({...data});
-                await setUser(user);
+                await setPayload({...data, user_type: type === 'business' ? 'dealer' : 'customer'});
+                await setUser(_user);
                 setSkipStep({...skipConfirmation, email: true});
                 nextStep();
             }
@@ -111,12 +114,12 @@ export const SignupView = ({...props }) => {
             key: 'profile',
             component: <SignupStep type={type} />
         },
-        // {
-        //     title: 'Confirm your email',
-        //     description: 'Verify your email to get notifications and updates from Veyu.',
-        //     key: 'email',
-        //     component: <ConfirmationStep type={type} verification={'email'}  />
-        // },
+        {
+            title: 'Confirm your email',
+            description: 'Verify your email to get notifications and updates from Veyu.',
+            key: 'email',
+            component: <ConfirmationStep type={type} verification={'email'}  />
+        },
     ]
 
     function nextStep(){
@@ -218,24 +221,49 @@ const EmailStep = ({ signUpWithGoogle }) => {
     const [params] = useSearchParams();
     const type = params.get('type') || 'customer'
     const [password, setPassword] = useState('');
-    const {axios, notify, onError} = useContext(GlobalStore);
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const {axios, notify} = useContext(GlobalStore);
     const {checkEmail, user_type, addToPayload, setUserType, payload, nextStep} = useContext(SignupContext);
 
     async function handleSubmit(e){
         e.preventDefault();
         try{
+            // Validate password confirmation
+            if (password !== confirmPassword){
+                return notify({
+                    title: 'Error!',
+                    color: 'red',
+                    body: 'Passwords do not match'
+                });
+            }
+
+            // Validate password length (API requires min 8 characters)
+            if (password.length < 8){
+                return notify({
+                    title: 'Error!',
+                    color: 'red',
+                    body: 'Password must be at least 8 characters long'
+                });
+            }
+
             const canProceed = await checkEmail(email);
             if (canProceed){
-                if (type === 'business' && ['dealer', 'mechanic'].includes(user_type)){
-        
-                }else if (type === 'personal'){
-                    setUserType('customer');
-                }else{
-                    throw new Error("Please select a business type!" + ' that matches ' + type);
+                // Validate business type selection for business accounts
+                if (type === 'business' && !['dealer', 'mechanic'].includes(user_type)){
+                    throw new Error("Please select a business type (Dealer or Mechanic)");
                 }
+                
+                // Set user_type to customer for personal/customer accounts
+                if (type === 'personal' || type === 'customer'){
+                    setUserType('customer');
+                }
+                
                 addToPayload({
                     email,
                     password,
+                    confirm_password: confirmPassword,
                     provider: 'veyu'
                 });
                 nextStep();
@@ -289,16 +317,52 @@ const EmailStep = ({ signUpWithGoogle }) => {
                         />
                     </FormControl>
 
-                    <FormControl name={'email'} my={2} isRequired>
+                    <FormControl name={'password'} my={2} isRequired>
                         <FormLabel> Password </FormLabel>
-                        <Input
-                            type="password"
-                            required={true}
-                            value={password}
-                            name="password"
-                            onInput={e => setPassword(e.target.value)}
-                            placeholder="Enter a password"
-                        />
+                        <InputGroup>
+                            <Input
+                                type={showPassword ? "text" : "password"}
+                                required={true}
+                                value={password}
+                                name="password"
+                                minLength={8}
+                                onInput={e => setPassword(e.target.value)}
+                                placeholder="Enter a password (min 8 characters)"
+                            />
+                            <InputRightElement>
+                                <IconButton
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
+                                    icon={showPassword ? <FaEyeSlash /> : <FaEye />}
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    variant="ghost"
+                                    size="sm"
+                                />
+                            </InputRightElement>
+                        </InputGroup>
+                    </FormControl>
+
+                    <FormControl name={'confirm_password'} my={2} isRequired>
+                        <FormLabel> Confirm Password </FormLabel>
+                        <InputGroup>
+                            <Input
+                                type={showConfirmPassword ? "text" : "password"}
+                                required={true}
+                                value={confirmPassword}
+                                name="confirm_password"
+                                minLength={8}
+                                onInput={e => setConfirmPassword(e.target.value)}
+                                placeholder="Re-enter your password"
+                            />
+                            <InputRightElement>
+                                <IconButton
+                                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                    icon={showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    variant="ghost"
+                                    size="sm"
+                                />
+                            </InputRightElement>
+                        </InputGroup>
                     </FormControl>
 
                     <FormControl my={4}>
@@ -348,35 +412,44 @@ const SignupStep = ({ type }) => {
 
         const newPayload = {
             ...payload,
-            cac_number,
             first_name,
             last_name,
             phone_number,
-            action: 'create-account',
-            id_type,
-            user_type
+            user_type,
+            action: 'create-account'
         }
 
         try{
             addToPayload({ ...newPayload });
 
-            const res = await axios.post('/accounts/register/', JSON.stringify(newPayload));
+            console.log('Signup payload:', newPayload); // Debug log
+
+            const res = await axios.post('/accounts/register/', newPayload, {
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            console.log('Signup response:', res); // Debug log
+            console.log('Response status:', res.status); // Debug log
+            console.log('Response data:', res.data); // Debug log
+            
             const data = objectifyJSON(res.data)
 
-            if (res.status === 201){
-                localStorage.setItem('motaa-auth-user', jsonifyObject(data.data));
+            if (res.status === 201 || res.status === 200){
+                // Store auth data for verification step
+                const authData = data.data || data;
+                if (authData.token || authData.api_token){
+                    localStorage.setItem('veyu-auth-user', jsonifyObject(authData));
+                }
+                
                 notify({
                     title: 'Success',
-                    body: "Successfully created your account"
+                    body: "Account created! Please verify your email."
                 });
 
-                if (type === 'business'){
-                    return redirect('/signup/business/')
-                }
-                onAuthenticated({ ...auth })
-                redirect('/home');
-
-                // REMOVED BECAUSE OTP BREAKS
+                // Go to email verification step
+                nextStep();
 
                 // if (payload.provider === 'google'){ // skip email confirmation
                 //     if(type === 'business'){
@@ -396,10 +469,18 @@ const SignupStep = ({ type }) => {
                 })
             }
         }catch(error){
+            console.error('Signup error:', error);
+            console.error('Error response:', error.response?.data);
+            
+            const errorMessage = error.response?.data?.message 
+                || error.response?.data?.error
+                || (typeof error.response?.data === 'object' ? JSON.stringify(error.response?.data) : error.response?.data)
+                || error.message;
+            
             notify({
                 title: 'Error!',
                 color: 'red',
-                body: error.message,
+                body: errorMessage,
             })
         }
     }
@@ -453,96 +534,205 @@ const ConfirmationStep = ({ verification, type }) => {
     const timer = useRef();
     const redirect = useNavigate();
 
-    async function requestCode(){
-        timer.current.innerHTML = `Request new code in 60s`;
-        let time = 60;
-        const auth = objectifyJSON(localStorage.getItem('motaa-auth-user'))
-        const token = auth.token
+    // Auto-request verification code when component mounts
+    useEffect(() => {
+        requestCode();
+    }, []);
 
-        const counter = setInterval(() => {
-            if (time > 0){
-                time -= 1
-                timer.current.innerHTML = `Request new code in ${time}s`;
-                setCodeTimer(time);
-            }else{
-                timer.current.innerHTML = `Click to resend`;
-                return clearInterval(counter)
-            }
-        }, 1000);
-        
-        const res = await axios.post('/accounts/verify-email/', JSON.stringify({
-            action: 'request-code',
-            email: payload.email,
-        }), {
-            headers: {
-                // 'User-Agent': `${document.location.hostname}`,
-                'Authorization': `Token ${token}`
-            }
-        })
-    }
-    
-    async function verifyCode(){
-        const auth = objectifyJSON(localStorage.getItem('motaa-auth-user'));
-        const token = auth.token
-        timer.current.focus()
-        
-        if (verification === 'email'){
+    async function requestCode(){
+        try {
+            timer.current.innerHTML = `Request new code in 60s`;
+            let time = 60;
+            const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'))
+            const token = auth?.token || auth?.api_token
+
+            const counter = setInterval(() => {
+                if (time > 0){
+                    time -= 1
+                    timer.current.innerHTML = `Request new code in ${time}s`;
+                    setCodeTimer(time);
+                }else{
+                    timer.current.innerHTML = `Click to resend`;
+                    return clearInterval(counter)
+                }
+            }, 1000);
+            
             const res = await axios.post('/accounts/verify-email/', JSON.stringify({
-                action: 'confirm-code',
+                action: 'request-code',
                 email: payload.email,
-                code: otp
             }), {
                 headers: {
+                    'Content-Type': 'application/json',
                     'Authorization': `Token ${token}`
                 }
             })
-            
-            if (res.status === 200){
-                setOTP('');
-                notify({
-                    title: "Success",
-                    body: "Your email has been verified"
-                });
 
-                if (type === 'business'){
-                    return redirect('/signup/business/')
-                }
-                onAuthenticated({ ...auth })
-                redirect('/home');
+            if (res.status === 200) {
+                notify({
+                    title: 'Success',
+                    body: 'Verification code sent to your email'
+                });
             }
+        } catch (error) {
+            console.error('Request code error:', error);
+            notify({
+                title: 'Error',
+                body: error.response?.data?.message || 'Failed to send verification code',
+                color: 'red'
+            });
+        }
+    }
+    
+    async function verifyCode(){
+        try {
+            const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'));
+            const token = auth?.token || auth?.api_token;
+            
+            if (!token) {
+                notify({
+                    title: 'Error',
+                    body: 'Authentication token not found. Please sign up again.',
+                    color: 'red'
+                });
+                return redirect('/signup');
+            }
+            
+            if (verification === 'email'){
+                const res = await axios.post('/accounts/verify-email/', JSON.stringify({
+                    action: 'confirm-code',
+                    email: payload.email,
+                    code: otp
+                }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${token}`
+                    }
+                })
+                
+                if (res.status === 200){
+                    setOTP('');
+                    notify({
+                        title: "Success",
+                        body: "Your email has been verified! Please log in."
+                    });
+
+                    // Clear auth data and redirect to login
+                    localStorage.removeItem('veyu-auth-user');
+                    setTimeout(() => {
+                        redirect('/login');
+                    }, 1500);
+                }
+            }
+        } catch (error) {
+            console.error('Verify code error:', error);
+            notify({
+                title: 'Error',
+                body: error.response?.data?.message || 'Invalid verification code',
+                color: 'red'
+            });
         }
     }
 
     return(
-        <Box flex={1} textAlign={'center'}>
-            <Card my={5} py={5} px={5} width={'max-content'} mx={'auto'}>
-                <Icon className="icon" color={'primary'} my={3} mx={'auto'}> {verification === 'email' ? <RxEnvelopeOpen /> : <RiMessage3Line /> }</Icon>
-                <Heading className="subtitle" size={'md'} mb={3}> Please check your {verification === 'email' ? 'inbox' : 'messages'}. </Heading>
-                <Text className="small-text" size={'xs'}> We've sent a code to {verification === 'email' ? `${payload?.email}` : `${payload?.phone_number}`} </Text>
+        <Box flex={1} textAlign={'center'} py={8}>
+            <VStack spacing={6} maxW="500px" mx={'auto'} px={4}>
+                {/* Icon Section */}
+                <Box
+                    w={20}
+                    h={20}
+                    borderRadius="full"
+                    bg="blue.50"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    mb={2}
+                >
+                    <Icon 
+                        fontSize="40px" 
+                        color={'primary'}
+                    > 
+                        {verification === 'email' ? <RxEnvelopeOpen /> : <RiMessage3Line />}
+                    </Icon>
+                </Box>
 
-                <OTPField value={otp} onChange={val => setOTP(val)} />
+                {/* Heading Section */}
+                <VStack spacing={2}>
+                    <Heading size={'lg'} fontWeight="bold" color="gray.900">
+                        Verify your {verification === 'email' ? 'email' : 'phone'}
+                    </Heading>
+                    <Text fontSize={'md'} color="gray.600" maxW="400px">
+                        We've sent a 6-digit verification code to
+                    </Text>
+                    <Text fontSize={'md'} fontWeight="semibold" color="primary">
+                        {verification === 'email' ? payload?.email : payload?.phone_number}
+                    </Text>
+                </VStack>
 
-                <Text className="small-text" size={'xs'}>
-                    Didn't get a code?
+                {/* OTP Input Section */}
+                <Box w="full" py={4}>
+                    <OTPField value={otp} onChange={val => setOTP(val)} />
+                </Box>
+
+                {/* Verify Button */}
+                <Button 
+                    onClick={verifyCode} 
+                    disabled={!otp || otp.length < 6} 
+                    type="submit" 
+                    w={'100%'} 
+                    size="lg"
+                    colorScheme="blue" 
+                    bg={'primary'}
+                    _hover={{ bg: 'blue.600' }}
+                    _disabled={{
+                        bg: 'gray.300',
+                        cursor: 'not-allowed'
+                    }}
+                >
+                    Verify Code
+                </Button>
+
+                {/* Resend Section */}
+                <HStack spacing={1} fontSize="sm" color="gray.600">
+                    <Text>Didn't receive the code?</Text>
                     <Button
-                     textDecor={'underline'}
-                     bg={'transparent'}
-                     _hover={{ bg: 'transparent'}}
-                     disabled={timeout > 0}
-                     px={1}
-                     onClick={requestCode}
-                    > <span ref={timer}>Click to resend</span> </Button>
-                </Text>
+                        variant="link"
+                        colorScheme="blue"
+                        fontWeight="semibold"
+                        disabled={timeout > 0}
+                        onClick={requestCode}
+                        fontSize="sm"
+                        _disabled={{
+                            color: 'gray.400',
+                            cursor: 'not-allowed'
+                        }}
+                    >
+                        <span ref={timer}>Resend code</span>
+                    </Button>
+                </HStack>
 
-                {/*<dojah-button
-                  widgetId="undefined"
-                  text="Web"
-                  textColor="#FFFFFF"
-                  backgroundColor="#3977de">
-                </dojah-button>*/}
-
-                <Button my={5} onClick={verifyCode} disabled={!otp} type="submit" w={'100%'} colorScheme="blue" bg={'primary'}> Verify code </Button>
-            </Card>
+                {/* Help Text */}
+                <Box 
+                    mt={4} 
+                    p={4} 
+                    bg="blue.50" 
+                    borderRadius="lg" 
+                    w="full"
+                    borderLeft="4px solid"
+                    borderColor="primary"
+                >
+                    <HStack spacing={2} align="start">
+                        <Icon as={RiMailFill} color="primary" mt={0.5} />
+                        <VStack align="start" spacing={1}>
+                            <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+                                Check your spam folder
+                            </Text>
+                            <Text fontSize="xs" color="gray.600">
+                                If you don't see the email in your inbox, please check your spam or junk folder.
+                            </Text>
+                        </VStack>
+                    </HStack>
+                </Box>
+            </VStack>
         </Box>
     )
 }
