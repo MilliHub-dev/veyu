@@ -1,4 +1,4 @@
-import {useState, useEffect, useContext} from 'react';
+import { useState, useEffect, useContext } from 'react';
 import {
   Box,
   Container,
@@ -25,6 +25,17 @@ import {
   Badge,
   IconButton,
   useColorModeValue,
+  Card,
+  CardBody,
+  Avatar,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  Divider,
+  Wrap,
+  WrapItem,
+  useBreakpointValue,
 } from "@chakra-ui/react"
 import {
   Search,
@@ -40,25 +51,170 @@ import {
   Instagram,
   ShieldCheck,
   Zap,
+  TrendingUp,
+  Users,
+  Award,
+  Clock,
+  MapPin,
+  ArrowRight,
+  Play,
+  CheckCircle,
+  Heart,
+  Filter,
+  Sparkles,
+  Target,
+  Globe,
 } from "lucide-react"
-import {ListingItemCard, ImageCarousel, LocationBreadcrumb} from "../../components";
-import {GlobalStore} from "../../App";
-import {objectifyJSON} from "../../utils";
+import { ListingItemCard, ImageCarousel, LocationBreadcrumb } from "../../components";
+import { GlobalStore } from "../../App";
+import { objectifyJSON } from "../../utils";
 import ScrollAnimation from 'react-animate-on-scroll';
-import {Link} from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
-// Feature Card Component
-function FeatureCard({ icon, title, description, ...props }) {
+const MotionBox = motion(Box);
+const MotionCard = motion(Card);
+
+// Enhanced Feature Card Component
+function FeatureCard({ icon, title, description, gradient, ...props }) {
   return (
-    <Box bgGradient="linear(to-br, white, gray.50)" minW={'260px'} maxW={'320px'} p={8} borderRadius="2xl" boxShadow="lg" textAlign="left" _hover={{ transform: 'translateY(-4px)', boxShadow: 'xl' }} transition="all .2s" {...props}>
-      <Box bg="blue.100" w="fit-content" px={4} py={3} borderRadius="full" mb={4}>
-        {icon}
+    <MotionCard
+      whileHover={{ y: -8, scale: 1.02 }}
+      transition={{ duration: 0.3 }}
+      minW="280px"
+      maxW="350px"
+      bg="white"
+      borderRadius="2xl"
+      shadow="xl"
+      border="1px solid"
+      borderColor="gray.100"
+      overflow="hidden"
+      _hover={{
+        shadow: '2xl',
+        borderColor: '#F4A950'
+      }}
+      {...props}
+    >
+      <CardBody p={8}>
+        <VStack spacing={4} align="start">
+          <Box
+            bg={gradient || "linear-gradient(135deg, #F4A950, #FF6B35)"}
+            w="60px"
+            h="60px"
+            borderRadius="xl"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            color="white"
+            shadow="lg"
+          >
+            {icon}
+          </Box>
+          <VStack spacing={2} align="start">
+            <Text fontSize="xl" fontWeight="bold" color="gray.800">
+              {title}
+            </Text>
+            <Text color="gray.600" lineHeight="1.6">
+              {description}
+            </Text>
+          </VStack>
+        </VStack>
+      </CardBody>
+    </MotionCard>
+  )
+}
+
+// Stats Card Component
+function StatsCard({ icon, number, label, trend, ...props }) {
+  return (
+    <Card bg="white" borderRadius="xl" shadow="md" border="1px solid" borderColor="gray.100" {...props}>
+      <CardBody p={6}>
+        <HStack spacing={4}>
+          <Box
+            bg="#F4A950"
+            p={3}
+            borderRadius="lg"
+            color="white"
+          >
+            {icon}
+          </Box>
+          <VStack spacing={1} align="start">
+            <Text fontSize="2xl" fontWeight="bold" color="gray.800">
+              {number}
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              {label}
+            </Text>
+            {trend && (
+              <HStack spacing={1}>
+                <TrendingUp size={12} color="#10B981" />
+                <Text fontSize="xs" color="green.500" fontWeight="medium">
+                  {trend}
+                </Text>
+              </HStack>
+            )}
+          </VStack>
+        </HStack>
+      </CardBody>
+    </Card>
+  )
+}
+
+// Category Card Component
+function CategoryCard({ title, count, image, href, ...props }) {
+  return (
+    <MotionCard
+      as={Link}
+      to={href}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.2 }}
+      bg="white"
+      borderRadius="xl"
+      shadow="md"
+      overflow="hidden"
+      _hover={{
+        shadow: 'lg',
+        textDecoration: 'none'
+      }}
+      {...props}
+    >
+      <Box position="relative" h="120px" overflow="hidden">
+        <Image
+          src={image}
+          alt={title}
+          w="full"
+          h="full"
+          objectFit="cover"
+          transition="transform 0.3s"
+          _hover={{ transform: 'scale(1.1)' }}
+        />
+        <Box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          bg="blackAlpha.400"
+        />
+        <VStack
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          justify="center"
+          color="white"
+          textAlign="center"
+        >
+          <Text fontSize="lg" fontWeight="bold">
+            {title}
+          </Text>
+          <Text fontSize="sm" opacity={0.9}>
+            {count} available
+          </Text>
+        </VStack>
       </Box>
-      <Text fontSize="lg" color="primary" fontWeight="bold" mb={1}>
-        {title}
-      </Text>
-      <Text color="gray.600">{description}</Text>
-    </Box>
+    </MotionCard>
   )
 }
 
@@ -70,22 +226,29 @@ export default function MainPage() {
     sales: [],
     services: [],
   });
-  const {authUser, redirect, axios, notify} = useContext(GlobalStore);
-  const words = ['Cars', 'Aircraft', 'Bikes', 'Boat'];
+  const { authUser, redirect, axios, notify } = useContext(GlobalStore);
+  const words = ['Cars', 'Motorcycles', 'Boats', 'Aircraft'];
   const [wordIndex, setWordIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState(0);
 
-  function navToPage(path){
-    if (!query.trim()){
+  const isMobile = useBreakpointValue({ base: true, md: false });
+
+  function navToPage(path) {
+    if (!query.trim()) {
       return redirect(path)
     }
   }
 
-  async function getData(){
-    const res = await axios.get(`/listings/my-listings/?scope=recents;top-deals`);
-    const data = objectifyJSON(res.data);
+  async function getData() {
+    try {
+      const res = await axios.get(`/listings/my-listings/?scope=recents;top-deals`);
+      const data = objectifyJSON(res.data);
 
-    setRecentlyViewed(data.recents);
-    setTopDeals(data.top_deals);
+      setRecentlyViewed(data.recents || []);
+      setTopDeals(data.top_deals || { rentals: [], sales: [], services: [] });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
   }
 
   useEffect(() => {
@@ -93,221 +256,684 @@ export default function MainPage() {
   }, [])
 
   useEffect(() => {
-    const id = setInterval(() => setWordIndex((i) => (i + 1) % words.length), 1600);
+    const id = setInterval(() => setWordIndex((i) => (i + 1) % words.length), 2000);
     return () => clearInterval(id);
   }, [])
 
   return (
-    <Box minH="100vh">
-      {/* Hero Section */}
-      <Box>
-        <Container maxW="container.xl" pb={8} pt={6}>
-          <LocationBreadcrumb />
+    <Box minH="100vh" bg="gray.50">
+      {/* Enhanced Hero Section */}
+      <Box
+        bgGradient="linear(to-br, orange.50, yellow.50, red.50)"
+        position="relative"
+        overflow="hidden"
+      >
+        {/* Background Pattern */}
+        <Box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          opacity={0.1}
+          bgImage="radial-gradient(circle at 25% 25%, #F4A950 2px, transparent 2px)"
+          bgSize="50px 50px"
+        />
+
+        <Container maxW="7xl" py={{ base: 12, md: 20 }}>
+          <LocationBreadcrumb mb={8} />
 
           <Grid
-           mt={5}
-           templateColumns={{ base: "1fr", md: "1fr 1fr" }}
-           gap={8}
-           alignItems="center"
-           templateAreas={{
-              base: `"image" "content"`,  // Reverse order on small screens
-              md: `"content image"`,       // Normal order on larger screens
-           }}
+            templateColumns={{ base: "1fr", lg: "1fr 1fr" }}
+            gap={12}
+            alignItems="center"
+            minH="500px"
           >
-            <Box gridArea="content">
-              <Heading size="xl" mb={4} className="subtitle">
-                Your garage, on demand
-              </Heading>
-
-              <Text fontSize="md" mb={4}>
-                Shop cars, rent vehicles, and book trusted mechanics — all in one seamless experience.
-              </Text>
-
-              <Stack spacing={4} align={{ base: 'stretch', md: 'center' }} direction={{ base: 'column', md: 'row' }} mb={4} justify={{ md: 'flex-start' }}>
-               {/* <InputGroup size="lg">
-                  <InputLeftElement>
-                    <Search size="20px"/>
-                  </InputLeftElement>
-                  <Input
-                   value={query}
-                   placeholder="Search for cars, rentals or mechanic services..."
-                   borderRadius="30px" bg="gray.200"
-                   onInput={e => setQuery(e.target.value)}
-                  />
-                </InputGroup> */}
-
-                <Button as={!query.trim() && Link} to='/buy' colorScheme="blue" bg="primary" size="lg">
-                  Shop vehicles
-                </Button>
-                <Button as={!query.trim() && Link} to='/rent' colorScheme="blue" variant="outline" borderColor="primary" borderWidth={2} size="lg">
-                  Rent vehicles
-                </Button>
-                <Button as={!query.trim() && Link} to='/mechanics' colorScheme="blue" variant="ghost" size="lg">
-                  Get a mechanic
-                </Button>
-              </Stack>
-            </Box>
-
-            <Box position="relative" gridArea="image" overflow="hidden" borderRadius="lg">
-              <Image lazy src="/assets/veyu/usdash.jpg" alt="Featured" w="full" h="auto" style={{ filter: 'blur(3px)', transform: 'scale(1.04)' }} />
-              <Box position="absolute" inset={0} bg="blackAlpha.500" />
-              <Flex position="absolute" inset={0} align="center" justify="center">
-                <Text
-                  key={wordIndex}
+            {/* Hero Content */}
+            <MotionBox
+              initial={{ opacity: 0, x: -50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <VStack spacing={6} align="start">
+                <Badge
+                  bg="#F4A950"
                   color="white"
-                  fontSize={{ base: '4xl', md: '6xl' }}
-                  fontWeight="800"
-                  textTransform="uppercase"
-                  letterSpacing="widest"
-                  transition="opacity .5s ease"
+                  px={4}
+                  py={2}
+                  borderRadius="full"
+                  fontSize="sm"
+                  fontWeight="bold"
                 >
-                  {words[wordIndex]}
+                  🚗 Nigeria's #1 Vehicle Marketplace
+                </Badge>
+
+                <Heading
+                  size="2xl"
+                  lineHeight="1.2"
+                  color="gray.800"
+                  fontWeight="800"
+                >
+                  Your Perfect{" "}
+                  <Text
+                    as="span"
+                    color="#F4A950"
+                    key={wordIndex}
+                    display="inline-block"
+                    animation="fadeIn 0.5s ease-in-out"
+                  >
+                    {words[wordIndex]}
+                  </Text>
+                  <br />
+                  Awaits You
+                </Heading>
+
+                <Text fontSize="xl" color="gray.600" maxW="500px" lineHeight="1.6">
+                  Discover, buy, rent, and maintain vehicles with Nigeria's most trusted marketplace.
+                  From luxury cars to reliable mechanics - we've got you covered.
                 </Text>
-              </Flex>
-            </Box>
+
+                {/* Enhanced Search Bar */}
+                <Box w="full" maxW="600px">
+                  <InputGroup size="lg">
+                    <InputLeftElement>
+                      <Search size={20} color="#F4A950" />
+                    </InputLeftElement>
+                    <Input
+                      value={query}
+                      placeholder="Search cars, motorcycles, boats, or services..."
+                      borderRadius="full"
+                      bg="white"
+                      border="2px solid"
+                      borderColor="gray.200"
+                      _hover={{ borderColor: '#F4A950' }}
+                      _focus={{
+                        borderColor: '#F4A950',
+                        shadow: '0 0 0 1px #F4A950'
+                      }}
+                      pl={12}
+                      h="60px"
+                      fontSize="md"
+                      onInput={e => setQuery(e.target.value)}
+                    />
+                  </InputGroup>
+                </Box>
+
+                {/* Action Buttons */}
+                <HStack spacing={4} flexWrap="wrap">
+                  <Button
+                    as={Link}
+                    to="/buy"
+                    bg="#F4A950"
+                    color="white"
+                    size="lg"
+                    px={8}
+                    py={6}
+                    borderRadius="full"
+                    _hover={{
+                      bg: 'orange.600',
+                      transform: 'translateY(-2px)',
+                      shadow: 'lg'
+                    }}
+                    leftIcon={<ShoppingCart size={20} />}
+                  >
+                    Buy Vehicles
+                  </Button>
+                  <Button
+                    as={Link}
+                    to="/rent"
+                    variant="outline"
+                    borderColor="#F4A950"
+                    color="#F4A950"
+                    size="lg"
+                    px={8}
+                    py={6}
+                    borderRadius="full"
+                    _hover={{
+                      bg: '#F4A950',
+                      color: 'white',
+                      transform: 'translateY(-2px)',
+                      shadow: 'lg'
+                    }}
+                    leftIcon={<Clock size={20} />}
+                  >
+                    Rent Now
+                  </Button>
+                  <Button
+                    as={Link}
+                    to="/mechanics"
+                    variant="ghost"
+                    color="#F4A950"
+                    size="lg"
+                    px={8}
+                    py={6}
+                    borderRadius="full"
+                    _hover={{
+                      bg: 'orange.50',
+                      transform: 'translateY(-2px)'
+                    }}
+                    leftIcon={<User size={20} />}
+                  >
+                    Find Mechanic
+                  </Button>
+                </HStack>
+
+                {/* Trust Indicators */}
+                <HStack spacing={6} pt={4}>
+                  <HStack spacing={2}>
+                    <CheckCircle size={16} color="#10B981" />
+                    <Text fontSize="sm" color="gray.600">Verified Dealers</Text>
+                  </HStack>
+                  <HStack spacing={2}>
+                    <ShieldCheck size={16} color="#10B981" />
+                    <Text fontSize="sm" color="gray.600">Secure Payments</Text>
+                  </HStack>
+                  <HStack spacing={2}>
+                    <Award size={16} color="#10B981" />
+                    <Text fontSize="sm" color="gray.600">Quality Assured</Text>
+                  </HStack>
+                </HStack>
+              </VStack>
+            </MotionBox>
+
+            {/* Hero Image */}
+            <MotionBox
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              position="relative"
+            >
+              <Box
+                position="relative"
+                borderRadius="2xl"
+                overflow="hidden"
+                shadow="2xl"
+                _hover={{ transform: 'scale(1.02)' }}
+                transition="transform 0.3s"
+              >
+                <Image
+                  src="/assets/veyu/usdash.jpg"
+                  alt="Premium Vehicles"
+                  w="full"
+                  h="400px"
+                  objectFit="cover"
+                />
+                <Box
+                  position="absolute"
+                  top={0}
+                  left={0}
+                  right={0}
+                  bottom={0}
+                  bgGradient="linear(to-t, blackAlpha.600, transparent)"
+                />
+
+                {/* Play Button Overlay */}
+                <Flex
+                  position="absolute"
+                  top={0}
+                  left={0}
+                  right={0}
+                  bottom={0}
+                  align="center"
+                  justify="center"
+                >
+                  <Button
+                    bg="whiteAlpha.900"
+                    color="#F4A950"
+                    borderRadius="full"
+                    size="lg"
+                    p={6}
+                    _hover={{
+                      bg: 'white',
+                      transform: 'scale(1.1)'
+                    }}
+                    leftIcon={<Play size={24} />}
+                  >
+                    Watch Demo
+                  </Button>
+                </Flex>
+              </Box>
+
+              {/* Floating Stats */}
+              <Box
+                position="absolute"
+                bottom={-6}
+                right={-6}
+                bg="white"
+                p={4}
+                borderRadius="xl"
+                shadow="xl"
+                border="1px solid"
+                borderColor="gray.100"
+              >
+                <VStack spacing={2} align="center">
+                  <Text fontSize="2xl" fontWeight="bold" color="#F4A950">
+                    50K+
+                  </Text>
+                  <Text fontSize="sm" color="gray.600" textAlign="center">
+                    Happy Customers
+                  </Text>
+                </VStack>
+              </Box>
+            </MotionBox>
           </Grid>
         </Container>
       </Box>
+
+      {/* Stats Section */}
+      <Container maxW="7xl" py={12}>
+        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6}>
+          <StatsCard
+            icon={<ShoppingCart size={24} />}
+            number="25K+"
+            label="Vehicles Listed"
+            trend="+12% this month"
+          />
+          <StatsCard
+            icon={<Users size={24} />}
+            number="15K+"
+            label="Active Users"
+            trend="+8% this month"
+          />
+          <StatsCard
+            icon={<Award size={24} />}
+            number="500+"
+            label="Verified Dealers"
+            trend="+15% this month"
+          />
+          <StatsCard
+            icon={<Star size={24} />}
+            number="4.8"
+            label="Average Rating"
+            trend="Excellent"
+          />
+        </SimpleGrid>
+      </Container>
+
+      {/* Vehicle Categories */}
+      <Container maxW="7xl" py={12}>
+        <VStack spacing={8}>
+          <VStack spacing={4} textAlign="center">
+            <Heading size="xl" color="gray.800">
+              Browse by Category
+            </Heading>
+            <Text fontSize="lg" color="gray.600" maxW="600px">
+              Find exactly what you're looking for in our diverse vehicle categories
+            </Text>
+          </VStack>
+
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6} w="full">
+            <CategoryCard
+              title="Cars"
+              count="18,500"
+              image="/assets/home/cars.jpg"
+              href="/buy?category=cars"
+            />
+            <CategoryCard
+              title="Motorcycles"
+              count="3,200"
+              image="/assets/home/motorbike.png"
+              href="/buy?category=motorcycles"
+            />
+            <CategoryCard
+              title="Boats"
+              count="850"
+              image="/assets/home/boat.jpg"
+              href="/buy?category=boats"
+            />
+            <CategoryCard
+              title="Aircraft"
+              count="120"
+              image="/assets/home/aircraft.jpg"
+              href="/buy?category=aircraft"
+            />
+          </SimpleGrid>
+        </VStack>
+      </Container>
 
       {/* Recently Viewed Section */}
-      {
-        recentlyViewed?.length > 0 &&
+      {recentlyViewed?.length > 0 && (
         <Container maxW="7xl" py={12}>
-          <Heading size="lg" mb={2}>
-            Recently viewed
-          </Heading>
-          <Text as="p" color="gray.600" mb={8}>
-            Catchup where you left!
-          </Text>
+          <MotionBox
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <VStack spacing={8}>
+              <VStack spacing={4} textAlign="center">
+                <HStack spacing={3}>
+                  <Clock size={24} color="#F4A950" />
+                  <Heading size="xl" color="gray.800">
+                    Continue Where You Left Off
+                  </Heading>
+                </HStack>
+                <Text fontSize="lg" color="gray.600">
+                  Pick up from your recent browsing history
+                </Text>
+              </VStack>
 
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={8}>
-            {recentlyViewed?.map((listing, index) => (
-              <ListingItemCard key={index} listing={listing} />
-            ))}
-          </SimpleGrid>
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={8} w="full">
+                {recentlyViewed?.map((listing, index) => (
+                  <MotionBox
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                    viewport={{ once: true }}
+                  >
+                    <ListingItemCard listing={listing} />
+                  </MotionBox>
+                ))}
+              </SimpleGrid>
+            </VStack>
+          </MotionBox>
         </Container>
-      }
+      )}
 
-      {/* Promotional Banner */}
-      <Box bg="primary" color="white">
-        <Container maxW="7xl" py={12}>
-          <Grid templateColumns={{ base: "1fr", sm: "1fr 1fr" }} gap={8} alignItems="center">
-            <Image src="/assets/veyu/gif.gif" alt="BMW Promotional" />
+      {/* Enhanced Tools Section */}
+      <Box bg="#F4A950" color="white" position="relative" overflow="hidden">
+        {/* Background Pattern */}
+        <Box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          opacity={0.1}
+          bgImage="radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 2px, transparent 2px)"
+          bgSize="30px 30px"
+        />
 
-            <Box>
-              <Heading size={{base: "2xl", sm: "3xl", md: "4xl"}} mb={4}>
-                Featured tools
-              </Heading>
+        <Container maxW="7xl" py={16} position="relative">
+          <Grid templateColumns={{ base: "1fr", lg: "1fr 1fr" }} gap={12} alignItems="center">
+            <MotionBox
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <Image
+                src="/assets/veyu/gif.gif"
+                alt="Smart Tools"
+                borderRadius="2xl"
+                shadow="2xl"
+                _hover={{ transform: 'scale(1.05)' }}
+                transition="transform 0.3s"
+              />
+            </MotionBox>
 
-              <Heading className="title" fontWeight="400" size={{base: 'md', md: "lg"}} mb={4} px={4} py={4} bg="tertiary" color="primary">
-                Plan smarter. Shop faster.
-              </Heading>
-              
-              <Text mb={6}>
-                Calculate payments, compare deals, check affordability, find dealers, and book services — all in one place.
-              </Text>
+            <MotionBox
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              <VStack spacing={6} align="start">
+                <VStack spacing={4} align="start">
+                  <Badge
+                    bg="whiteAlpha.200"
+                    color="white"
+                    px={4}
+                    py={2}
+                    borderRadius="full"
+                    fontSize="sm"
+                  >
+                    🛠️ Smart Tools
+                  </Badge>
 
-              <Stack spacing={3} direction={{ base: 'column', md: 'row' }} mb={4}>
-                <Button as={Link} to='/tools/payment-calculator' size='sm' variant='outline' colorScheme='whiteAlpha' borderColor='white' color='white'>Payment Calculator</Button>
-                <Button as={Link} to='/compare' size='sm' variant='outline' colorScheme='whiteAlpha' borderColor='white' color='white'>Compare Deals</Button>
-                <Button as={Link} to='/tools/affordability' size='sm' variant='outline' colorScheme='whiteAlpha' borderColor='white' color='white'>Affordability Check</Button>
-                <Button as={Link} to='/dealers' size='sm' variant='outline' colorScheme='whiteAlpha' borderColor='white' color='white'>Dealer Finder</Button>
-                <Button as={Link} to='/mechanics' size='sm' variant='outline' colorScheme='whiteAlpha' borderColor='white' color='white'>Book Service</Button>
-              </Stack>
+                  <Heading size="2xl" lineHeight="1.2">
+                    Plan Smarter,
+                    <br />
+                    Shop Faster
+                  </Heading>
 
-              <Button as={Link} to='/tools' fontWeight={'600'} bg="tertiary" color="primary" w={{base: '100%', md: '250px'}} size="lg">
-                Explore tools
-              </Button>
-            </Box>
+                  <Text fontSize="lg" opacity={0.9} lineHeight="1.6">
+                    Access powerful tools to calculate payments, compare deals, check affordability,
+                    find trusted dealers, and book professional services.
+                  </Text>
+                </VStack>
+
+                <Wrap spacing={3}>
+                  <WrapItem>
+                    <Button
+                      as={Link}
+                      to="/tools/payment-calculator"
+                      variant="outline"
+                      borderColor="white"
+                      color="white"
+                      _hover={{ bg: 'whiteAlpha.200' }}
+                      leftIcon={<Target size={16} />}
+                    >
+                      Payment Calculator
+                    </Button>
+                  </WrapItem>
+                  <WrapItem>
+                    <Button
+                      as={Link}
+                      to="/compare"
+                      variant="outline"
+                      borderColor="white"
+                      color="white"
+                      _hover={{ bg: 'whiteAlpha.200' }}
+                      leftIcon={<TrendingUp size={16} />}
+                    >
+                      Compare Deals
+                    </Button>
+                  </WrapItem>
+                  <WrapItem>
+                    <Button
+                      as={Link}
+                      to="/tools/affordability"
+                      variant="outline"
+                      borderColor="white"
+                      color="white"
+                      _hover={{ bg: 'whiteAlpha.200' }}
+                      leftIcon={<CheckCircle size={16} />}
+                    >
+                      Affordability Check
+                    </Button>
+                  </WrapItem>
+                  <WrapItem>
+                    <Button
+                      as={Link}
+                      to="/dealers"
+                      variant="outline"
+                      borderColor="white"
+                      color="white"
+                      _hover={{ bg: 'whiteAlpha.200' }}
+                      leftIcon={<MapPin size={16} />}
+                    >
+                      Find Dealers
+                    </Button>
+                  </WrapItem>
+                </Wrap>
+
+                <Button
+                  as={Link}
+                  to="/tools"
+                  bg="white"
+                  color="#F4A950"
+                  size="lg"
+                  px={8}
+                  py={6}
+                  borderRadius="full"
+                  fontWeight="bold"
+                  _hover={{
+                    transform: 'translateY(-2px)',
+                    shadow: 'xl'
+                  }}
+                  rightIcon={<ArrowRight size={20} />}
+                >
+                  Explore All Tools
+                </Button>
+              </VStack>
+            </MotionBox>
           </Grid>
         </Container>
       </Box>
 
-      {/* Why Choose Us Section */}
-      <Container maxW="container.xl" my={20}>
-        <Heading size="lg" textAlign="center" mb={12}>
-          Why Veyu<Text as="span" color="primary">?</Text>
-        </Heading>
-        <center>
-        <Flex
-         w={'100%'}
-         className="hidden-scroll"
-         alignItems="center"
-         px={4} gap={8} justify="space-between"
-         flexWrap="nowrap"
-         overflowX='scroll'
-         py={10}
+      {/* Enhanced Why Choose Us Section */}
+      <Container maxW="7xl" py={20}>
+        <MotionBox
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
         >
-          <ScrollAnimation animateIn="zoomIn">
-            <FeatureCard
-              icon={<Search size={24} />}
-              title="Smart search"
-              description="Find the right vehicle or service fast with powerful filters and instant results."
-            />
-          </ScrollAnimation>
+          <VStack spacing={12}>
+            <VStack spacing={4} textAlign="center">
+              <Badge
+                bg="#F4A950"
+                color="white"
+                px={4}
+                py={2}
+                borderRadius="full"
+                fontSize="sm"
+              >
+                ✨ Why Choose Veyu
+              </Badge>
+              <Heading size="2xl" color="gray.800">
+                Nigeria's Most Trusted
+                <Text as="span" color="#F4A950"> Vehicle Platform</Text>
+              </Heading>
+              <Text fontSize="lg" color="gray.600" maxW="600px">
+                Join thousands of satisfied customers who trust Veyu for all their vehicle needs
+              </Text>
+            </VStack>
 
-          <ScrollAnimation animateIn="zoomIn">
-            <FeatureCard
-              icon={<ShieldCheck size={24} />}
-              title="Trust & transparency"
-              description="Verified partners, clear history, and upfront pricing so you can decide with confidence."
-            />
-          </ScrollAnimation>
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8} w="full">
+              <FeatureCard
+                icon={<Search size={28} />}
+                title="Smart Discovery"
+                description="Advanced AI-powered search helps you find the perfect vehicle with intelligent filters and personalized recommendations."
+                gradient="linear-gradient(135deg, #F4A950, #FF6B35)"
+              />
 
-          <ScrollAnimation animateIn="zoomIn">
-            <FeatureCard
-              icon={<Zap size={24} />}
-              title="Effortless experience"
-              description="Lightning‑fast booking and built‑in messaging streamline every step from browse to keys."
-            />
-          </ScrollAnimation>
-        </Flex>
-        </center>
+              <FeatureCard
+                icon={<ShieldCheck size={28} />}
+                title="Trust & Security"
+                description="Every dealer is verified, every vehicle is inspected, and every transaction is secured with our comprehensive protection."
+                gradient="linear-gradient(135deg, #10B981, #059669)"
+              />
+
+              <FeatureCard
+                icon={<Zap size={28} />}
+                title="Lightning Fast"
+                description="From search to purchase in minutes. Our streamlined process eliminates paperwork and reduces waiting time."
+                gradient="linear-gradient(135deg, #3B82F6, #1D4ED8)"
+              />
+            </SimpleGrid>
+
+            {/* Additional Features */}
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} w="full" pt={8}>
+              <VStack spacing={3} textAlign="center">
+                <Box
+                  bg="orange.100"
+                  p={4}
+                  borderRadius="full"
+                  color="#F4A950"
+                >
+                  <Globe size={24} />
+                </Box>
+                <Text fontWeight="bold" color="gray.800">Nationwide Coverage</Text>
+                <Text fontSize="sm" color="gray.600" textAlign="center">
+                  Available in all 36 states across Nigeria
+                </Text>
+              </VStack>
+
+              <VStack spacing={3} textAlign="center">
+                <Box
+                  bg="green.100"
+                  p={4}
+                  borderRadius="full"
+                  color="green.600"
+                >
+                  <Heart size={24} />
+                </Box>
+                <Text fontWeight="bold" color="gray.800">Customer First</Text>
+                <Text fontSize="sm" color="gray.600" textAlign="center">
+                  24/7 support with 4.8/5 satisfaction rating
+                </Text>
+              </VStack>
+
+              <VStack spacing={3} textAlign="center">
+                <Box
+                  bg="blue.100"
+                  p={4}
+                  borderRadius="full"
+                  color="blue.600"
+                >
+                  <Sparkles size={24} />
+                </Box>
+                <Text fontWeight="bold" color="gray.800">Premium Quality</Text>
+                <Text fontSize="sm" color="gray.600" textAlign="center">
+                  Only the finest vehicles make it to our platform
+                </Text>
+              </VStack>
+
+              <VStack spacing={3} textAlign="center">
+                <Box
+                  bg="purple.100"
+                  p={4}
+                  borderRadius="full"
+                  color="purple.600"
+                >
+                  <Award size={24} />
+                </Box>
+                <Text fontWeight="bold" color="gray.800">Award Winning</Text>
+                <Text fontSize="sm" color="gray.600" textAlign="center">
+                  Nigeria's Best Auto Platform 2024
+                </Text>
+              </VStack>
+            </SimpleGrid>
+          </VStack>
+        </MotionBox>
       </Container>
 
       {/* Top Deals Section */}
-      
+
       <Container maxW="7xl" py={12} align="center">
         <Heading size="lg" mb={6} textAlign="center">
           Today’s top picks
         </Heading>
 
-        <Tabs colorScheme="blue"  align="center" mb={8}>
+        <Tabs colorScheme="blue" align="center" mb={8}>
           <TabList align="center" mx="auto" as={ButtonGroup} size='md' border="none" isAttached variant='outline' mt={3}>
             <Tab as={Button}
               color="primary"
-             _selected={{
-               bgColor: 'primary',
-               color: 'white'
-             }}
-             borderWidth="1px"
-             colorScheme={'blue'}
-             borderColor="cornflowerblue"
-             borderRadius="30px" px={'35px'}
+              _selected={{
+                bgColor: 'primary',
+                color: 'white'
+              }}
+              borderWidth="1px"
+              colorScheme={'blue'}
+              borderColor="cornflowerblue"
+              borderRadius="30px" px={'35px'}
             >Buy</Tab>
 
             <Tab as={Button}
               color="primary"
-             _selected={{
-               bgColor: 'primary',
-               color: 'white'
-             }}
-             borderWidth="1px"
-             colorScheme={'blue'}
-             borderColor="cornflowerblue"
-             borderRadius="30px" px={'35px'}
+              _selected={{
+                bgColor: 'primary',
+                color: 'white'
+              }}
+              borderWidth="1px"
+              colorScheme={'blue'}
+              borderColor="cornflowerblue"
+              borderRadius="30px" px={'35px'}
             >Rent</Tab>
 
             <Tab as={Button}
               color="primary"
-             _selected={{
-               bgColor: 'primary',
-               color: 'white'
-             }}
-             borderWidth="1px"
-             colorScheme={'blue'}
-             borderColor="cornflowerblue"
-             borderRadius="30px" px={'35px'}
+              _selected={{
+                bgColor: 'primary',
+                color: 'white'
+              }}
+              borderWidth="1px"
+              colorScheme={'blue'}
+              borderColor="cornflowerblue"
+              borderRadius="30px" px={'35px'}
             >Mechanic</Tab>
           </TabList>
 
@@ -327,7 +953,7 @@ export default function MainPage() {
                 ))}
               </SimpleGrid>
             </TabPanel>
-            
+
             <TabPanel>
               <SimpleGrid columns={{ base: 1, md: 2, lg: 3, xl: 4 }} spacing={8}>
                 {/*{topDeals.services?.map((listing, index) => (

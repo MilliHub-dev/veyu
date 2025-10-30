@@ -21,13 +21,13 @@
 .nav {
   display: flex;
   gap: 1.5rem;
-  background-color: white;
+  background-color: #F4A950;
   padding: 10px 50px;
   border-radius: 10px;
 }
 
 .nav a {
-  color: #F4A950;
+  color: #fff;
   text-decoration: none;
 }
 

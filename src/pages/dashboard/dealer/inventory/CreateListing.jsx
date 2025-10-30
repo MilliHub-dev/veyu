@@ -25,8 +25,8 @@ import {
   UnorderedList,
   ListItem,
 } from "@chakra-ui/react";
-import {CloseIcon} from "@chakra-ui/icons";
-import {BackButton} from '../../../../components/nav';
+import { CloseIcon } from "@chakra-ui/icons";
+import { BackButton } from '../../../../components/nav';
 import {
   StepIndicator,
   DocumentUploader,
@@ -35,15 +35,15 @@ import {
   ListingReviewCard,
   CreateSaleForm,
 } from '../../../../components/forms';
-import {GlobalStore} from '../../../../App';
-import {objectifyJSON, jsonifyObject} from '../../../../utils';
+import { GlobalStore } from '../../../../App';
+import { objectifyJSON, jsonifyObject } from '../../../../utils';
 import { ArrowLeft, DeleteIcon, Upload, AlertTriangle, Zap, Clock, Settings, MessageCircle, Bell } from "lucide-react"
 import { useState, useEffect, useContext, useRef } from "react";
 
 
 export default function AddListing() {
   const [currentStep, setCurrentStep] = useState(0);
-  const {axios, notify, authUser, redirect} = useContext(GlobalStore); 
+  const { axios, notify, authUser, redirect } = useContext(GlobalStore);
   const [formData, setFormData] = useState({
     uuid: null,
     listing_type: 'sale',
@@ -58,19 +58,19 @@ export default function AddListing() {
 
   const handleContinue = () => {
     if (currentStep < 3) {
-      try{
-        switch(currentStep){
+      try {
+        switch (currentStep) {
           case 1: {
             return handleImageUpload()
           }
           case 2: {
             return handlePublish()
           }
-          default:{
+          default: {
             const inputs = formRef.current.querySelectorAll('[required]');
-            for (let input of inputs){
-              if (!input.value.trim()){
-                 notify({
+            for (let input of inputs) {
+              if (!input.value.trim()) {
+                notify({
                   title: "Not so fast!",
                   body: "Hey! You gotta fill all the required fields with, they're marked with a red *",
                   color: "red",
@@ -78,13 +78,13 @@ export default function AddListing() {
                   isClosable: false,
                 });
 
-                 return
+                return
               }
             }
             return handleCreate();
           }
         }
-      }catch(error){
+      } catch (error) {
         console.log("Oops:", error)
       }
     }
@@ -96,11 +96,11 @@ export default function AddListing() {
     }
   }
 
-  async function handleImageUpload(){
+  async function handleImageUpload() {
     const payload = new FormData(formRef.current);
-    payload.append('action',  'upload-images');
-    payload.append('listing',  formData?.uuid);
-    for(var i=0; i < formData?.images?.length; i++){
+    payload.append('action', 'upload-images');
+    payload.append('listing', formData?.uuid);
+    for (var i = 0; i < formData?.images?.length; i++) {
       payload.append(
         'image',
         formData?.images[i]?.file,
@@ -114,101 +114,130 @@ export default function AddListing() {
       }
     });
 
-    if (res.status === 200){
-      setCurrentStep(currentStep+1)
+    if (res.status === 200) {
+      setCurrentStep(currentStep + 1)
     }
   }
 
   const handleCreate = async () => {
-    try{
+    try {
       // Validate required fields
-      if (!formData?.brand || !formData?.model) {
+      const requiredFields = ['brand', 'model', 'year', 'price'];
+      const missingFields = requiredFields.filter(field => !formData?.[field]);
+
+      if (missingFields.length > 0) {
         notify({
           title: "Missing Required Fields",
-          body: "Please select both brand and model for your vehicle",
+          body: `Please fill in all required fields: ${missingFields.join(', ')}`,
           color: "red",
           duration: 5000,
         });
         return;
       }
 
-      const condition = formData?.condition || formData?.usage;
-      const vehicleType = formData?.vehicle_type || formData?.body;
-      const fuel = formData?.fuel_system || formData?.fuel;
+      // Validate numeric fields
+      const numericFields = {
+        'price': formData?.price,
+        'year': formData?.year,
+        'mileage': formData?.mileage || '0',
+        'doors': formData?.doors || '4',
+        'seats': formData?.seats || '5'
+      };
+
+      for (const [field, value] of Object.entries(numericFields)) {
+        if (isNaN(value) || value === '') {
+          notify({
+            title: "Invalid Input",
+            body: `Please enter a valid number for ${field}`,
+            color: "red",
+            duration: 5000,
+          });
+          return;
+        }
+      }
+
+      const condition = formData?.condition || formData?.usage || 'used';
+      const vehicleType = formData?.vehicle_type || formData?.body || 'sedan';
+      const fuel = formData?.fuel_system || formData?.fuel || 'petrol';
 
       // Create FormData with individual fields (not nested JSON)
       const form = new FormData();
       form.append('action', 'create-listing');
-      
-      // Top-level listing fields
+
+      // Top-level listing fields - ensure all required fields are included
       form.append('listing_type', formData?.listing_type === 'rental' ? 'rental' : 'sale');
-      if (formData?.title) form.append('title', formData.title);
-      if (formData?.price) form.append('price', formData.price.toString());
+      form.append('title', formData.title || `${formData.brand} ${formData.model} ${formData.year}`);
+      form.append('price', formData.price.toString());
       form.append('payment_cycle', formData?.listing_type === 'rental' ? (formData?.payment_cycle || 'daily') : 'single');
-      if (formData?.notes) form.append('notes', formData.notes);
-      
+      form.append('notes', formData?.notes || '');
+
       // Vehicle category (car, bike, boat, aircraft)
-      form.append('vehicle_category', formData?.vehicle_category || 'car');
-      
+      const category = formData?.vehicle_category?.toLowerCase() || 'car';
+      form.append('vehicle_category', category);
+
       // Vehicle fields (flattened)
-      if (formData?.title) form.append('name', formData.title);
-      form.append('brand', formData?.brand);
-      form.append('model', formData?.model);
-      form.append('condition', condition || 'used');
-      if (formData?.year) form.append('year', formData.year);
-      if (formData?.color) form.append('color', formData.color);
-      
+      form.append('name', formData.title || `${formData.brand} ${formData.model}`);
+      form.append('brand', formData.brand);
+      form.append('model', formData.model);
+      form.append('condition', condition);
+      form.append('year', formData.year);
+      form.append('color', formData?.color || 'Black');
+
       // Category-specific fields
-      const category = formData?.vehicle_category || 'car';
-      
       if (category === 'car') {
         // Required car fields
-        if (fuel) form.append('fuel_system', fuel);
-        if (formData?.transmission) form.append('transmission', formData.transmission);
-        form.append('mileage', (formData?.mileage ?? '0').toString());
-        if (vehicleType) {
-          form.append('body', vehicleType);
-          form.append('vehicle_type', vehicleType); // Backend requires this
+        form.append('fuel_system', fuel);
+        form.append('transmission', formData?.transmission || 'automatic');
+        form.append('mileage', (formData?.mileage || '0').toString());
+        form.append('body', vehicleType);
+        form.append('vehicle_type', vehicleType);
+
+        // Required car-specific fields
+        form.append('vin', formData?.vin || 'N/A');
+        form.append('drivetrain', formData?.drivetrain || 'FWD');
+        form.append('doors', formData?.doors || '4');
+        form.append('seats', formData?.seats || '5');
+        form.append('registration', formData?.registration || 'Registered');
+      }
+
+      // Convert features to a properly formatted array
+      let featuresArray = [];
+      if (Array.isArray(formData?.features)) {
+        featuresArray = formData.features;
+      } else if (typeof formData?.features === 'string') {
+        // Handle both comma-separated and JSON string formats
+        try {
+          // Try to parse as JSON array first
+          featuresArray = JSON.parse(formData.features);
+          if (!Array.isArray(featuresArray)) {
+            throw new Error('Not an array');
+          }
+        } catch (e) {
+          // If not valid JSON, split by comma
+          featuresArray = formData.features
+            .split(',')
+            .map(f => f.trim())
+            .filter(f => f.length > 0);
         }
-        
-        // Required car-specific fields (backend expects these)
-        form.append('vin', formData?.vin || '');
-        form.append('drivetrain', formData?.drivetrain || '');
-        form.append('doors', formData?.doors || '');
-        form.append('seats', formData?.seats || '');
-        
-        // Optional car fields
-        if (formData?.registration) form.append('registration', formData.registration);
-      } else if (category === 'bike' || category === 'motorcycle') {
-        form.append('engine_capacity', formData?.engine_capacity || '');
-        form.append('fuel_system', fuel || '');
-        form.append('transmission', formData?.transmission || '');
-        form.append('mileage', (formData?.mileage ?? '0').toString());
-        if (formData?.bike_type) form.append('bike_type', formData.bike_type);
-      } else if (category === 'boat') {
-        form.append('length', formData?.length || '');
-        form.append('engine_type', formData?.engine_type || '');
-        form.append('hull_material', formData?.hull_material || '');
-        form.append('capacity', formData?.capacity || '');
-        if (formData?.boat_type) form.append('boat_type', formData.boat_type);
-      } else if (category === 'aircraft') {
-        form.append('aircraft_type', formData?.aircraft_type || '');
-        form.append('engine_type', formData?.engine_type || '');
-        form.append('total_hours', formData?.total_hours || '0');
-        form.append('passenger_capacity', formData?.passenger_capacity || '');
-        if (formData?.registration) form.append('registration', formData.registration);
       }
-      
-      // Features as comma-separated string
-      if (Array.isArray(formData?.features) && formData.features.length > 0) {
-        form.append('features', formData.features.join(', '));
-      }
+
+      // Add features as individual form fields
+      featuresArray.forEach(feature => {
+        form.append('features', feature);
+      });
+
+      // Add default values for required fields that might be missing
+      if (!form.has('vin')) form.append('vin', 'N/A');
+      if (!form.has('drivetrain')) form.append('drivetrain', 'FWD');
+      if (!form.has('registration')) form.append('registration', 'Registered');
+      if (!form.has('color')) form.append('color', 'Black');
 
       // Debug: Log all FormData entries
       console.log('=== LISTING CREATION DEBUG ===');
-      console.log('FormData state:', formData);
       console.log('FormData entries:');
+      const formDataObj = {};
       for (let [key, value] of form.entries()) {
+        formDataObj[key] = value;
         console.log(`  ${key}: ${value}`);
       }
       console.log('=== END DEBUG ===');
@@ -220,9 +249,9 @@ export default function AddListing() {
       );
       const data = objectifyJSON(res.data)
 
-      if (res.status === 200 || res.status === 201){
+      if (res.status === 200 || res.status === 201) {
         const newUuid = data?.data?.uuid || data?.uuid || data?.data?.vehicle?.uuid;
-        setFormData({ ...formData, uuid: newUuid})
+        setFormData({ ...formData, uuid: newUuid })
         toast({
           title: "Listing created successfully",
           description: "Now upload images for your listing.",
@@ -231,17 +260,17 @@ export default function AddListing() {
           isClosable: true,
         });
 
-        return setCurrentStep(currentStep+1);
+        return setCurrentStep(currentStep + 1);
       }
-    }catch(error){
+    } catch (error) {
       const raw = error?.response?.data;
-      try { console.error('Create listing failed RAW:', typeof raw === 'string' ? raw.slice(0, 1000) : raw); } catch {}
+      try { console.error('Create listing failed RAW:', typeof raw === 'string' ? raw.slice(0, 1000) : raw); } catch { }
       console.error('Create listing failed:', error);
-      
+
       // Better error message extraction
       let errorMessage = 'Server error while creating listing';
       let errorTitle = 'Unable to create listing';
-      
+
       // Handle CORS/Network errors
       if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
         errorTitle = 'Network Error';
@@ -256,7 +285,7 @@ export default function AddListing() {
       } else if (error?.message) {
         errorMessage = error.message;
       }
-      
+
       notify({
         title: errorTitle,
         body: errorMessage,
@@ -265,15 +294,15 @@ export default function AddListing() {
       })
     }
   }
-  
+
   const handlePublish = async () => {
     const res = await axios.post('/admin/dealership/listings/create/', jsonifyObject({
-        listing: formData?.uuid,
-        action: 'publish-listing'
-      })
+      listing: formData?.uuid,
+      action: 'publish-listing'
+    })
     )
 
-    if (res.status === 200){
+    if (res.status === 200) {
       toast({
         title: "Listing submitted for review",
         description: "We'll notify you once the review is complete.",
@@ -290,7 +319,7 @@ export default function AddListing() {
     <Box bg="gray.50" color="black">
       <Container maxW="9xl" pb={16}>
         <BackButton
-          onClick={currentStep > 0 ? () => setCurrentStep(currentStep -1) : undefined}
+          onClick={currentStep > 0 ? () => setCurrentStep(currentStep - 1) : undefined}
         />
 
         <VStack spacing={8}>
@@ -312,48 +341,48 @@ export default function AddListing() {
             <StepIndicator currentStep={currentStep} steps={steps} />
           </Box>
 
-          <Container maxW={{sm: '100%', lg: "85%"}}>
+          <Container maxW={{ sm: '100%', lg: "85%" }}>
             <Box bg="white" borderWidth={1} borderColor="gray.200" borderRadius="xl" boxShadow="sm" p={{ base: 4, md: 6 }}>
-            <form style={{width:"100%", placeItems: 'center', placeContent: 'center'}} encType="multipart/form-data" ref={formRef} id="details-form" onSubmit={e => e.preventDefault()} method='post'>
-              {currentStep === 0 && (
+              <form style={{ width: "100%", placeItems: 'center', placeContent: 'center' }} encType="multipart/form-data" ref={formRef} id="details-form" onSubmit={e => e.preventDefault()} method='post'>
+                {currentStep === 0 && (
                   <VStack spacing={8} w="full">
                     <FormControl isRequired mx={'auto'} width="100%">
                       <FormLabel fontWeight="600" color="gray.700">Vehicle Category</FormLabel>
-                      <SimpleGrid columns={{base: 2, md: 4}} gap={3} mt={3}>
-                        <Button onClick={() => setFormData({...formData, vehicle_category: 'car'})} 
-                         bgColor={formData?.vehicle_category === 'car' ? 'primary' : 'white'}
-                         color={formData?.vehicle_category === 'car' ? 'white' : 'primary'}
-                         borderWidth={2}
-                         colorScheme={'blue'}
-                         borderColor="cornflowerblue"
-                         borderRadius="10px" py={5}
+                      <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mt={3}>
+                        <Button onClick={() => setFormData({ ...formData, vehicle_category: 'car' })}
+                          bgColor={formData?.vehicle_category === 'car' ? 'primary' : 'white'}
+                          color={formData?.vehicle_category === 'car' ? 'white' : 'primary'}
+                          borderWidth={2}
+                          colorScheme={'blue'}
+                          borderColor="cornflowerblue"
+                          borderRadius="10px" py={5}
                         >🚗 Car</Button>
 
-                        <Button onClick={() => setFormData({...formData, vehicle_category: 'bike'})}
-                         bgColor={formData?.vehicle_category === 'bike' ? 'primary' : 'white'}
-                         color={formData?.vehicle_category === 'bike' ? 'white' : 'primary'}
-                         borderWidth={2}
-                         colorScheme={'blue'}
-                         borderColor="cornflowerblue"
-                         borderRadius="10px" py={5}
+                        <Button onClick={() => setFormData({ ...formData, vehicle_category: 'bike' })}
+                          bgColor={formData?.vehicle_category === 'bike' ? 'primary' : 'white'}
+                          color={formData?.vehicle_category === 'bike' ? 'white' : 'primary'}
+                          borderWidth={2}
+                          colorScheme={'blue'}
+                          borderColor="cornflowerblue"
+                          borderRadius="10px" py={5}
                         >🏍️ Bike</Button>
 
-                        <Button onClick={() => setFormData({...formData, vehicle_category: 'boat'})}
-                         bgColor={formData?.vehicle_category === 'boat' ? 'primary' : 'white'}
-                         color={formData?.vehicle_category === 'boat' ? 'white' : 'primary'}
-                         borderWidth={2}
-                         colorScheme={'blue'}
-                         borderColor="cornflowerblue"
-                         borderRadius="10px" py={5}
+                        <Button onClick={() => setFormData({ ...formData, vehicle_category: 'boat' })}
+                          bgColor={formData?.vehicle_category === 'boat' ? 'primary' : 'white'}
+                          color={formData?.vehicle_category === 'boat' ? 'white' : 'primary'}
+                          borderWidth={2}
+                          colorScheme={'blue'}
+                          borderColor="cornflowerblue"
+                          borderRadius="10px" py={5}
                         >⛵ Boat</Button>
 
-                        <Button onClick={() => setFormData({...formData, vehicle_category: 'aircraft'})}
-                         bgColor={formData?.vehicle_category === 'aircraft' ? 'primary' : 'white'}
-                         color={formData?.vehicle_category === 'aircraft' ? 'white' : 'primary'}
-                         borderWidth={2}
-                         colorScheme={'blue'}
-                         borderColor="cornflowerblue"
-                         borderRadius="10px" py={5}
+                        <Button onClick={() => setFormData({ ...formData, vehicle_category: 'aircraft' })}
+                          bgColor={formData?.vehicle_category === 'aircraft' ? 'primary' : 'white'}
+                          color={formData?.vehicle_category === 'aircraft' ? 'white' : 'primary'}
+                          borderWidth={2}
+                          colorScheme={'blue'}
+                          borderColor="cornflowerblue"
+                          borderRadius="10px" py={5}
                         >✈️ Aircraft</Button>
                       </SimpleGrid>
                     </FormControl>
@@ -361,29 +390,29 @@ export default function AddListing() {
                     <FormControl isRequired mx={'auto'} width="100%">
                       <FormLabel fontWeight="600" color="gray.700">Listing Type</FormLabel>
                       <ButtonGroup size='md' isAttached variant='outline' mt={3} width="full">
-                        <Button onClick={() => setFormData({...formData, listing_type: 'sale'})} 
-                         bgColor={formData?.listing_type === 'sale' ? 'primary' : 'transparent'}
-                         color={formData?.listing_type === 'sale' ? 'white' : 'primary'}
-                         borderTopWidth={2} borderBottomWidth={2}
-                         borderLeftWidth={2} flex={1}
-                         colorScheme={'blue'}
-                         borderColor="cornflowerblue"
-                         borderRadius="10px" py={5}
+                        <Button onClick={() => setFormData({ ...formData, listing_type: 'sale' })}
+                          bgColor={formData?.listing_type === 'sale' ? 'primary' : 'transparent'}
+                          color={formData?.listing_type === 'sale' ? 'white' : 'primary'}
+                          borderTopWidth={2} borderBottomWidth={2}
+                          borderLeftWidth={2} flex={1}
+                          colorScheme={'blue'}
+                          borderColor="cornflowerblue"
+                          borderRadius="10px" py={5}
                         >Direct Sale</Button>
 
-                        <Button onClick={() => setFormData({...formData, listing_type: 'rental'})}
-                         bgColor={formData?.listing_type === 'rental' ? 'primary' : 'transparent'}
-                         color={formData?.listing_type === 'rental' ? 'white' : 'primary'}
-                         borderTopWidth={2} borderBottomWidth={2}
-                         borderRightWidth={2} flex={1}
-                         colorScheme={'blue'}
-                         borderColor="cornflowerblue"
-                         borderRadius="10px" py={5}
+                        <Button onClick={() => setFormData({ ...formData, listing_type: 'rental' })}
+                          bgColor={formData?.listing_type === 'rental' ? 'primary' : 'transparent'}
+                          color={formData?.listing_type === 'rental' ? 'white' : 'primary'}
+                          borderTopWidth={2} borderBottomWidth={2}
+                          borderRightWidth={2} flex={1}
+                          colorScheme={'blue'}
+                          borderColor="cornflowerblue"
+                          borderRadius="10px" py={5}
                         >Rental</Button>
                       </ButtonGroup>
                     </FormControl>
 
-                    { formData?.listing_type === 'rental' ?
+                    {formData?.listing_type === 'rental' ?
                       <CreateRentalForm formData={formData} setFormData={setFormData} vehicleCategory={formData?.vehicle_category} />
                       :
                       <CreateSaleForm formData={formData} setFormData={setFormData} vehicleCategory={formData?.vehicle_category} />
@@ -392,41 +421,41 @@ export default function AddListing() {
                       Continue
                     </Button>
                   </VStack>
-              )}
+                )}
 
-              {currentStep === 1 && (
-                <VStack spacing={8} w="full">
-                  <ImageUploader
-                    title="of your car"
-                    limit={12}
-                    description="See image upload guidelines"
-                    onUpload={(files) => {
-                      console.log("Uploads:", files)
-                      setFormData({ ...formData, images: [...files] });
-                    }}
-                    data={formData?.images}
-                  />
-                  <Button disabled={formData?.images?.length > 0 ? false : true} colorScheme="blue" size="lg" w="full" onClick={handleContinue}>
-                    Continue
-                  </Button>
-                </VStack>
-              )}
-
-              {currentStep === 2 && (
-                <VStack spacing={8} w="full">
-                  <ListingReviewCard formData={formData} />
-                  <HStack spacing={4}>
-                    <Button colorScheme="blue" size="md" onClick={handlePublish}>
-                      Publish
+                {currentStep === 1 && (
+                  <VStack spacing={8} w="full">
+                    <ImageUploader
+                      title="of your car"
+                      limit={12}
+                      description="See image upload guidelines"
+                      onUpload={(files) => {
+                        console.log("Uploads:", files)
+                        setFormData({ ...formData, images: [...files] });
+                      }}
+                      data={formData?.images}
+                    />
+                    <Button disabled={formData?.images?.length > 0 ? false : true} colorScheme="blue" size="lg" w="full" onClick={handleContinue}>
+                      Continue
                     </Button>
+                  </VStack>
+                )}
 
-                    <Button variant="outline" size="md" onClick={() => setCurrentStep(0)}>
-                      Cancel
-                    </Button>
-                  </HStack>
-                </VStack>
-              )}
-            </form>
+                {currentStep === 2 && (
+                  <VStack spacing={8} w="full">
+                    <ListingReviewCard formData={formData} />
+                    <HStack spacing={4}>
+                      <Button colorScheme="blue" size="md" onClick={handlePublish}>
+                        Publish
+                      </Button>
+
+                      <Button variant="outline" size="md" onClick={() => setCurrentStep(0)}>
+                        Cancel
+                      </Button>
+                    </HStack>
+                  </VStack>
+                )}
+              </form>
             </Box>
           </Container>
         </VStack>

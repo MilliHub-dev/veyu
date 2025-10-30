@@ -101,49 +101,89 @@ const VerificationFormModal = ({ isOpen, onClose, businessType, onSuccess }) => 
     try {
       const payload = new FormData();
 
+      // Log form data for debugging
+      console.log('Form Data:', formData);
+      console.log('Files to upload:', Object.keys(files).filter(key => files[key]));
+
       // Add text fields
       Object.entries(formData).forEach(([key, value]) => {
-        if (value) payload.append(key, value);
+        if (value) {
+          console.log(`Adding field: ${key} = ${value}`);
+          payload.append(key, value);
+        }
       });
 
       // Add files
       Object.entries(files).forEach(([key, file]) => {
-        if (file) payload.append(key, file);
+        if (file) {
+          console.log(`Adding file: ${key} = ${file.name} (${file.size} bytes)`);
+          payload.append(key, file);
+        }
       });
 
+      console.log('Sending verification request...');
       const res = await axios.post('/accounts/verify-business/', payload, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        withCredentials: true
       });
 
-      notify({
-        title: 'Success!',
-        body: res.data.message || 'Business verification submitted successfully',
-        color: 'green'
-      });
+      console.log('API Response:', res.data);
 
-      onSuccess();
-      onClose();
+      if (res.status >= 200 && res.status < 300) {
+        notify({
+          title: 'Success!',
+          body: res.data.message || 'Business verification submitted successfully',
+          color: 'green'
+        });
+        onSuccess();
+        onClose();
+      } else {
+        throw new Error(res.data.detail || 'Unexpected response from server');
+      }
     } catch (error) {
-      const errorMessage = error.response?.data?.message 
-        || error.response?.data?.error
-        || 'Submission failed. Please try again.';
+      console.error('Verification error:', error);
+      console.error('Error response:', error.response?.data);
+      
+      let errorMessage = 'Submission failed. Please try again.';
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        errorMessage = error.response.data?.detail || 
+                      error.response.data?.message || 
+                      error.response.statusText ||
+                      `Server responded with status ${error.response.status}`;
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('No response received:', error.request);
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Request setup error:', error.message);
+        errorMessage = error.message;
+      }
       
       notify({
         title: 'Error',
         body: errorMessage,
         color: 'red',
-        timeout: 5000
+        timeout: 8000
       });
 
       // Show field-specific errors if available
       if (error.response?.data?.errors) {
         const errors = error.response.data.errors;
         Object.keys(errors).forEach(field => {
+          const errorText = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
+          console.error(`Field error (${field}):`, errorText);
           notify({
-            title: `${field} Error`,
-            body: errors[field][0],
+            title: `${field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Error`,
+            body: errorText,
             color: 'red',
-            timeout: 4000
+            timeout: 5000
           });
         });
       }

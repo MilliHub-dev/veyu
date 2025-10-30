@@ -1,20 +1,26 @@
-import { Search, Bell, CloudUpload, ChevronDown, ArrowRight } from "lucide-react"
+import { 
+  CloudUpload, 
+  Building,
+  MapPin,
+  Phone,
+  Mail,
+  Camera,
+  CheckCircle,
+  Star,
+  Shield,
+  Zap,
+  Plus,
+  X
+} from "lucide-react";
 import {
   Avatar,
   Box,
   Button,
   Container,
   InputGroup,
-  InputLeftAddon,
   VStack,
-  IconButton,
-  FormErrorMessage,
   Textarea,
   Tag,
-  Card,
-  Checkbox,
-  Divider,
-  Flex,
   FormControl,
   FormLabel,
   Heading,
@@ -22,40 +28,39 @@ import {
   Icon,
   Image,
   Input,
-  Link,
   ButtonGroup,
-  PinInput,
-  PinInputField,
-  Select,
-  SelectField,
-  Stack,
-  Text,
   SimpleGrid,
   useColorModeValue,
+  Text,
+  Flex,
+  Badge,
+  Progress,
+  InputLeftElement,
+  Wrap,
+  WrapItem,
+  IconButton,
+  useToast
 } from "@chakra-ui/react";
-import { useContext, useRef, useState, createContext, useEffect } from "react";
+import { useContext, useRef, useState, useEffect } from "react";
 import { GlobalStore } from "../../App";
 import { SignupContext } from "./Signup";
-import {motion} from 'framer-motion';
-import { CenteredLayout, OTPField } from "../../components";
+import { motion } from 'framer-motion';
 import { CustomPlacesAutocomplete } from "../../components/maps";
-import { redirect, useNavigate, useParams, useSearchParams, Link as RLink } from "react-router-dom";
-import { RiCircleFill, RiCircleLine, RiMailCloseFill, RiMailFill, RiMessage2Line, RiMessage3Line, RiMessageLine } from "react-icons/ri";
-import { FcSms, FcVoicemail } from "react-icons/fc";
-import { FaGoogle, FaFacebook, FaArrowRight } from "react-icons/fa";
-import { RxChatBubble, RxEnvelopeOpen } from "react-icons/rx";
-import { jsonifyObject, objectifyJSON } from "../../utils";
-import { auth } from "../../firebase";
-import firebase from 'firebase/compat/app';
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { objectifyJSON } from "../../utils";
 
+const MotionBox = motion(Box);
 
-
-function BusinessProfile({onSubmit, ...props }) {
-  const {payload} = useContext(SignupContext);
-  const {onAuthenticated, axios, logout, notify} = useContext(GlobalStore);
-  const [logoPreview, setLogoPreview] = useState('')
+function BusinessProfile({ onSubmit, ...props }) {
+  const { payload } = useContext(SignupContext);
+  const { onAuthenticated, axios, logout, notify } = useContext(GlobalStore);
+  const [logoPreview, setLogoPreview] = useState('');
   const [params] = useSearchParams();
-  const user_type = params.get('user_type') || 'dealer'
+  const user_type = params.get('user_type') || 'dealer';
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [completionProgress, setCompletionProgress] = useState(0);
+  const toast = useToast();
+  
   const [businessProfile, setBusinessProfile] = useState({
     logo: null,
     business_name: '',
@@ -70,428 +75,829 @@ function BusinessProfile({onSubmit, ...props }) {
       place_id: '',
       street_address: '',
     },
-    business_type: 'business', // business | individual
+    business_type: 'business',
     about: '',
     headline: '',
     contact_phone: '',
     contact_email: '',
   });
 
-  let mechServices = [
+  const mechServices = [
     'Oil Change',
     'Paint Job',
     'Body Work',
     'Engine Repair',
-  ]
+    'Brake Service',
+    'Tire Service',
+    'AC Repair',
+    'Electrical Work',
+    'Transmission Repair',
+    'Suspension Work',
+    'Exhaust System',
+    'Battery Service'
+  ];
 
-  let dealerServices = [
+  const dealerServices = [
     'Car Rentals',
     'Car Sales',
     'Drivers',
-  ]
+    'Vehicle Financing',
+    'Trade-ins',
+    'Warranty Service',
+    'Insurance',
+    'Vehicle Inspection',
+    'Delivery Service',
+    'Maintenance Plans'
+  ];
 
-  const servicesOffered = payload?.business_type === 'mechanic' ? mechServices : dealerServices;
-  const imageRef = useRef()
-  const imagesRef = useRef()
-  const pageBg = useColorModeValue('gray.50', 'gray.900');
+  const servicesOffered = user_type === 'mechanic' ? mechServices : dealerServices;
+  const imageRef = useRef();
+  const redirect = useNavigate();
+
+  const bgGradient = useColorModeValue(
+    'linear(to-br, orange.50, yellow.50, red.50)',
+    'linear(to-br, gray.900, orange.900, yellow.900)'
+  );
+  
   const cardBg = useColorModeValue('white', 'gray.800');
-  const borderCol = useColorModeValue('#d0d5dd', 'gray.700');
+  const textColor = useColorModeValue('gray.600', 'gray.300');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+
+  // Calculate completion progress
+  useEffect(() => {
+    const fields = [
+      businessProfile.logo,
+      businessProfile.business_name,
+      businessProfile.headline,
+      businessProfile.about,
+      businessProfile.contact_email,
+      businessProfile.contact_phone,
+      businessProfile.services.length > 0,
+      businessProfile.location.street_address
+    ];
+    const completed = fields.filter(Boolean).length;
+    setCompletionProgress((completed / fields.length) * 100);
+  }, [businessProfile]);
 
   const changeValue = (key, value) => {
-    const oldValue = businessProfile
-    oldValue[`${key}`] = value;
-    setBusinessProfile({ ...oldValue })
-  }
+    setBusinessProfile(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
 
-  function removeService(service){
-    const oldValue = businessProfile.services;
-    oldValue.pop(service)
-    changeValue('services', [...oldValue])
-  }
+  const addService = (service) => {
+    if (!businessProfile.services.includes(service)) {
+      changeValue('services', [...businessProfile.services, service]);
+    }
+  };
 
-  async function setupBusinessProfile(e){
+  const removeService = (service) => {
+    const updatedServices = businessProfile.services.filter(s => s !== service);
+    changeValue('services', updatedServices);
+  };
+
+  async function setupBusinessProfile(e) {
     e.preventDefault();
+    setIsSubmitting(true);
 
-    if (!businessProfile.logo){
+    if (!businessProfile.logo) {
+      setIsSubmitting(false);
       return notify({
         color: 'red',
-        title: 'Please Upload your Logo'
-      })
+        title: 'Logo Required',
+        body: 'Please upload your business logo to continue'
+      });
     }
     
-    // images must be < 2mb
-    if (businessProfile.logo && businessProfile.logo.size/10**6 > 2.048){
+    if (businessProfile.logo && businessProfile.logo.size / 10**6 > 2.048) {
+      setIsSubmitting(false);
       return notify({
         color: 'red',
-        title: 'Your Logo file size exceeds 2mb',
+        title: 'File Too Large',
+        body: 'Your logo file size exceeds 2MB. Please choose a smaller file.',
         timeout: 4500,
-      })
+      });
     }
 
-    try{
-      // Check both possible localStorage keys
+    try {
       const authUser = objectifyJSON(localStorage.getItem('veyu-auth-user')) 
                     || objectifyJSON(localStorage.getItem('motaa-auth-user'));
       
-      console.log('Auth user for business setup:', authUser); // Debug log
-      
       if (!authUser) {
+        setIsSubmitting(false);
         return notify({
-          title: 'Error',
+          title: 'Authentication Error',
           body: 'Please log in first to set up your business profile',
           color: 'red'
         });
       }
 
       const payload = new FormData();
-      payload.append('action', 'setup-business-profile')
-      payload.append('user_type', user_type)
-      payload.append('logo', businessProfile?.logo, businessProfile.logo?.name)
-      payload.append('business_type', businessProfile.business_type)
-      payload.append('about', businessProfile.about)
-      payload.append('headline', businessProfile.headline)
-      payload.append('business_name', businessProfile.business_name)
-      payload.append('contact_phone', businessProfile.contact_phone)
-      payload.append('contact_email', businessProfile.contact_email)
-      payload.append('services', businessProfile.services)
-      payload.append('location', JSON.stringify(businessProfile.location))
+      payload.append('action', 'setup-business-profile');
+      payload.append('user_type', user_type);
+      payload.append('logo', businessProfile?.logo, businessProfile.logo?.name);
+      payload.append('business_type', businessProfile.business_type);
+      payload.append('about', businessProfile.about);
+      payload.append('headline', businessProfile.headline);
+      payload.append('business_name', businessProfile.business_name);
+      payload.append('contact_phone', businessProfile.contact_phone);
+      payload.append('contact_email', businessProfile.contact_email);
+      payload.append('services', businessProfile.services);
+      payload.append('location', JSON.stringify(businessProfile.location));
       
-      // Use api_token or token field
       const token = authUser?.api_token || authUser?.token;
-      console.log('Using token:', token ? 'Token found' : 'No token'); // Debug log
       
       const res = await axios.post('/accounts/register/', payload, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Token ${token}`
         }
-      })
-      
-      console.log('Business profile response:', res); // Debug log
-      console.log('Response status:', res.status); // Debug log
-      console.log('Response data:', res.data); // Debug log
+      });
       
       const data = objectifyJSON(res.data);
 
-      if (res.status === 200 || res.status === 201){
-        console.log("New business data:", data);
-        
+      if (res.status === 200 || res.status === 201) {
         notify({
-          title: 'Success',
-          body: "Business profile created successfully! Redirecting to dashboard..."
+          title: 'Success!',
+          body: "Business profile created successfully! Welcome to Veyu!",
+          color: 'green'
         });
         
-        // Update localStorage with new data if returned
         if (data.data || data.user) {
           localStorage.setItem('veyu-auth-user', JSON.stringify(data.data || data.user || data));
         }
         
-        // Redirect to dashboard after short delay
         setTimeout(() => {
           redirect('/dashboard');
         }, 1500);
-      }else{
-        console.log('Business setup failed:', data); // Debug log
+      } else {
         notify({
-          title: 'Error',
+          title: 'Setup Failed',
           timeout: 5000,
           body: data.message || 'Failed to set up business profile',
           color: 'red'
-        })
+        });
       }
-    }catch(error){
-        console.error('Business profile error:', error); // Debug log
-        console.error('Error response:', error.response?.data); // Debug log
-        
-        const errorMessage = error.response?.data?.message 
-          || error.response?.data?.error
-          || (typeof error.response?.data === 'object' ? JSON.stringify(error.response?.data) : error.response?.data)
-          || error.message;
-        
-        notify({
-          title: 'Error',
-          timeout: 5000,
-          body: errorMessage,
-          color: 'red'
-        })
-
+    } catch (error) {
+      const errorMessage = error.response?.data?.message 
+        || error.response?.data?.error
+        || (typeof error.response?.data === 'object' ? JSON.stringify(error.response?.data) : error.response?.data)
+        || error.message;
+      
+      notify({
+        title: 'Error',
+        timeout: 5000,
+        body: errorMessage,
+        color: 'red'
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { duration: 0.5 }
+    }
+  };
+
   return (
-    <Box minH="100vh" bg={pageBg}>
-      <Container maxW="4xl" py={10} px={{ base: 4, md: 6 }}>
-        <form id="profileForm" method="post" onSubmit={setupBusinessProfile} encType="multipart/form-data">
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} alignItems="start">
-        <VStack spacing={6} align="stretch" gridColumn={{ md: 'span 2' }}>
-        {/* Profile Image */}
-        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} boxShadow="md">
-          <VStack align="stretch" spacing={6}>
-            <Flex alignItems="center" justifyContent="center" mb={2}>
-              <Avatar
-               w="20" h="20"
-               borderRadius="full"
-               src={logoPreview}
-               name={businessProfile?.business_name}
-              />
-            </Flex>
-
-            <Button
-             onClick={() => imageRef.current.click()}
-             variant="link" color="#0460cc"
-             fontSize="sm" fontWeight="medium"
-             leftIcon={<CloudUpload size={16} />}
-            >
-              Upload your logo
-            </Button>
-            
-            <Input
-             hidden
-             ref={imageRef}
-             type="file"
-             allow="image/*"
-             isRequired
-             name="logo"
-             onInput={(e) => {
-              const file = e.target.files[0];
-              changeValue('logo', file);
-              if (file) setLogoPreview(URL.createObjectURL(file))
-             }}
+    <Box bg={bgGradient} minH="100vh" py={8}>
+      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
+        <MotionBox
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+        >
+          {/* Header */}
+          <MotionBox variants={itemVariants} textAlign="center" mb={8}>
+            <Image 
+              src="/assets/images/logo-main.png" 
+              alt="Veyu Logo" 
+              mx="auto" 
+              width="150px" 
+              mb={4}
             />
+            <Heading size="xl" color="gray.800" mb={2}>
+              Set Up Your Business Profile
+            </Heading>
+            <Text fontSize="lg" color={textColor}>
+              Tell us about your {user_type === 'dealer' ? 'dealership' : 'mechanic shop'} to get started
+            </Text>
+          </MotionBox>
 
-            <SimpleGrid mt={2} columns={{ base: 1, md: 2 }} spacing={4}>
-              <FormControl isRequired>
-                <FormLabel> Business Name </FormLabel>
-                <Input
-                 type="text" w="100%"
-                 value={businessProfile.business_name}
-                 placeholder="Business Name"
-                 onInput={e => changeValue('business_name', e.target.value)}
+          {/* Progress Bar */}
+          <MotionBox variants={itemVariants} mb={8}>
+            <Box maxW="2xl" mx="auto">
+              <VStack spacing={2}>
+                <HStack justify="space-between" w="full">
+                  <Text fontSize="sm" color={textColor}>Profile Completion</Text>
+                  <Text fontSize="sm" fontWeight="semibold" color="#F4A950">
+                    {Math.round(completionProgress)}%
+                  </Text>
+                </HStack>
+                <Progress 
+                  value={completionProgress} 
+                  colorScheme="orange" 
+                  size="lg" 
+                  borderRadius="full"
+                  w="full"
+                  bg="gray.200"
+                  sx={{
+                    '& > div': {
+                      bg: '#F4A950'
+                    }
+                  }}
                 />
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel> Business Headline or Motto </FormLabel>
-                <Input
-                 type="text" w="100%"
-                 value={businessProfile.headline}
-                 placeholder="Business Headline / Motto"
-                 onInput={e => changeValue('headline', e.target.value)}
-                />
-              </FormControl>
+              </VStack>
+            </Box>
+          </MotionBox>
+
+          <form id="profileForm" method="post" onSubmit={setupBusinessProfile} encType="multipart/form-data">
+            <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={8} alignItems="start">
+              {/* Main Form Content */}
+              <VStack spacing={8} align="stretch" gridColumn={{ base: 1, lg: 'span 2' }}>
+                
+                {/* Business Logo & Basic Info */}
+                <MotionBox variants={itemVariants}>
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="2xl"
+                    shadow="lg"
+                    border="1px solid"
+                    borderColor={borderColor}
+                  >
+                    <VStack spacing={6} align="stretch">
+                      <HStack spacing={3} mb={4}>
+                        <Icon as={Building} boxSize={6} color="#F4A950" />
+                        <Heading size="md" color="gray.800">Business Information</Heading>
+                      </HStack>
+
+                      {/* Logo Upload */}
+                      <VStack spacing={4}>
+                        <Box position="relative">
+                          <Avatar
+                            size="2xl"
+                            src={logoPreview}
+                            name={businessProfile?.business_name}
+                            bg="orange.100"
+                            color="#F4A950"
+                            border="4px solid"
+                            borderColor="orange.200"
+                          />
+                          <Box
+                            position="absolute"
+                            bottom={0}
+                            right={0}
+                            bg="#F4A950"
+                            borderRadius="full"
+                            p={2}
+                            cursor="pointer"
+                            onClick={() => imageRef.current.click()}
+                            _hover={{ bg: 'orange.600' }}
+                            transition="all 0.2s"
+                          >
+                            <Camera size={16} color="white" />
+                          </Box>
+                        </Box>
+
+                        <Button
+                          onClick={() => imageRef.current.click()}
+                          variant="outline"
+                          colorScheme="orange"
+                          leftIcon={<CloudUpload size={20} />}
+                          _hover={{ transform: 'translateY(-2px)', shadow: 'md' }}
+                          transition="all 0.2s"
+                          borderColor="#F4A950"
+                          color="#F4A950"
+                          _active={{ bg: '#F4A950', color: 'white' }}
+                        >
+                          Upload Business Logo
+                        </Button>
+                        
+                        <Input
+                          hidden
+                          ref={imageRef}
+                          type="file"
+                          accept="image/*"
+                          name="logo"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            changeValue('logo', file);
+                            if (file) setLogoPreview(URL.createObjectURL(file));
+                          }}
+                        />
+                        
+                        <Text fontSize="xs" color={textColor} textAlign="center">
+                          Recommended: Square image, max 2MB (JPG, PNG)
+                        </Text>
+                      </VStack>
+
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                        <FormControl isRequired>
+                          <FormLabel color="gray.700" fontWeight="semibold">
+                            Business Name
+                          </FormLabel>
+                          <InputGroup>
+                            <InputLeftElement>
+                              <Building size={20} color="gray" />
+                            </InputLeftElement>
+                            <Input
+                              value={businessProfile.business_name}
+                              onChange={(e) => changeValue('business_name', e.target.value)}
+                              placeholder="Your Business Name"
+                              size="lg"
+                              bg="gray.50"
+                              border="2px solid"
+                              borderColor={borderColor}
+                              _hover={{ borderColor: 'orange.300' }}
+                              _focus={{ 
+                                borderColor: '#F4A950', 
+                                bg: 'white',
+                                shadow: '0 0 0 1px #F4A950'
+                              }}
+                              pl={12}
+                            />
+                          </InputGroup>
+                        </FormControl>
+
+                        <FormControl isRequired>
+                          <FormLabel color="gray.700" fontWeight="semibold">
+                            Business Headline
+                          </FormLabel>
+                          <Input
+                            value={businessProfile.headline}
+                            onChange={(e) => changeValue('headline', e.target.value)}
+                            placeholder="Your business motto or tagline"
+                            size="lg"
+                            bg="gray.50"
+                            border="2px solid"
+                            borderColor={borderColor}
+                            _hover={{ borderColor: 'orange.300' }}
+                            _focus={{ 
+                              borderColor: '#F4A950', 
+                              bg: 'white',
+                              shadow: '0 0 0 1px #F4A950'
+                            }}
+                          />
+                        </FormControl>
+                      </SimpleGrid>
+
+                      <FormControl isRequired>
+                        <FormLabel color="gray.700" fontWeight="semibold">
+                          Business Type
+                        </FormLabel>
+                        <ButtonGroup isAttached w="full">
+                          <Button
+                            flex={1}
+                            size="lg"
+                            variant={businessProfile.business_type === 'business' ? 'solid' : 'outline'}
+                            colorScheme="orange"
+                            onClick={() => changeValue('business_type', 'business')}
+                            _hover={{ transform: 'translateY(-2px)', shadow: 'md' }}
+                            transition="all 0.2s"
+                            bg={businessProfile.business_type === 'business' ? '#F4A950' : 'transparent'}
+                            borderColor="#F4A950"
+                            color={businessProfile.business_type === 'business' ? 'white' : '#F4A950'}
+                          >
+                            Registered Business
+                          </Button>
+                          <Button
+                            flex={1}
+                            size="lg"
+                            variant={businessProfile.business_type === 'individual' ? 'solid' : 'outline'}
+                            colorScheme="orange"
+                            onClick={() => changeValue('business_type', 'individual')}
+                            _hover={{ transform: 'translateY(-2px)', shadow: 'md' }}
+                            transition="all 0.2s"
+                            bg={businessProfile.business_type === 'individual' ? '#F4A950' : 'transparent'}
+                            borderColor="#F4A950"
+                            color={businessProfile.business_type === 'individual' ? 'white' : '#F4A950'}
+                          >
+                            Individual
+                          </Button>
+                        </ButtonGroup>
+                      </FormControl>
+                    </VStack>
+                  </Box>
+                </MotionBox>
+
+                {/* Contact Information */}
+                <MotionBox variants={itemVariants}>
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="2xl"
+                    shadow="lg"
+                    border="1px solid"
+                    borderColor={borderColor}
+                  >
+                    <VStack spacing={6} align="stretch">
+                      <HStack spacing={3} mb={4}>
+                        <Icon as={Phone} boxSize={6} color="#F4A950" />
+                        <Heading size="md" color="gray.800">Contact Information</Heading>
+                      </HStack>
+
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                        <FormControl isRequired>
+                          <FormLabel color="gray.700" fontWeight="semibold">
+                            Contact Email
+                          </FormLabel>
+                          <InputGroup>
+                            <InputLeftElement>
+                              <Mail size={20} color="gray" />
+                            </InputLeftElement>
+                            <Input
+                              type="email"
+                              value={businessProfile.contact_email}
+                              onChange={(e) => changeValue('contact_email', e.target.value)}
+                              placeholder="business@example.com"
+                              size="lg"
+                              bg="gray.50"
+                              border="2px solid"
+                              borderColor={borderColor}
+                              _hover={{ borderColor: 'orange.300' }}
+                              _focus={{ 
+                                borderColor: '#F4A950', 
+                                bg: 'white',
+                                shadow: '0 0 0 1px #F4A950'
+                              }}
+                              pl={12}
+                            />
+                          </InputGroup>
+                        </FormControl>
+
+                        <FormControl isRequired>
+                          <FormLabel color="gray.700" fontWeight="semibold">
+                            Contact Phone
+                          </FormLabel>
+                          <InputGroup>
+                            <InputLeftElement>
+                              <Phone size={20} color="gray" />
+                            </InputLeftElement>
+                            <Input
+                              type="tel"
+                              value={businessProfile.contact_phone}
+                              onChange={(e) => changeValue('contact_phone', e.target.value)}
+                              placeholder="+1 (555) 123-4567"
+                              size="lg"
+                              bg="gray.50"
+                              border="2px solid"
+                              borderColor={borderColor}
+                              _hover={{ borderColor: 'orange.300' }}
+                              _focus={{ 
+                                borderColor: '#F4A950', 
+                                bg: 'white',
+                                shadow: '0 0 0 1px #F4A950'
+                              }}
+                              pl={12}
+                            />
+                          </InputGroup>
+                        </FormControl>
+                      </SimpleGrid>
+                    </VStack>
+                  </Box>
+                </MotionBox>
+
+                {/* Location */}
+                <MotionBox variants={itemVariants}>
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="2xl"
+                    shadow="lg"
+                    border="1px solid"
+                    borderColor={borderColor}
+                  >
+                    <VStack spacing={6} align="stretch">
+                      <HStack spacing={3} mb={4}>
+                        <Icon as={MapPin} boxSize={6} color="#F4A950" />
+                        <Heading size="md" color="gray.800">Business Location</Heading>
+                      </HStack>
+
+                      <FormControl isRequired>
+                        <FormLabel color="gray.700" fontWeight="semibold">
+                          Business Address
+                        </FormLabel>
+                        <CustomPlacesAutocomplete
+                          onSelect={(location) => changeValue('location', location)}
+                          placeholder="Enter your business address"
+                          inputProps={{
+                            size: "lg",
+                            bg: "gray.50",
+                            border: "2px solid",
+                            borderColor: borderColor,
+                            _hover: { borderColor: 'orange.300' },
+                            _focus: { 
+                              borderColor: '#F4A950', 
+                              bg: 'white',
+                              shadow: '0 0 0 1px #F4A950'
+                            }
+                          }}
+                        />
+                      </FormControl>
+                    </VStack>
+                  </Box>
+                </MotionBox>
+
+                {/* Services */}
+                <MotionBox variants={itemVariants}>
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="2xl"
+                    shadow="lg"
+                    border="1px solid"
+                    borderColor={borderColor}
+                  >
+                    <VStack spacing={6} align="stretch">
+                      <HStack spacing={3} mb={4}>
+                        <Icon as={Star} boxSize={6} color="#F4A950" />
+                        <Heading size="md" color="gray.800">Services Offered</Heading>
+                      </HStack>
+
+                      <Text color={textColor} fontSize="sm">
+                        Select the services you offer to help customers find you
+                      </Text>
+
+                      {/* Selected Services */}
+                      {businessProfile.services.length > 0 && (
+                        <Box>
+                          <Text fontWeight="semibold" color="gray.700" mb={3}>
+                            Selected Services ({businessProfile.services.length})
+                          </Text>
+                          <Wrap spacing={2}>
+                            {businessProfile.services.map((service, index) => (
+                              <WrapItem key={index}>
+                                <Tag
+                                  size="lg"
+                                  bg="#F4A950"
+                                  color="white"
+                                  borderRadius="full"
+                                  px={4}
+                                  py={2}
+                                >
+                                  {service}
+                                  <IconButton
+                                    size="xs"
+                                    ml={2}
+                                    bg="transparent"
+                                    color="white"
+                                    _hover={{ bg: 'whiteAlpha.200' }}
+                                    icon={<X size={12} />}
+                                    onClick={() => removeService(service)}
+                                  />
+                                </Tag>
+                              </WrapItem>
+                            ))}
+                          </Wrap>
+                        </Box>
+                      )}
+
+                      {/* Available Services */}
+                      <Box>
+                        <Text fontWeight="semibold" color="gray.700" mb={3}>
+                          Available Services
+                        </Text>
+                        <Wrap spacing={2}>
+                          {servicesOffered
+                            .filter(service => !businessProfile.services.includes(service))
+                            .map((service, index) => (
+                            <WrapItem key={index}>
+                              <Tag
+                                size="lg"
+                                variant="outline"
+                                borderColor="#F4A950"
+                                color="#F4A950"
+                                borderRadius="full"
+                                px={4}
+                                py={2}
+                                cursor="pointer"
+                                _hover={{ 
+                                  bg: '#F4A950', 
+                                  color: 'white',
+                                  transform: 'translateY(-2px)',
+                                  shadow: 'md'
+                                }}
+                                transition="all 0.2s"
+                                onClick={() => addService(service)}
+                              >
+                                <Plus size={12} style={{ marginRight: '8px' }} />
+                                {service}
+                              </Tag>
+                            </WrapItem>
+                          ))}
+                        </Wrap>
+                      </Box>
+                    </VStack>
+                  </Box>
+                </MotionBox>
+
+                {/* About Business */}
+                <MotionBox variants={itemVariants}>
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="2xl"
+                    shadow="lg"
+                    border="1px solid"
+                    borderColor={borderColor}
+                  >
+                    <VStack spacing={6} align="stretch">
+                      <HStack spacing={3} mb={4}>
+                        <Icon as={Shield} boxSize={6} color="#F4A950" />
+                        <Heading size="md" color="gray.800">About Your Business</Heading>
+                      </HStack>
+
+                      <FormControl isRequired>
+                        <FormLabel color="gray.700" fontWeight="semibold">
+                          Business Description
+                        </FormLabel>
+                        <Textarea
+                          value={businessProfile.about}
+                          onChange={(e) => changeValue('about', e.target.value)}
+                          placeholder="Tell customers about your business, experience, and what makes you special..."
+                          rows={6}
+                          size="lg"
+                          bg="gray.50"
+                          border="2px solid"
+                          borderColor={borderColor}
+                          _hover={{ borderColor: 'orange.300' }}
+                          _focus={{ 
+                            borderColor: '#F4A950', 
+                            bg: 'white',
+                            shadow: '0 0 0 1px #F4A950'
+                          }}
+                          resize="vertical"
+                        />
+                        <Text fontSize="xs" color={textColor} mt={2}>
+                          {businessProfile.about.length}/500 characters
+                        </Text>
+                      </FormControl>
+                    </VStack>
+                  </Box>
+                </MotionBox>
+              </VStack>
+
+              {/* Sidebar */}
+              <MotionBox variants={itemVariants}>
+                <VStack spacing={6} position="sticky" top={8}>
+                  {/* Profile Preview */}
+                  <Box
+                    bg={cardBg}
+                    p={6}
+                    borderRadius="2xl"
+                    shadow="lg"
+                    border="1px solid"
+                    borderColor={borderColor}
+                    w="full"
+                  >
+                    <VStack spacing={4}>
+                      <Text fontWeight="bold" color="gray.800" fontSize="lg">
+                        Profile Preview
+                      </Text>
+                      
+                      <Avatar
+                        size="xl"
+                        src={logoPreview}
+                        name={businessProfile.business_name}
+                        bg="orange.100"
+                        color="#F4A950"
+                      />
+                      
+                      <VStack spacing={2} textAlign="center">
+                        <Text fontWeight="bold" color="gray.800">
+                          {businessProfile.business_name || 'Your Business Name'}
+                        </Text>
+                        <Text fontSize="sm" color={textColor}>
+                          {businessProfile.headline || 'Your business headline'}
+                        </Text>
+                        <Badge colorScheme="orange" variant="subtle">
+                          {businessProfile.business_type === 'business' ? 'Registered Business' : 'Individual'}
+                        </Badge>
+                      </VStack>
+
+                      {businessProfile.services.length > 0 && (
+                        <Box w="full">
+                          <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
+                            Services ({businessProfile.services.length})
+                          </Text>
+                          <Wrap spacing={1} justify="center">
+                            {businessProfile.services.slice(0, 3).map((service, index) => (
+                              <WrapItem key={index}>
+                                <Badge size="sm" colorScheme="orange">
+                                  {service}
+                                </Badge>
+                              </WrapItem>
+                            ))}
+                            {businessProfile.services.length > 3 && (
+                              <WrapItem>
+                                <Badge size="sm" variant="outline" colorScheme="orange">
+                                  +{businessProfile.services.length - 3} more
+                                </Badge>
+                              </WrapItem>
+                            )}
+                          </Wrap>
+                        </Box>
+                      )}
+                    </VStack>
+                  </Box>
+
+                  {/* Trust Indicators */}
+                  <Box
+                    bg={cardBg}
+                    p={6}
+                    borderRadius="2xl"
+                    shadow="lg"
+                    border="1px solid"
+                    borderColor={borderColor}
+                    w="full"
+                  >
+                    <VStack spacing={4}>
+                      <Text fontWeight="bold" color="gray.800" fontSize="lg">
+                        Why Complete Your Profile?
+                      </Text>
+                      
+                      <VStack spacing={3} align="start" w="full">
+                        <HStack spacing={3}>
+                          <Icon as={CheckCircle} color="green.500" boxSize={5} />
+                          <Text fontSize="sm" color={textColor}>
+                            Get more customer inquiries
+                          </Text>
+                        </HStack>
+                        <HStack spacing={3}>
+                          <Icon as={Star} color="#F4A950" boxSize={5} />
+                          <Text fontSize="sm" color={textColor}>
+                            Build trust with customers
+                          </Text>
+                        </HStack>
+                        <HStack spacing={3}>
+                          <Icon as={Zap} color="blue.500" boxSize={5} />
+                          <Text fontSize="sm" color={textColor}>
+                            Appear in relevant searches
+                          </Text>
+                        </HStack>
+                        <HStack spacing={3}>
+                          <Icon as={Shield} color="purple.500" boxSize={5} />
+                          <Text fontSize="sm" color={textColor}>
+                            Verified business badge
+                          </Text>
+                        </HStack>
+                      </VStack>
+                    </VStack>
+                  </Box>
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    form="profileForm"
+                    size="lg"
+                    bg="#F4A950"
+                    color="white"
+                    _hover={{ 
+                      bg: 'orange.600',
+                      transform: 'translateY(-2px)',
+                      shadow: 'lg'
+                    }}
+                    _active={{ bg: 'orange.700' }}
+                    isLoading={isSubmitting}
+                    loadingText="Setting up profile..."
+                    w="full"
+                    py={6}
+                    fontSize="lg"
+                    fontWeight="bold"
+                    transition="all 0.2s"
+                    isDisabled={completionProgress < 80}
+                  >
+                    Complete Setup
+                  </Button>
+                  
+                  {completionProgress < 80 && (
+                    <Text fontSize="xs" color="red.500" textAlign="center">
+                      Please complete at least 80% of your profile to continue
+                    </Text>
+                  )}
+                </VStack>
+              </MotionBox>
             </SimpleGrid>
-
-            <FormControl mt={4} isRequired>
-              <FormLabel> Business Type </FormLabel>
-              <ButtonGroup isAttached w="100%">
-                <Button
-                  flex={1}
-                  variant={businessProfile.business_type === 'business' ? 'solid' : 'outline'}
-                  colorScheme={businessProfile.business_type === 'business' ? 'blue' : 'gray'}
-                  onClick={() => changeValue('business_type', 'business')}
-                >
-                  Registered Business
-                </Button>
-                <Button
-                  flex={1}
-                  variant={businessProfile.business_type === 'individual' ? 'solid' : 'outline'}
-                  colorScheme={businessProfile.business_type === 'individual' ? 'blue' : 'gray'}
-                  onClick={() => changeValue('business_type', 'individual')}
-                >
-                  Individual
-                </Button>
-              </ButtonGroup>
-            </FormControl>
-          </VStack>
-        </Box>
-
-
-        {/* About Your Business */}
-        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} boxShadow="sm">
-          <FormLabel fontWeight="medium" mb={2}>
-            About your Business
-          </FormLabel>
-          <Textarea
-            onInput={(e) => changeValue('about', e.target.value)}
-           placeholder="Enter a brief description of your business. Minimum of 50 characters..."
-           minH="100px"
-           borderColor={borderCol}
-          />
-        </Box>
-
-        {/* Choose Services */}
-        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} boxShadow="sm">
-          <FormLabel fontWeight="medium" mb={2}> Services Offered </FormLabel>
-          <Box border="1px solid" borderColor={borderCol} borderRadius="lg" overflow="hidden">
-            <Box p={3} borderBottom="1px solid" borderColor={borderCol}>
-              <FormLabel fontWeight="medium" mb={2}> Choose services </FormLabel>
-              <Flex flexWrap="wrap" gap={2}>
-              {
-                servicesOffered?.map((service) => {
-                  const selected = businessProfile?.services?.includes(service);
-                  if (selected) return null;
-                  return (
-                    <Tag
-                      variant={selected ? "solid" : "outline"}
-                      size="lg"
-                      cursor="pointer"
-                      borderRadius="full"
-                      fontSize="sm"
-                      bg={selected ? "#f2f4f7" : cardBg}
-                      color={selected ? "#101828" : useColorModeValue('#667085', 'gray.300')}
-                      borderColor={borderCol}
-                      _hover={{ bg: selected ? "#e4e7ec" : "gray.50" }}
-                      onClick={() => changeValue('services', [...businessProfile?.services, service])}
-                    >
-                      {service}
-                    </Tag>
-                  )
-                }
-              )}
-              </Flex>
-            </Box>
-
-            <Box p={3}>
-              <Flex flexWrap="wrap" gap={2}>
-                {
-                  businessProfile?.services?.map((service) => 
-                    <Tag
-                      variant={"solid"}
-                      cursor="pointer"
-                      size="lg"
-                      borderRadius="full"
-                      fontSize="sm"
-                      bg={"#0460cc"}
-                      color={"white"}
-                      borderColor={"#0460cc"}
-                      _hover={{ bg: "#0354b4"}}
-                      onClick={() => removeService(service)}
-                    >
-                      {service}
-                    </Tag>
-                  )
-                }
-                {businessProfile?.services.length < 1 && <Text> Select at least one service you offer </Text>}
-              </Flex>
-            </Box>
-          </Box>
-        </Box>
-
-        {/* Contact Details */}
-        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} boxShadow="sm">
-          <FormLabel fontWeight="medium" mb={2}>
-            Contact details
-          </FormLabel>
-          <Text fontSize="sm" color="#667085" mb={4}>
-            This would be shown on inspection slips and transaction receipts.
-          </Text>
-
-          <FormControl isRequired mb={4}>
-            <FormLabel fontSize="sm" fontWeight="medium" mb={1}>
-              Email
-            </FormLabel>
-            <Input type="email" placeholder="info@company.com" borderColor={borderCol}
-                onInput={(e) => changeValue('contact_email', e.target.value)}
-             />
-          </FormControl>
-
-          <FormControl isRequired isInvalid={true}>
-            <FormLabel fontSize="sm" fontWeight="medium" mb={1}>
-              Phone Number
-            </FormLabel>
-            <InputGroup>
-              <InputLeftAddon
-                bg={cardBg}
-                borderColor={borderCol}
-                px={2}
-                children={
-                  <Flex alignItems="center">
-                    <Box w={6} h={4} position="relative">
-                      <Box position="absolute" inset={0} bg="#6da544" w="33.33%"></Box>
-                      <Box position="absolute" inset={0} left="33.33%" bg="white" w="33.33%"></Box>
-                      <Box position="absolute" inset={0} left="66.66%" bg="#6da544" w="33.33%"></Box>
-                    </Box>
-                    <ChevronDown size={16} ml={1} color="#667085" />
-                  </Flex>
-                }
-              />
-              <Input
-                type="tel"
-                placeholder="+2341234567890"
-                value={businessProfile.contact_phone}
-                onInput={(e) => changeValue('contact_phone', e.target.value)}
-              />
-            </InputGroup>
-          </FormControl>
-        </Box>
-
-        <Box bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 8 }} boxShadow="sm">
-          <SimpleGrid columns={{ base: 1 }} spacing={4}>
-            <FormControl isRequired>
-              <FormLabel fontSize="sm" fontWeight="medium" mb={1}>
-                Street Address
-              </FormLabel>
-              <Input type="address" placeholder="e.g Suite 4. Acura Plaza" borderColor={borderCol}
-                  onInput={(e) => changeValue('location', {...businessProfile.location, street_address: e.target.value})}
-               />
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel fontSize="sm" fontWeight="medium" mb={1}>
-                Physical Location <small> Select a Location on Google </small>
-              </FormLabel>
-              <CustomPlacesAutocomplete onPlaceChange={({...data}) => changeValue('location', {...businessProfile.location, ...data})} />
-            </FormControl>
-          </SimpleGrid>
-        </Box>
-
-        {/* Close left column and add right preview column */}
-        </VStack>
-
-        <Box position="sticky" top={4} bg={cardBg} border="1px solid" borderColor={borderCol} borderRadius="xl" p={{ base: 5, md: 6 }}>
-          <VStack spacing={4} align="stretch">
-            <HStack>
-              <Avatar w="14" h="14" src={logoPreview} name={businessProfile?.business_name} />
-              <Box>
-                <Heading as="h3" fontSize="md" fontWeight="semibold">
-                  {businessProfile?.business_name || 'Business name'}
-                </Heading>
-                <Text fontSize="sm" color="#667085">{businessProfile?.headline || 'Headline'}</Text>
-              </Box>
-            </HStack>
-            <Divider />
-            <Text fontSize="sm" color="#667085">{businessProfile?.about || 'Tell customers about your business...'}</Text>
-            <HStack flexWrap={{base: 'wrap', md: 'nowrap'}} mt={2} fontSize="sm" color="#667085">
-              <Text>{businessProfile?.contact_email || 'email@example.com'}</Text>
-              <Text>•</Text>
-              <Text>{businessProfile?.contact_phone || '+234 000 000 0000'}</Text>
-            </HStack>
-            <Box>
-              <Text fontWeight="medium" mb={2}>Services</Text>
-              <HStack flexWrap="wrap" gap={2}>
-                {businessProfile?.services?.map((s, i) => <Tag key={i} colorScheme="blue" variant="subtle">{s}</Tag>)}
-                {(!businessProfile?.services || businessProfile?.services?.length === 0) && <Text color="gray.500">No services selected</Text>}
-              </HStack>
-            </Box>
-            <Box>
-              <Text fontWeight="medium" mb={1}>Address</Text>
-              <Text fontSize="sm" color="#667085">{businessProfile?.location?.street_address || 'Street address'}</Text>
-            </Box>
-          </VStack>
-        </Box>
-
-        </SimpleGrid>
-
-        {/* Submit Button */}
-        <Box mt={8}>
-          <Button form="profileForm" type="submit" w="full" bg="#0460cc" color="white" _hover={{ bg: "#0354b4" }} boxShadow="md">
-            Create your Profile
-          </Button>
-        </Box>
-      </form>
+          </form>
+        </MotionBox>
       </Container>
     </Box>
-  )
+  );
 }
 
 export default BusinessProfile;
-

@@ -29,84 +29,378 @@ import {
   SimpleGrid,
   UnorderedList,
   ListItem,
+  Icon,
 } from "@chakra-ui/react";
-import {CloseIcon} from "@chakra-ui/icons";
+import {CloseIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon, CheckIcon} from "@chakra-ui/icons";
 import {BackButton} from './nav';
 import {GlobalStore} from '../App';
 import { getBrandNames, getModelsForBrand } from '../data/vehicleBrands';
 import {objectifyJSON} from '../utils';
-import { ArrowLeft, DeleteIcon, Upload, AlertTriangle, Zap, Clock, Settings, MessageCircle, Bell } from "lucide-react"
+import { 
+  ArrowLeft, DeleteIcon, Upload, AlertTriangle, Zap, Clock, Settings, 
+  MessageCircle, Bell, MapPin, CheckCircle, Eye, Shield, Star, Calendar
+} from "lucide-react"
 import { useState, useEffect, useContext, useRef } from "react";
 
 
 // Review Component
 export function ListingReviewCard({ formData }) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const images = formData?.images || formData?.vehicle?.images || [];
+  
+  const nextImage = () => {
+    if (images.length > 1) {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (images.length > 1) {
+      setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+    }
+  };
+
   return (
-    <VStack spacing={6} align="stretch" maxW="600px" mx="auto">
-      <Box borderWidth={1} borderRadius="lg" overflow="hidden" borderColor="gray.200" bg="white" boxShadow="sm">
-        <Image
-          src={formData?.images[0]?.previewUrl || "/placeholder.svg"}
-          alt="Car preview"
-          w="full"
-          h="300px"
-          objectFit="cover"
-        />
-        <Box p={6}>
-          <HStack justify="space-between" mb={4}>
-            <VStack align="start" spacing={1}>
-              <Text fontSize="lg" fontWeight="bold">
-                {formData.title}
-              </Text>
-              <Badge colorScheme="gray">{formData?.usage}</Badge>
-            </VStack>
-            <VStack align="end" spacing={1}>
-              <Text fontSize="lg" fontWeight="bold" color="blue.600">
-                ₦{Number(formData.price).toLocaleString()}
-              </Text>
-              <Text color="green.500" fontSize="sm">
-                +0.5% added fees
-              </Text>
-            </VStack>
-          </HStack>
+    <VStack spacing={8} align="stretch" maxW="800px" mx="auto">
+      {/* Main Listing Preview Card */}
+      <Box
+        borderWidth={2}
+        borderRadius="2xl"
+        overflow="hidden"
+        borderColor="#F4A950"
+        bg="white"
+        shadow="2xl"
+        position="relative"
+        _hover={{
+          shadow: "3xl",
+          transform: "translateY(-4px)",
+          transition: "all 0.3s ease"
+        }}
+        transition="all 0.3s ease"
+      >
+        {/* Image Section with Gallery */}
+        <Box position="relative" h="400px" bg="gray.100">
+          {images.length > 0 ? (
+            <>
+              <Image
+                src={images[currentImageIndex]?.previewUrl || images[currentImageIndex]?.url || "/placeholder.svg"}
+                alt="Vehicle preview"
+                w="full"
+                h="full"
+                objectFit="cover"
+                transition="all 0.3s ease"
+              />
+              
+              {/* Image Navigation */}
+              {images.length > 1 && (
+                <>
+                  <IconButton
+                    position="absolute"
+                    left={4}
+                    top="50%"
+                    transform="translateY(-50%)"
+                    icon={<ChevronLeftIcon />}
+                    onClick={prevImage}
+                    bg="whiteAlpha.900"
+                    color="gray.800"
+                    _hover={{ bg: "white", transform: "translateY(-50%) scale(1.1)" }}
+                    borderRadius="full"
+                    size="lg"
+                    shadow="lg"
+                  />
+                  <IconButton
+                    position="absolute"
+                    right={4}
+                    top="50%"
+                    transform="translateY(-50%)"
+                    icon={<ChevronRightIcon />}
+                    onClick={nextImage}
+                    bg="whiteAlpha.900"
+                    color="gray.800"
+                    _hover={{ bg: "white", transform: "translateY(-50%) scale(1.1)" }}
+                    borderRadius="full"
+                    size="lg"
+                    shadow="lg"
+                  />
+                  
+                  {/* Image Counter */}
+                  <Badge
+                    position="absolute"
+                    bottom={4}
+                    right={4}
+                    bg="blackAlpha.700"
+                    color="white"
+                    px={3}
+                    py={1}
+                    borderRadius="full"
+                    fontSize="sm"
+                  >
+                    {currentImageIndex + 1} / {images.length}
+                  </Badge>
+                </>
+              )}
+              
+              {/* Condition Badge */}
+              <Badge
+                position="absolute"
+                top={4}
+                left={4}
+                bg="white"
+                color="gray.700"
+                px={4}
+                py={2}
+                borderRadius="full"
+                fontWeight="bold"
+                fontSize="sm"
+                textTransform="uppercase"
+                shadow="md"
+              >
+                {formData?.vehicle?.condition || formData?.condition || 'New'}
+              </Badge>
+            </>
+          ) : (
+            <Flex align="center" justify="center" h="full" bg="gray.50">
+              <VStack spacing={4} color="gray.400">
+                <Box fontSize="4xl">📷</Box>
+                <Text>No images uploaded</Text>
+              </VStack>
+            </Flex>
+          )}
+        </Box>
 
-          <HStack spacing={6} mb={4}>
-            <HStack>
-              <Clock size={16} />
-              <Text>{formData.mileage || "800"} miles</Text>
-            </HStack>
-            <HStack>
-              <Settings size={16} />
-              <Text>{formData.transmission}</Text>
-            </HStack>
-            <HStack>
-              <Zap size={16} />
-              <Text>{formData.fuel_system}</Text>
-            </HStack>
-          </HStack>
+        {/* Content Section */}
+        <Box p={8}>
+          {/* Title and Price */}
+          <Flex justify="space-between" align="start" mb={6}>
+            <VStack align="start" spacing={2} flex={1}>
+              <Heading size="lg" color="gray.800" noOfLines={2}>
+                {formData?.title || `${formData?.vehicle?.make} ${formData?.vehicle?.model} ${formData?.vehicle?.year}`}
+              </Heading>
+              <HStack spacing={3}>
+                <Badge 
+                  colorScheme="orange" 
+                  variant="subtle" 
+                  px={3} 
+                  py={1} 
+                  borderRadius="full"
+                  fontSize="sm"
+                >
+                  {formData?.listing_type === 'sale' ? 'For Sale' : 'For Rent'}
+                </Badge>
+                {formData?.vehicle?.custom_duty && (
+                  <Badge 
+                    colorScheme="purple" 
+                    variant="solid" 
+                    px={3} 
+                    py={1} 
+                    borderRadius="full"
+                    fontSize="sm"
+                  >
+                    ✓ Custom Duty
+                  </Badge>
+                )}
+              </HStack>
+            </VStack>
+            
+            <VStack align="end" spacing={1} ml={4}>
+              <Text fontSize="3xl" fontWeight="bold" color="#F4A950">
+                ₦{Number(formData?.price || 0).toLocaleString()}
+              </Text>
+              {formData?.listing_type === 'rental' && (
+                <Text fontSize="sm" color="gray.500">
+                  per {formData?.payment_cycle || 'day'}
+                </Text>
+              )}
+              <HStack spacing={1} fontSize="sm" color="green.600">
+                <Icon as={InfoIcon} />
+                <Text>+0.5% platform fee</Text>
+              </HStack>
+            </VStack>
+          </Flex>
 
-          <HStack>
-            <Text color="gray.600">FCT, AMAC</Text>
-            <Badge colorScheme="purple"> CUSTOM DUTY ✓</Badge>
+          {/* Vehicle Specifications */}
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6} mb={6}>
+            <VStack spacing={2} align="center" p={4} bg="gray.50" borderRadius="xl">
+              <Icon as={Clock} color="#F4A950" boxSize={6} />
+              <Text fontSize="sm" color="gray.600" textAlign="center">Mileage</Text>
+              <Text fontWeight="bold" fontSize="lg">
+                {Number(formData?.vehicle?.mileage || formData?.mileage || 0).toLocaleString()} mi
+              </Text>
+            </VStack>
+            
+            <VStack spacing={2} align="center" p={4} bg="gray.50" borderRadius="xl">
+              <Icon as={Settings} color="#F4A950" boxSize={6} />
+              <Text fontSize="sm" color="gray.600" textAlign="center">Transmission</Text>
+              <Text fontWeight="bold" fontSize="lg" textAlign="center">
+                {formData?.vehicle?.transmission || formData?.transmission || 'Automatic'}
+              </Text>
+            </VStack>
+            
+            <VStack spacing={2} align="center" p={4} bg="gray.50" borderRadius="xl">
+              <Icon as={Zap} color="#F4A950" boxSize={6} />
+              <Text fontSize="sm" color="gray.600" textAlign="center">Fuel Type</Text>
+              <Text fontWeight="bold" fontSize="lg" textAlign="center">
+                {formData?.vehicle?.fuel_system || formData?.fuel_system || 'Petrol'}
+              </Text>
+            </VStack>
+            
+            <VStack spacing={2} align="center" p={4} bg="gray.50" borderRadius="xl">
+              <Icon as={Calendar} color="#F4A950" boxSize={6} />
+              <Text fontSize="sm" color="gray.600" textAlign="center">Year</Text>
+              <Text fontWeight="bold" fontSize="lg">
+                {formData?.vehicle?.year || formData?.year || '2020'}
+              </Text>
+            </VStack>
+          </SimpleGrid>
+
+          {/* Location and Additional Info */}
+          <HStack justify="space-between" align="center" pt={4} borderTop="1px solid" borderColor="gray.200">
+            <HStack spacing={2} color="gray.600">
+              <Icon as={MapPin} />
+              <Text fontSize="sm">
+                {formData?.location || 'Abuja, Nigeria'}
+              </Text>
+            </HStack>
+            
+            <HStack spacing={4}>
+              <Badge 
+                colorScheme="blue" 
+                display="flex" 
+                alignItems="center" 
+                gap={1}
+                px={3}
+                py={1}
+                borderRadius="full"
+              >
+                <Icon as={CheckCircle} boxSize={3} />
+                <Text fontSize="xs">Verified Dealer</Text>
+              </Badge>
+              
+              <HStack spacing={1} fontSize="sm" color="gray.500">
+                <Icon as={Eye} boxSize={4} />
+                <Text>Preview Mode</Text>
+              </HStack>
+            </HStack>
           </HStack>
         </Box>
       </Box>
 
-      <Box p={4} bg="orange.50" borderRadius="md" borderLeftWidth={4} borderLeftColor="orange.400">
-        <HStack>
-          <AlertTriangle className="text-orange-500" />
-          <Box>
-            <Text fontWeight="medium">Reviews normally take 2-24 hours.</Text>
-            <Text fontSize="sm" color="gray.600">
-              Why we do reviews?
-            </Text>
-            <UnorderedList fontSize="sm" color="gray.600" mt={2}>
-              <ListItem>To avoid duplicate listings.</ListItem>
-              <ListItem>To ensure validity of vehicle.</ListItem>
-              <ListItem>To increase customer trust in your listings.</ListItem>
-            </UnorderedList>
+      {/* Review Process Information */}
+      <Box
+        p={6}
+        bg="orange.50"
+        borderRadius="2xl"
+        borderLeft="6px solid"
+        borderLeftColor="#F4A950"
+        shadow="md"
+      >
+        <HStack spacing={4} align="start">
+          <Box
+            p={3}
+            bg="#F4A950"
+            borderRadius="full"
+            color="white"
+          >
+            <AlertTriangle size={24} />
           </Box>
+          
+          <VStack align="start" spacing={4} flex={1}>
+            <Box>
+              <Text fontSize="lg" fontWeight="bold" color="gray.800" mb={2}>
+                Listing Review Process
+              </Text>
+              <Text color="gray.600" mb={4}>
+                Your listing will be reviewed by our team within 2-24 hours to ensure quality and accuracy.
+              </Text>
+            </Box>
+            
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} w="full">
+              <VStack spacing={2} align="start" p={4} bg="white" borderRadius="xl" shadow="sm">
+                <Icon as={Shield} color="green.500" boxSize={5} />
+                <Text fontWeight="semibold" fontSize="sm">Quality Assurance</Text>
+                <Text fontSize="xs" color="gray.600">
+                  Prevent duplicate and invalid listings
+                </Text>
+              </VStack>
+              
+              <VStack spacing={2} align="start" p={4} bg="white" borderRadius="xl" shadow="sm">
+                <Icon as={CheckCircle} color="blue.500" boxSize={5} />
+                <Text fontWeight="semibold" fontSize="sm">Vehicle Verification</Text>
+                <Text fontSize="xs" color="gray.600">
+                  Ensure authenticity and accuracy
+                </Text>
+              </VStack>
+              
+              <VStack spacing={2} align="start" p={4} bg="white" borderRadius="xl" shadow="sm">
+                <Icon as={Star} color="#F4A950" boxSize={5} />
+                <Text fontWeight="semibold" fontSize="sm">Trust Building</Text>
+                <Text fontSize="xs" color="gray.600">
+                  Increase customer confidence
+                </Text>
+              </VStack>
+            </SimpleGrid>
+            
+            <HStack spacing={4} pt={2}>
+              <Badge colorScheme="orange" variant="subtle" px={3} py={1} borderRadius="full">
+                ⏱️ Review Time: 2-24 hours
+              </Badge>
+              <Badge colorScheme="green" variant="subtle" px={3} py={1} borderRadius="full">
+                📧 Email notifications enabled
+              </Badge>
+            </HStack>
+          </VStack>
         </HStack>
       </Box>
+
+      {/* Image Gallery Thumbnails */}
+      {images.length > 1 && (
+        <Box>
+          <Text fontSize="lg" fontWeight="bold" mb={4} color="gray.800">
+            Image Gallery ({images.length} photos)
+          </Text>
+          <SimpleGrid columns={{ base: 3, md: 6 }} spacing={3}>
+            {images.map((image, index) => (
+              <Box
+                key={index}
+                position="relative"
+                cursor="pointer"
+                onClick={() => setCurrentImageIndex(index)}
+                borderRadius="lg"
+                overflow="hidden"
+                border="3px solid"
+                borderColor={index === currentImageIndex ? "#F4A950" : "transparent"}
+                _hover={{
+                  borderColor: "#F4A950",
+                  transform: "scale(1.05)",
+                  transition: "all 0.2s"
+                }}
+                transition="all 0.2s"
+              >
+                <Image
+                  src={image?.previewUrl || image?.url}
+                  alt={`Vehicle image ${index + 1}`}
+                  w="full"
+                  h="80px"
+                  objectFit="cover"
+                />
+                {index === currentImageIndex && (
+                  <Box
+                    position="absolute"
+                    top={2}
+                    right={2}
+                    bg="#F4A950"
+                    color="white"
+                    borderRadius="full"
+                    p={1}
+                  >
+                    <CheckIcon boxSize={3} />
+                  </Box>
+                )}
+              </Box>
+            ))}
+          </SimpleGrid>
+        </Box>
+      )}
     </VStack>
   )
 }

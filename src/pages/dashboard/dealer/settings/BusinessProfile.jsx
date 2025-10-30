@@ -56,47 +56,109 @@ export const BusinessProfile = ({  }) => {
   }
 
   async function getDealership() {
-    const res = await axios.get('/admin/dealership/settings/');
-    const data = objectifyJSON(res.data);
-
-    if (res.status === 200){
-      // console.log("My settings:", data.data);
-      setDealership(data.data)
+    try {
+      const response = await axios.get('/accounts/dealership/me/');
+      if (response.status === 200) {
+        const data = response.data;
+        console.log('Fetched dealership data:', data);
+        setDealership(prev => ({
+          ...prev,
+          ...data,
+          // Preserve any existing file preview
+          logo: prev.logo?.preview ? prev.logo : data.logo
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching dealership data:', error);
+      notify({
+        title: 'Error',
+        description: 'Failed to load dealership data. Please refresh the page.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true
+      });
     }
   }
 
   async function handleSubmit() {
-    const payload = new FormData();
-    const keys = Object.keys(dealership);
-
-    for (let key of keys){
-      if (key === 'logo' && typeof dealership[key] !== 'string'){
-        const logo = dealership['logo'];
-        if(logo){
-          console.log('new-logo', logo.file.name, logo.file)
-          payload.append('new-logo', logo.file, logo.file.name)
+    try {
+      const payload = new FormData();
+      
+      // Add all form fields to FormData
+      Object.entries(dealership).forEach(([key, value]) => {
+        // Skip logo for now (handle it separately)
+        if (key === 'logo' && value && typeof value === 'object' && value.file) {
+          // Skip, we'll handle the file upload separately
+          return;
         }
-      }else{
-        payload.append(key, dealership[key])
+        
+        // Handle nested objects (like services array)
+        if (value && typeof value === 'object' && !(value instanceof File)) {
+          payload.append(key, JSON.stringify(value));
+        } else if (value !== null && value !== undefined) {
+          payload.append(key, value);
+        }
+      });
+
+      // Handle logo upload separately if it's a new file
+      if (dealership.logo && typeof dealership.logo === 'object' && dealership.logo.file) {
+        payload.append('logo', dealership.logo.file);
       }
-    }
 
-    console.log("Payload", payload)
-    const res = await axios.post('/admin/dealership/settings/', payload, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      },
-      withCredentials: false  // Temporary workaround for CORS issue
-    });
-    const data = objectifyJSON(res.data);
+      console.log('Saving dealership settings...');
+      const response = await axios.patch('/accounts/dealership/me/', payload, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'X-CSRFToken': document.cookie.match(/csrftoken=([^ ;]+)/)?.[1] || ''
+        }
+      });
 
-    if (res.status === 200){
+      if (response.status === 200) {
+        const data = response.data;
+        notify({
+          title: 'Success!',
+          description: 'Dealership settings saved successfully.',
+          status: 'success',
+          duration: 3000,
+          isClosable: true
+        });
+        
+        // Update local state with the saved data
+        setDealership(prev => ({
+          ...prev,
+          ...data,
+          // Preserve the local file preview if it exists
+          logo: prev.logo?.preview ? prev.logo : data.logo
+        }));
+        
+        return true;
+      }
+    } catch (error) {
+      console.error('Error saving dealership settings:', error);
+      
+      let errorMessage = 'Failed to save settings. Please try again.';
+      if (error.response?.data) {
+        // Handle field-specific errors
+        const errors = [];
+        Object.entries(error.response.data).forEach(([field, messages]) => {
+          if (Array.isArray(messages)) {
+            errors.push(...messages);
+          } else {
+            errors.push(`${field}: ${messages}`);
+          }
+        });
+        errorMessage = errors.join('\n');
+      }
+      
       notify({
-        title: 'Settings saved!',
-        color: 'green'
-      })
-      setDealership(data.data)
+        title: 'Error',
+        description: errorMessage,
+        status: 'error',
+        duration: 5000,
+        isClosable: true
+      });
     }
+    return false;
   }
 
   let dealerServices = [

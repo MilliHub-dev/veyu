@@ -1,4 +1,31 @@
-import { Box, Container, Heading, Text, VStack, Divider, UnorderedList, ListItem, Flex, Icon, HStack, Tag, Link as CLink } from "@chakra-ui/react"
+import { 
+  Box, 
+  Container, 
+  Heading, 
+  Text, 
+  VStack, 
+  HStack,
+  Divider, 
+  UnorderedList, 
+  ListItem, 
+  Flex, 
+  Icon, 
+  Tag, 
+  Link as CLink,
+  Badge,
+  useColorModeValue,
+  SimpleGrid,
+  Button,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
+  Progress,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink
+} from "@chakra-ui/react";
 import {
   BsShieldLock,
   BsInfoCircle,
@@ -17,340 +44,911 @@ import {
   BsDatabase,
   BsPersonBadge,
   BsCookie,
-} from "react-icons/bs"
+  BsCheckCircle,
+  BsEye,
+  BsLock,
+  BsTrash
+} from "react-icons/bs";
+import { 
+  Shield, 
+  Eye, 
+  Lock, 
+  Users, 
+  Clock, 
+  Mail, 
+  Phone, 
+  Globe,
+  MapPin,
+  ArrowRight,
+  CheckCircle,
+  AlertCircle,
+  FileText,
+  Database,
+  Share2
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+
+const MotionBox = motion(Box);
 
 const PrivacyPolicy = () => {
+  const [activeSection, setActiveSection] = useState('introduction');
+  const [readingProgress, setReadingProgress] = useState(0);
+
+  const bgGradient = useColorModeValue(
+    'linear(to-br, blue.50, purple.50, pink.50)',
+    'linear(to-br, gray.900, blue.900, purple.900)'
+  );
+  
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const textColor = useColorModeValue('gray.600', 'gray.300');
+
+  // Track reading progress
+  useEffect(() => {
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (window.scrollY / totalHeight) * 100;
+      setReadingProgress(Math.min(progress, 100));
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const sections = [
+    { id: 'introduction', title: 'Introduction', icon: AlertCircle },
+    { id: 'info-we-collect', title: 'Information We Collect', icon: Database },
+    { id: 'use-of-info', title: 'How We Use Info', icon: Eye },
+    { id: 'sharing', title: 'Sharing', icon: Share2 },
+    { id: 'security', title: 'Security', icon: Shield },
+    { id: 'rights', title: 'Your Rights', icon: Users },
+    { id: 'retention', title: 'Retention', icon: Clock },
+    { id: 'links', title: 'Third-Party Links', icon: Globe },
+    { id: 'changes', title: 'Changes', icon: FileText },
+    { id: 'contact', title: 'Contact', icon: Mail }
+  ];
+
+  const privacyHighlights = [
+    {
+      icon: Shield,
+      title: 'Data Protection',
+      description: 'Your data is encrypted and protected with industry-standard security measures.',
+      color: 'green'
+    },
+    {
+      icon: Eye,
+      title: 'Transparency',
+      description: 'We clearly explain what data we collect and how we use it.',
+      color: 'blue'
+    },
+    {
+      icon: Users,
+      title: 'Your Control',
+      description: 'You have full control over your data with rights to access, modify, or delete.',
+      color: 'purple'
+    },
+    {
+      icon: Lock,
+      title: 'No Selling',
+      description: 'We never sell your personal information to third parties.',
+      color: 'orange'
+    }
+  ];
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { duration: 0.5 }
+    }
+  };
+
   return (
-    <Container maxW="900px" py={8} px={4}>
-      {/* Hero Header */}
-      <Box bgGradient="linear(to-r, blue.500, cyan.500)" color="white" p={6} borderRadius="xl" mb={6} boxShadow="lg">
-        <Flex align="center" gap={3}>
-          <Icon as={BsShieldLock} boxSize={8} />
-          <Box id="use-of-info">
-            <Heading as="h1" size="lg">Privacy Policy</Heading>
-            <Text opacity={0.9}>LAST UPDATED: 17 OCT 2025</Text>
-          </Box>
-        </Flex>
-        <HStack spacing={3} mt={4} wrap="wrap">
-          <Tag colorScheme="whiteAlpha" variant="subtle">Data Security</Tag>
-          <Tag colorScheme="whiteAlpha" variant="subtle">Your Rights</Tag>
-          <Tag colorScheme="whiteAlpha" variant="subtle">Cookies</Tag>
-        </HStack>
-      </Box>
+    <Box bg={bgGradient} minH="100vh">
+      {/* Reading Progress Bar */}
+      <Progress 
+        value={readingProgress} 
+        size="xs" 
+        colorScheme="blue" 
+        position="fixed" 
+        top={0} 
+        left={0} 
+        right={0} 
+        zIndex={1000}
+      />
 
-      {/* Quick Nav */}
-      <Box bg="gray.50" borderWidth={1} borderColor="gray.200" p={4} borderRadius="md" mb={6}>
-        <HStack spacing={4} wrap="wrap">
-          <CLink href="#introduction" className="link">Introduction</CLink>
-          <CLink href="#info-we-collect" className="link">Information We Collect</CLink>
-          <CLink href="#use-of-info" className="link">How We Use Info</CLink>
-          <CLink href="#sharing" className="link">Sharing</CLink>
-          <CLink href="#security" className="link">Security</CLink>
-          <CLink href="#rights" className="link">Your Rights</CLink>
-          <CLink href="#retention" className="link">Retention</CLink>
-          <CLink href="#links" className="link">Third‑Party Links</CLink>
-          <CLink href="#changes" className="link">Changes</CLink>
-          <CLink href="#contact" className="link">Contact</CLink>
-        </HStack>
-      </Box>
+      <Container maxW="7xl" py={8} px={{ base: 4, md: 8 }}>
+        <MotionBox
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+        >
+          {/* Breadcrumb */}
+          <MotionBox variants={itemVariants} mb={6}>
+            <Breadcrumb spacing="8px" separator={<ArrowRight size={16} />}>
+              <BreadcrumbItem>
+                <BreadcrumbLink as={Link} to="/" color="blue.500">Home</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbItem isCurrentPage>
+                <BreadcrumbLink color="gray.600">Privacy Policy</BreadcrumbLink>
+              </BreadcrumbItem>
+            </Breadcrumb>
+          </MotionBox>
 
-      <VStack spacing={6} align="stretch">
+          {/* Hero Header */}
+          <MotionBox variants={itemVariants} mb={12}>
+            <Box
+              bg={cardBg}
+              p={8}
+              borderRadius="2xl"
+              shadow="xl"
+              border="1px solid"
+              borderColor="gray.200"
+              position="relative"
+              overflow="hidden"
+            >
+              <Box
+                position="absolute"
+                top={0}
+                left={0}
+                right={0}
+                h="4px"
+                bgGradient="linear(to-r, blue.400, purple.400, pink.400)"
+              />
+              
+              <Flex direction={{ base: 'column', md: 'row' }} align="center" gap={6}>
+                <Box
+                  p={4}
+                  borderRadius="full"
+                  bg="blue.100"
+                  border="4px solid"
+                  borderColor="blue.200"
+                >
+                  <Icon as={Shield} size={12} color="blue.600" />
+                </Box>
+                
+                <VStack align={{ base: 'center', md: 'start' }} spacing={3} flex={1}>
+                  <Heading size="2xl" color="gray.800" textAlign={{ base: 'center', md: 'left' }}>
+                    Privacy Policy
+                  </Heading>
+                  <Text fontSize="lg" color={textColor} textAlign={{ base: 'center', md: 'left' }}>
+                    Your privacy matters to us. Learn how we protect and handle your data.
+                  </Text>
+                  <HStack spacing={2}>
+                    <Badge colorScheme="blue" px={3} py={1} borderRadius="full">
+                      Last Updated: Oct 17, 2025
+                    </Badge>
+                    <Badge colorScheme="green" px={3} py={1} borderRadius="full">
+                      GDPR Compliant
+                    </Badge>
+                  </HStack>
+                </VStack>
+              </Flex>
+            </Box>
+          </MotionBox>
 
-        <Divider />
-
-        {/* Introduction */}
-        <Box id="introduction">
-          <Flex align="center" mb={4}>
-            <Icon as={BsInfoCircle} boxSize={5} color="blue.500" mr={2} />
-            <Heading as="h2" size="lg">
-              Introduction
-            </Heading>
-          </Flex>
-          <Text mb={4}>
-            Welcome to Veyu Ltd ("Company," "we," "us," or "our"). We operate the website www.veyu.cc, Android and
-            iOS mobile apps, and provide services covering vehicle transactions and services across categories including
-            cars, motorcycles, boats, aircraft, UAVs and more. This Privacy Policy explains how we collect, use,
-            disclose, and safeguard your information when you visit our website, explore our apps, and use our services
-            (collectively, the "Services").
-          </Text>
-          <Text mb={4}>
-            By using our Services, you agree to the terms of this Privacy Policy. If you do not agree with the terms,
-            please do not access or use our Services.
-          </Text>
-        </Box>
-
-        {/* Numbered Sections */}
-        <Box id="info-we-collect">
-          <Flex align="center" mb={3}>
-            <Icon as={BsDatabase} boxSize={5} color="blue.500" mr={2} />
-            <Heading as="h2" size="md">
-              1. Information We Collect
-            </Heading>
-          </Flex>
-          <Text mb={3}>
-            We collect various types of information to provide and improve our Services to you. The types of information
-            we collect include:
-          </Text>
-
-          <Box pl={4} mb={4}>
-            <Flex align="center" mb={2}>
-              <Icon as={BsPersonCircle} boxSize={4} color="blue.400" mr={2} />
-              <Heading as="h3" size="sm">
-                1.1 Personal Information
+          {/* Privacy Highlights */}
+          <MotionBox variants={itemVariants} mb={12}>
+            <VStack spacing={6} textAlign="center" mb={8}>
+              <Heading size="lg" color="gray.800">
+                Our Privacy Commitment
               </Heading>
-            </Flex>
-            <Text mb={2}>
-              When you register on our platform or interact with us, we may collect the following personal information:
-            </Text>
-            <UnorderedList pl={6} spacing={1} mb={3}>
-              <ListItem>Name</ListItem>
-              <ListItem>Email Address</ListItem>
-              <ListItem>Phone Number</ListItem>
-              <ListItem>Address and or live location</ListItem>
-              <ListItem>Payment Information (e.g., credit card details)</ListItem>
-            </UnorderedList>
-          </Box>
-
-          <Box pl={4} mb={4}>
-            <Flex align="center" mb={2}>
-              <Icon as={BsFileEarmarkText} boxSize={4} color="blue.400" mr={2} />
-              <Heading as="h3" size="sm">
-                1.2 Non-Personal Information
-              </Heading>
-            </Flex>
-            <Text mb={2}>
-              We also collect non-personal information that cannot be used to identify you directly, such as:
-            </Text>
-            <UnorderedList pl={6} spacing={1} mb={3}>
-              <ListItem>Browser type and version</ListItem>
-              <ListItem>Device information (e.g., IP address, operating system)</ListItem>
-              <ListItem>Usage data, such as pages viewed and interactions with our website</ListItem>
-            </UnorderedList>
-          </Box>
-
-          <Box pl={4} mb={4}>
-            <Flex align="center" mb={2}>
-              <Icon as={BsCookie} boxSize={4} color="blue.400" mr={2} />
-              <Heading as="h3" size="sm">
-                1.3 Cookies and Tracking Technologies
-              </Heading>
-            </Flex>
-            <Text>
-              We use cookies and similar tracking technologies (e.g., web beacons, pixels) to collect information about
-              your activity on our website. Cookies help us improve the functionality and user experience of our
-              Services.
-            </Text>
-          </Box>
-        </Box>
-
-        <Box>
-          <Flex align="center" mb={3}>
-            <Icon as={BsInfoCircle} boxSize={5} color="blue.500" mr={2} />
-            <Heading as="h2" size="md">
-              2. How We Use Your Information
-            </Heading>
-          </Flex>
-          <Text mb={2}>We use the information we collect for various purposes, including:</Text>
-          <UnorderedList pl={6} spacing={2} mb={4}>
-            <ListItem>
-              <strong>Providing and Improving Services:</strong> To process transactions, manage your account, and
-              provide customer support.
-            </ListItem>
-            <ListItem>
-              <strong>Communication:</strong> To send you updates, newsletters, and promotional materials (you can opt
-              out at any time).
-            </ListItem>
-            <ListItem>
-              <strong>Analytics:</strong> To understand how our users interact with the website and improve our
-              offerings.
-            </ListItem>
-            <ListItem>
-              <strong>Security:</strong> To detect and prevent fraud, unauthorized access, and any other unlawful
-              activities.
-            </ListItem>
-          </UnorderedList>
-        </Box>
-
-        <Box>
-          <Flex align="center" mb={3}>
-            <Icon as={BsShareFill} boxSize={5} color="blue.500" mr={2} />
-            <Heading as="h2" size="md">
-              3. How We Share Your Information
-            </Heading>
-          </Flex>
-          <Text mb={2}>We may share your information in the following ways:</Text>
-          <UnorderedList pl={6} spacing={2} mb={4}>
-            <ListItem>
-              <strong>With Service Providers:</strong> We may share your data with third-party service providers to
-              assist in providing our Services (e.g., payment processors, email service providers).
-            </ListItem>
-            <ListItem>
-              <strong>Legal Requirements:</strong> We may disclose your information if required by law or if we believe
-              that such action is necessary to comply with legal obligations or protect our rights.
-            </ListItem>
-            <ListItem>
-              <strong>Business Transfers:</strong> If we merge with or are acquired by another company, your information
-              may be transferred as part of that transaction.
-            </ListItem>
-          </UnorderedList>
-          <Text mb={4}>
-            We do not sell, trade, or rent your personal information to third parties for their marketing purposes.
-          </Text>
-        </Box>
-
-        <Box>
-          <Flex align="center" mb={3}>
-            <Icon as={BsShieldCheck} boxSize={5} color="blue.500" mr={2} />
-            <Heading as="h2" size="md">
-              4. Data Security
-            </Heading>
-          </Flex>
-          <Text mb={3}>
-            We implement appropriate technical and organizational security measures to protect your personal information
-            against unauthorized access, alteration, disclosure, or destruction. These measures include:
-          </Text>
-          <UnorderedList pl={6} spacing={2} mb={4}>
-            <ListItem>
-              <strong>Encryption:</strong> We use SSL encryption to protect data during transmission.
-            </ListItem>
-            <ListItem>
-              <strong>Access Controls:</strong> Only authorized personnel have access to your information.
-            </ListItem>
-            <ListItem>
-              <strong>Regular Security Audits:</strong> We conduct regular security audits to identify and address
-              vulnerabilities.
-            </ListItem>
-          </UnorderedList>
-          <Text mb={4}>
-            However, please note that no method of data transmission or storage is completely secure. While we strive to
-            protect your data, we cannot guarantee its absolute security.
-          </Text>
-        </Box>
-
-        <Box>
-          <Flex align="center" mb={3}>
-            <Icon as={BsPersonBadge} boxSize={5} color="blue.500" mr={2} />
-            <Heading as="h2" size="md">
-              5. Your Privacy Rights
-            </Heading>
-          </Flex>
-          <Text mb={2}>You have the following rights regarding your personal information:</Text>
-          <UnorderedList pl={6} spacing={2} mb={4}>
-            <ListItem>
-              <strong>Access:</strong> You can request access to the personal data we hold about you.
-            </ListItem>
-            <ListItem>
-              <strong>Correction:</strong> You can request that we correct any inaccurate or incomplete data.
-            </ListItem>
-            <ListItem>
-              <strong>Deletion:</strong> You can request the deletion of your personal data, subject to certain
-              conditions.
-            </ListItem>
-            <ListItem>
-              <strong>Opt-Out:</strong> You can opt out of receiving marketing communications from us at any time by
-              following the unsubscribe instructions in the emails.
-            </ListItem>
-          </UnorderedList>
-          <Text mb={4}>To exercise any of these rights, please contact us at support@veyu.cc</Text>
-        </Box>
-
-        <Box>
-          <Flex align="center" mb={3}>
-            <Icon as={BsClockHistory} boxSize={5} color="blue.500" mr={2} />
-            <Heading as="h2" size="md">
-              6. Data Retention
-            </Heading>
-          </Flex>
-          <Text mb={4}>
-            We retain your personal information for as long as necessary to fulfil the purposes outlined in this Privacy
-            Policy, unless a longer retention period is required or permitted by law. When we no longer need your
-            personal data, we will securely delete or anonymize it.
-          </Text>
-        </Box>
-
-        <Box>
-          <Flex align="center" mb={3}>
-            <Icon as={BsLink45Deg} boxSize={5} color="blue.500" mr={2} />
-            <Heading as="h2" size="md">
-              7. Third-Party Links
-            </Heading>
-          </Flex>
-          <Text mb={4}>
-            Our website may contain links to third-party websites. This Privacy Policy does not apply to these external
-            sites, and we are not responsible for their privacy practices. We encourage you to review the privacy
-            policies of any third-party websites you visit.
-          </Text>
-        </Box>
-
-        <Box>
-          <Flex align="center" mb={3}>
-            <Icon as={BsArrowClockwise} boxSize={5} color="blue.500" mr={2} />
-            <Heading as="h2" size="md">
-              8. Changes to This Privacy Policy
-            </Heading>
-          </Flex>
-          <Text mb={4}>
-            We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new
-            Privacy Policy on our website and updating the "Last updated" date. Your continued use of our Services after
-            any modifications indicates your acceptance of the updated Privacy Policy.
-          </Text>
-        </Box>
-
-        <Box>
-          <Flex align="center" mb={3}>
-            <Icon as={BsEnvelope} boxSize={5} color="blue.500" mr={2} />
-            <Heading as="h2" size="md">
-              9. Contact Us
-            </Heading>
-          </Flex>
-          <Text mb={2}>
-            If you have any questions or concerns about this Privacy Policy or how we handle your data, please contact
-            us at:
-          </Text>
-          <VStack align="flex-start" spacing={1} mb={4} pl={4}>
-            <Flex align="center">
-              <Icon as={BsEnvelope} boxSize={4} color="gray.500" mr={2} />
-              <Text>
-                <strong>Email:</strong> support@veyu.cc
+              <Text fontSize="lg" color={textColor} maxW="2xl">
+                We're committed to protecting your privacy with transparent practices and robust security measures.
               </Text>
-            </Flex>
-            <Flex align="center">
-              <Icon as={BsTelephone} boxSize={4} color="gray.500" mr={2} />
-              <Text>
-                <strong>Phone:</strong> +234 (0) 800 000 0000
-              </Text>
-            </Flex>
-            <Flex align="center">
-              <Icon as={BsGlobe} boxSize={4} color="gray.500" mr={2} />
-              <Text>
-                <strong>Website:</strong> www.veyu.cc
-              </Text>
-            </Flex>
-            <Flex align="center">
-              <Icon as={BsInstagram} boxSize={4} color="gray.500" mr={2} />
-              <Text>
-                <strong>IG/X:</strong> @veyu
-              </Text>
-            </Flex>
-            <Flex align="center">
-              <Icon as={BsGeoAlt} boxSize={4} color="gray.500" mr={2} />
-              <Text>
-                <strong>Address:</strong> Lagos, Nigeria.
-              </Text>
-            </Flex>
-          </VStack>
-        </Box>
+            </VStack>
 
-        <Box>
-          <Text fontWeight="medium">
-            By using our Services, you acknowledge that you have read and understood this Privacy Policy and agree to
-            its terms.
-          </Text>
-        </Box>
-      </VStack>
-    </Container>
-  )
-}
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
+              {privacyHighlights.map((highlight, i) => (
+                <MotionBox
+                  key={i}
+                  variants={itemVariants}
+                  whileHover={{ y: -4 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <VStack
+                    spacing={4}
+                    p={6}
+                    bg={cardBg}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                    _hover={{
+                      shadow: 'lg',
+                      borderColor: `${highlight.color}.300`
+                    }}
+                    transition="all 0.3s"
+                    h="full"
+                  >
+                    <Box
+                      p={3}
+                      borderRadius="full"
+                      bg={`${highlight.color}.100`}
+                    >
+                      <Icon as={highlight.icon} size={6} color={`${highlight.color}.600`} />
+                    </Box>
+                    <VStack spacing={2} textAlign="center">
+                      <Text fontWeight="bold" color="gray.800">
+                        {highlight.title}
+                      </Text>
+                      <Text fontSize="sm" color={textColor} lineHeight="tall">
+                        {highlight.description}
+                      </Text>
+                    </VStack>
+                  </VStack>
+                </MotionBox>
+              ))}
+            </SimpleGrid>
+          </MotionBox> 
+         {/* Main Content Layout */}
+          <SimpleGrid columns={{ base: 1, lg: 4 }} spacing={8}>
+            {/* Sidebar Navigation */}
+            <MotionBox variants={itemVariants}>
+              <Box
+                bg={cardBg}
+                p={6}
+                borderRadius="xl"
+                shadow="md"
+                border="1px solid"
+                borderColor="gray.200"
+                position="sticky"
+                top={8}
+              >
+                <Heading size="md" mb={4} color="gray.800">
+                  Quick Navigation
+                </Heading>
+                <VStack spacing={2} align="stretch">
+                  {sections.map((section) => (
+                    <Button
+                      key={section.id}
+                      variant={activeSection === section.id ? 'solid' : 'ghost'}
+                      colorScheme="blue"
+                      size="sm"
+                      justifyContent="flex-start"
+                      leftIcon={<Icon as={section.icon} size={4} />}
+                      onClick={() => {
+                        document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth' });
+                        setActiveSection(section.id);
+                      }}
+                      _hover={{ bg: 'blue.50' }}
+                    >
+                      {section.title}
+                    </Button>
+                  ))}
+                </VStack>
+              </Box>
+            </MotionBox>
 
-export default PrivacyPolicy
+            {/* Content Area */}
+            <Box gridColumn={{ base: 1, lg: '2 / 5' }}>
+              <VStack spacing={8} align="stretch">
+                
+                {/* Introduction */}
+                <MotionBox variants={itemVariants} id="introduction">
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  >
+                    <HStack spacing={3} mb={6}>
+                      <Icon as={AlertCircle} size={6} color="blue.500" />
+                      <Heading size="lg" color="gray.800">Introduction</Heading>
+                    </HStack>
+                    
+                    <VStack spacing={4} align="start">
+                      <Text color={textColor} lineHeight="tall">
+                        Welcome to Veyu Ltd ("Company," "we," "us," or "our"). We operate the website www.veyu.cc, 
+                        Android and iOS mobile apps, and provide services covering vehicle transactions and services 
+                        across categories including cars, motorcycles, boats, aircraft, UAVs and more.
+                      </Text>
+                      
+                      <Box
+                        bg="blue.50"
+                        p={4}
+                        borderRadius="lg"
+                        border="1px solid"
+                        borderColor="blue.200"
+                        w="full"
+                      >
+                        <HStack spacing={2} mb={2}>
+                          <Icon as={CheckCircle} size={5} color="blue.500" />
+                          <Text fontWeight="semibold" color="blue.700">
+                            Key Point
+                          </Text>
+                        </HStack>
+                        <Text fontSize="sm" color="blue.600">
+                          By using our Services, you agree to the terms of this Privacy Policy. 
+                          If you do not agree with the terms, please do not access or use our Services.
+                        </Text>
+                      </Box>
+                    </VStack>
+                  </Box>
+                </MotionBox>
 
+                {/* Information We Collect */}
+                <MotionBox variants={itemVariants} id="info-we-collect">
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  >
+                    <HStack spacing={3} mb={6}>
+                      <Icon as={Database} size={6} color="blue.500" />
+                      <Heading size="lg" color="gray.800">1. Information We Collect</Heading>
+                    </HStack>
+
+                    <Accordion allowMultiple>
+                      <AccordionItem border="none" mb={4}>
+                        <AccordionButton
+                          bg="gray.50"
+                          borderRadius="lg"
+                          _hover={{ bg: 'gray.100' }}
+                          p={4}
+                        >
+                          <HStack flex={1} spacing={3}>
+                            <Icon as={BsPersonCircle} color="blue.500" />
+                            <Text fontWeight="semibold">1.1 Personal Information</Text>
+                          </HStack>
+                          <AccordionIcon />
+                        </AccordionButton>
+                        <AccordionPanel pb={4} pt={4}>
+                          <Text mb={3} color={textColor}>
+                            When you register on our platform or interact with us, we may collect:
+                          </Text>
+                          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+                            {['Name', 'Email Address', 'Phone Number', 'Address and Location', 'Payment Information'].map((item) => (
+                              <HStack key={item} spacing={2}>
+                                <Icon as={CheckCircle} size={4} color="green.500" />
+                                <Text fontSize="sm" color={textColor}>{item}</Text>
+                              </HStack>
+                            ))}
+                          </SimpleGrid>
+                        </AccordionPanel>
+                      </AccordionItem>
+
+                      <AccordionItem border="none" mb={4}>
+                        <AccordionButton
+                          bg="gray.50"
+                          borderRadius="lg"
+                          _hover={{ bg: 'gray.100' }}
+                          p={4}
+                        >
+                          <HStack flex={1} spacing={3}>
+                            <Icon as={BsFileEarmarkText} color="blue.500" />
+                            <Text fontWeight="semibold">1.2 Non-Personal Information</Text>
+                          </HStack>
+                          <AccordionIcon />
+                        </AccordionButton>
+                        <AccordionPanel pb={4} pt={4}>
+                          <Text mb={3} color={textColor}>
+                            We collect non-personal information that cannot identify you directly:
+                          </Text>
+                          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={2}>
+                            {['Browser Type & Version', 'Device Information', 'IP Address', 'Operating System', 'Usage Data', 'Page Interactions'].map((item) => (
+                              <HStack key={item} spacing={2}>
+                                <Icon as={CheckCircle} size={4} color="green.500" />
+                                <Text fontSize="sm" color={textColor}>{item}</Text>
+                              </HStack>
+                            ))}
+                          </SimpleGrid>
+                        </AccordionPanel>
+                      </AccordionItem>
+
+                      <AccordionItem border="none">
+                        <AccordionButton
+                          bg="gray.50"
+                          borderRadius="lg"
+                          _hover={{ bg: 'gray.100' }}
+                          p={4}
+                        >
+                          <HStack flex={1} spacing={3}>
+                            <Icon as={BsCookie} color="blue.500" />
+                            <Text fontWeight="semibold">1.3 Cookies & Tracking</Text>
+                          </HStack>
+                          <AccordionIcon />
+                        </AccordionButton>
+                        <AccordionPanel pb={4} pt={4}>
+                          <Text color={textColor}>
+                            We use cookies and similar tracking technologies (web beacons, pixels) to collect 
+                            information about your activity and improve functionality and user experience.
+                          </Text>
+                        </AccordionPanel>
+                      </AccordionItem>
+                    </Accordion>
+                  </Box>
+                </MotionBox>
+
+                {/* How We Use Your Information */}
+                <MotionBox variants={itemVariants} id="use-of-info">
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  >
+                    <HStack spacing={3} mb={6}>
+                      <Icon as={Eye} size={6} color="blue.500" />
+                      <Heading size="lg" color="gray.800">2. How We Use Your Information</Heading>
+                    </HStack>
+
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+                      {[
+                        {
+                          title: 'Providing Services',
+                          description: 'Process transactions, manage accounts, and provide customer support',
+                          icon: CheckCircle,
+                          color: 'green'
+                        },
+                        {
+                          title: 'Communication',
+                          description: 'Send updates, newsletters, and promotional materials (opt-out available)',
+                          icon: Mail,
+                          color: 'blue'
+                        },
+                        {
+                          title: 'Analytics',
+                          description: 'Understand user interactions and improve our offerings',
+                          icon: Eye,
+                          color: 'purple'
+                        },
+                        {
+                          title: 'Security',
+                          description: 'Detect and prevent fraud, unauthorized access, and unlawful activities',
+                          icon: Shield,
+                          color: 'orange'
+                        }
+                      ].map((use, i) => (
+                        <VStack
+                          key={i}
+                          spacing={3}
+                          p={4}
+                          bg="gray.50"
+                          borderRadius="lg"
+                          align="start"
+                        >
+                          <HStack spacing={2}>
+                            <Icon as={use.icon} size={5} color={`${use.color}.500`} />
+                            <Text fontWeight="semibold" color="gray.800">{use.title}</Text>
+                          </HStack>
+                          <Text fontSize="sm" color={textColor}>
+                            {use.description}
+                          </Text>
+                        </VStack>
+                      ))}
+                    </SimpleGrid>
+                  </Box>
+                </MotionBox>
+
+                {/* Data Sharing */}
+                <MotionBox variants={itemVariants} id="sharing">
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  >
+                    <HStack spacing={3} mb={6}>
+                      <Icon as={Share2} size={6} color="blue.500" />
+                      <Heading size="lg" color="gray.800">3. How We Share Your Information</Heading>
+                    </HStack>
+
+                    <VStack spacing={4} align="start">
+                      <Box
+                        bg="red.50"
+                        p={4}
+                        borderRadius="lg"
+                        border="1px solid"
+                        borderColor="red.200"
+                        w="full"
+                      >
+                        <HStack spacing={2} mb={2}>
+                          <Icon as={Shield} size={5} color="red.500" />
+                          <Text fontWeight="semibold" color="red.700">
+                            Important: We Never Sell Your Data
+                          </Text>
+                        </HStack>
+                        <Text fontSize="sm" color="red.600">
+                          We do not sell, trade, or rent your personal information to third parties for marketing purposes.
+                        </Text>
+                      </Box>
+
+                      <Text color={textColor} mb={4}>
+                        We may share your information only in these specific circumstances:
+                      </Text>
+
+                      <VStack spacing={3} w="full">
+                        {[
+                          {
+                            title: 'Service Providers',
+                            description: 'Third-party services that help us provide our Services (payment processors, email providers)',
+                            icon: Users
+                          },
+                          {
+                            title: 'Legal Requirements',
+                            description: 'When required by law or to comply with legal obligations and protect our rights',
+                            icon: FileText
+                          },
+                          {
+                            title: 'Business Transfers',
+                            description: 'If we merge with or are acquired by another company (as part of transaction)',
+                            icon: ArrowRight
+                          }
+                        ].map((sharing, i) => (
+                          <HStack
+                            key={i}
+                            spacing={4}
+                            p={4}
+                            bg="gray.50"
+                            borderRadius="lg"
+                            w="full"
+                            align="start"
+                          >
+                            <Icon as={sharing.icon} size={5} color="blue.500" mt={1} />
+                            <VStack align="start" spacing={1}>
+                              <Text fontWeight="semibold" color="gray.800">{sharing.title}</Text>
+                              <Text fontSize="sm" color={textColor}>{sharing.description}</Text>
+                            </VStack>
+                          </HStack>
+                        ))}
+                      </VStack>
+                    </VStack>
+                  </Box>
+                </MotionBox>      
+          {/* Data Security */}
+                <MotionBox variants={itemVariants} id="security">
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  >
+                    <HStack spacing={3} mb={6}>
+                      <Icon as={Shield} size={6} color="green.500" />
+                      <Heading size="lg" color="gray.800">4. Data Security</Heading>
+                    </HStack>
+
+                    <VStack spacing={6} align="start">
+                      <Text color={textColor}>
+                        We implement comprehensive security measures to protect your personal information:
+                      </Text>
+
+                      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} w="full">
+                        {[
+                          {
+                            title: 'SSL Encryption',
+                            description: 'Data protected during transmission',
+                            icon: Lock,
+                            color: 'green'
+                          },
+                          {
+                            title: 'Access Controls',
+                            description: 'Only authorized personnel access',
+                            icon: Users,
+                            color: 'blue'
+                          },
+                          {
+                            title: 'Security Audits',
+                            description: 'Regular vulnerability assessments',
+                            icon: Shield,
+                            color: 'purple'
+                          }
+                        ].map((security, i) => (
+                          <VStack
+                            key={i}
+                            spacing={3}
+                            p={4}
+                            bg={`${security.color}.50`}
+                            borderRadius="lg"
+                            border="1px solid"
+                            borderColor={`${security.color}.200`}
+                            textAlign="center"
+                          >
+                            <Icon as={security.icon} size={8} color={`${security.color}.500`} />
+                            <VStack spacing={1}>
+                              <Text fontWeight="semibold" color="gray.800">{security.title}</Text>
+                              <Text fontSize="sm" color={textColor}>{security.description}</Text>
+                            </VStack>
+                          </VStack>
+                        ))}
+                      </SimpleGrid>
+
+                      <Box
+                        bg="yellow.50"
+                        p={4}
+                        borderRadius="lg"
+                        border="1px solid"
+                        borderColor="yellow.200"
+                        w="full"
+                      >
+                        <HStack spacing={2} mb={2}>
+                          <Icon as={AlertCircle} size={5} color="yellow.600" />
+                          <Text fontWeight="semibold" color="yellow.700">
+                            Security Disclaimer
+                          </Text>
+                        </HStack>
+                        <Text fontSize="sm" color="yellow.600">
+                          While we implement robust security measures, no method of data transmission or storage 
+                          is completely secure. We strive to protect your data but cannot guarantee absolute security.
+                        </Text>
+                      </Box>
+                    </VStack>
+                  </Box>
+                </MotionBox>
+
+                {/* Your Rights */}
+                <MotionBox variants={itemVariants} id="rights">
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  >
+                    <HStack spacing={3} mb={6}>
+                      <Icon as={Users} size={6} color="purple.500" />
+                      <Heading size="lg" color="gray.800">5. Your Privacy Rights</Heading>
+                    </HStack>
+
+                    <VStack spacing={4} align="start">
+                      <Text color={textColor}>
+                        You have comprehensive rights regarding your personal information:
+                      </Text>
+
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="full">
+                        {[
+                          {
+                            title: 'Access',
+                            description: 'Request access to personal data we hold about you',
+                            icon: Eye,
+                            color: 'blue'
+                          },
+                          {
+                            title: 'Correction',
+                            description: 'Request correction of inaccurate or incomplete data',
+                            icon: FileText,
+                            color: 'green'
+                          },
+                          {
+                            title: 'Deletion',
+                            description: 'Request deletion of your personal data (subject to conditions)',
+                            icon: BsTrash,
+                            color: 'red'
+                          },
+                          {
+                            title: 'Opt-Out',
+                            description: 'Unsubscribe from marketing communications anytime',
+                            icon: Mail,
+                            color: 'orange'
+                          }
+                        ].map((right, i) => (
+                          <HStack
+                            key={i}
+                            spacing={4}
+                            p={4}
+                            bg="gray.50"
+                            borderRadius="lg"
+                            align="start"
+                          >
+                            <Box
+                              p={2}
+                              borderRadius="lg"
+                              bg={`${right.color}.100`}
+                            >
+                              <Icon as={right.icon} size={5} color={`${right.color}.600`} />
+                            </Box>
+                            <VStack align="start" spacing={1}>
+                              <Text fontWeight="semibold" color="gray.800">{right.title}</Text>
+                              <Text fontSize="sm" color={textColor}>{right.description}</Text>
+                            </VStack>
+                          </HStack>
+                        ))}
+                      </SimpleGrid>
+
+                      <Box
+                        bg="blue.50"
+                        p={4}
+                        borderRadius="lg"
+                        border="1px solid"
+                        borderColor="blue.200"
+                        w="full"
+                      >
+                        <Text fontSize="sm" color="blue.600">
+                          <strong>To exercise these rights:</strong> Contact us at support@veyu.cc with your request. 
+                          We'll respond within 30 days and verify your identity before processing.
+                        </Text>
+                      </Box>
+                    </VStack>
+                  </Box>
+                </MotionBox>
+
+                {/* Remaining Sections */}
+                <MotionBox variants={itemVariants} id="retention">
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  >
+                    <HStack spacing={3} mb={4}>
+                      <Icon as={Clock} size={6} color="orange.500" />
+                      <Heading size="lg" color="gray.800">6. Data Retention</Heading>
+                    </HStack>
+                    <Text color={textColor}>
+                      We retain your personal information only as long as necessary to fulfill the purposes outlined 
+                      in this Privacy Policy, unless a longer retention period is required by law. When no longer needed, 
+                      we securely delete or anonymize your data.
+                    </Text>
+                  </Box>
+                </MotionBox>
+
+                <MotionBox variants={itemVariants} id="links">
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  >
+                    <HStack spacing={3} mb={4}>
+                      <Icon as={Globe} size={6} color="cyan.500" />
+                      <Heading size="lg" color="gray.800">7. Third-Party Links</Heading>
+                    </HStack>
+                    <Text color={textColor}>
+                      Our website may contain links to third-party websites. This Privacy Policy does not apply to 
+                      external sites, and we're not responsible for their privacy practices. Please review their 
+                      privacy policies before sharing information.
+                    </Text>
+                  </Box>
+                </MotionBox>
+
+                <MotionBox variants={itemVariants} id="changes">
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  >
+                    <HStack spacing={3} mb={4}>
+                      <Icon as={FileText} size={6} color="purple.500" />
+                      <Heading size="lg" color="gray.800">8. Changes to This Policy</Heading>
+                    </HStack>
+                    <Text color={textColor}>
+                      We may update this Privacy Policy periodically. We'll notify you of changes by posting the 
+                      updated policy on our website and updating the "Last updated" date. Continued use of our 
+                      Services indicates acceptance of the updated policy.
+                    </Text>
+                  </Box>
+                </MotionBox>
+
+                {/* Contact Section */}
+                <MotionBox variants={itemVariants} id="contact">
+                  <Box
+                    bg={cardBg}
+                    p={8}
+                    borderRadius="xl"
+                    shadow="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  >
+                    <HStack spacing={3} mb={6}>
+                      <Icon as={Mail} size={6} color="blue.500" />
+                      <Heading size="lg" color="gray.800">9. Contact Us</Heading>
+                    </HStack>
+
+                    <VStack spacing={6} align="start">
+                      <Text color={textColor}>
+                        Have questions about this Privacy Policy or how we handle your data? We're here to help:
+                      </Text>
+
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} w="full">
+                        <VStack spacing={4} align="start">
+                          <HStack spacing={3}>
+                            <Icon as={Mail} size={5} color="blue.500" />
+                            <VStack align="start" spacing={0}>
+                              <Text fontWeight="semibold" color="gray.800">Email</Text>
+                              <Text fontSize="sm" color={textColor}>support@veyu.cc</Text>
+                            </VStack>
+                          </HStack>
+                          
+                          <HStack spacing={3}>
+                            <Icon as={Phone} size={5} color="green.500" />
+                            <VStack align="start" spacing={0}>
+                              <Text fontWeight="semibold" color="gray.800">Phone</Text>
+                              <Text fontSize="sm" color={textColor}>+234 (0) 800 000 0000</Text>
+                            </VStack>
+                          </HStack>
+                        </VStack>
+
+                        <VStack spacing={4} align="start">
+                          <HStack spacing={3}>
+                            <Icon as={Globe} size={5} color="purple.500" />
+                            <VStack align="start" spacing={0}>
+                              <Text fontWeight="semibold" color="gray.800">Website</Text>
+                              <Text fontSize="sm" color={textColor}>www.veyu.cc</Text>
+                            </VStack>
+                          </HStack>
+                          
+                          <HStack spacing={3}>
+                            <Icon as={MapPin} size={5} color="orange.500" />
+                            <VStack align="start" spacing={0}>
+                              <Text fontWeight="semibold" color="gray.800">Address</Text>
+                              <Text fontSize="sm" color={textColor}>Lagos, Nigeria</Text>
+                            </VStack>
+                          </HStack>
+                        </VStack>
+                      </SimpleGrid>
+
+                      <Box
+                        bg="blue.50"
+                        p={4}
+                        borderRadius="lg"
+                        border="1px solid"
+                        borderColor="blue.200"
+                        w="full"
+                      >
+                        <Text fontSize="sm" color="blue.600" textAlign="center">
+                          <strong>Response Time:</strong> We typically respond to privacy inquiries within 24-48 hours.
+                        </Text>
+                      </Box>
+                    </VStack>
+                  </Box>
+                </MotionBox>
+
+                {/* Final Agreement */}
+                <MotionBox variants={itemVariants}>
+                  <Box
+                    bg="gray.50"
+                    p={6}
+                    borderRadius="xl"
+                    border="2px solid"
+                    borderColor="gray.200"
+                    textAlign="center"
+                  >
+                    <Text fontWeight="semibold" color="gray.800" mb={2}>
+                      Agreement Acknowledgment
+                    </Text>
+                    <Text fontSize="sm" color={textColor}>
+                      By using our Services, you acknowledge that you have read and understood this Privacy Policy 
+                      and agree to its terms. Thank you for trusting Veyu with your information.
+                    </Text>
+                  </Box>
+                </MotionBox>
+              </VStack>
+            </Box>
+          </SimpleGrid>
+        </MotionBox>
+      </Container>
+    </Box>
+  );
+};
+
+export default PrivacyPolicy;

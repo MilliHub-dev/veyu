@@ -273,13 +273,11 @@ function ListingTable({ listings, total, page, totalPages, onPrev, onNext }) {
               </Td>
               <Td>{listing?.viewers?.length}</Td>
               <Td>
-                {!listing?.vehicle?.available && 
-                  <Flex gap={2}>
-                    <Button size="sm" colorScheme="green">Boost</Button>
-                    <IconButton as={Link} to={`edit/${listing?.uuid}`} aria-label="Edit" icon={<EditIcon />} size="sm" />
-                    <IconButton aria-label="Delete" icon={<DeleteIcon />} size="sm" colorScheme="red" />
-                  </Flex>
-                }
+                <Flex gap={2}>
+                  <Button size="sm" colorScheme="green">Boost</Button>
+                  <IconButton as={Link} to={`edit/${listing?.uuid}`} aria-label="Edit" icon={<EditIcon />} size="sm" />
+                  <IconButton aria-label="Delete" icon={<DeleteIcon />} size="sm" colorScheme="red" />
+                </Flex>
               </Td>
             </Tr>
           ))}

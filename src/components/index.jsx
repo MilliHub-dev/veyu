@@ -1117,9 +1117,17 @@ export function TimePicker({ value, onChange, format = "12h", showSeconds = fals
 
 export const ListingItemCard = ({ listing, ...props }) => {
     const {commaInt} = useContext(GlobalStore);
-    const {vehicle, } = listing;
+    
+    // Add defensive checks for listing and vehicle
+    if (!listing) {
+        return null;
+    }
+    
+    const vehicle = listing?.vehicle || {};
     const [image, setImage] = useState({});
     const [index, setIndex] = useState(0);
+    const [isFavorited, setIsFavorited] = useState(false);
+    const [isImageLoading, setIsImageLoading] = useState(false);
 
     function discount(price, dprice){
         const percent = (dprice / price) * 100
@@ -1127,31 +1135,70 @@ export const ListingItemCard = ({ listing, ...props }) => {
     }
 
     useEffect(() => {
-        setImage(vehicle?.images[0])
-    }, [listing]);
+        if (!listing || !vehicle) {
+            setImage({});
+            setIsImageLoading(false);
+            return;
+        }
+        
+        const images = vehicle?.images || [];
+        const firstImage = images[0];
+        
+        if (firstImage?.url) {
+            setImage(firstImage);
+            setIsImageLoading(false); // Don't show loading for initial image
+        } else {
+            setImage({});
+            setIsImageLoading(false);
+        }
+    }, [listing, vehicle]);
 
     function nextImage(idx){
-        let images = vehicle.images
-        idx += index
-        if (idx >= images.length){
-            idx = 0
+        if (!vehicle || !vehicle.images) return;
+        
+        let images = vehicle.images || []
+        if (images.length === 0) return;
+        
+        let newIndex = index + idx;
+        if (newIndex >= images.length){
+            newIndex = 0
         }
-        if (idx < 0){
-            idx = (images.length - 1)
+        if (newIndex < 0){
+            newIndex = (images.length - 1)
         }
 
-        setIndex(idx)
-        setImage(images[idx]);
+        setIndex(newIndex)
+        const newImage = images[newIndex];
+        
+        if (!newImage) return;
+        
+        setImage(newImage);
+        
+        if (newImage?.url) {
+            // Simple loading state for navigation
+            setIsImageLoading(true);
+            setTimeout(() => {
+                setIsImageLoading(false);
+            }, 500); // Short loading state for smooth transition
+        } else {
+            setIsImageLoading(false);
+        }
     }
 
     let type = 'buy';
 
-    if (listing.listing_type === 'sale'){
+    if (listing?.listing_type === 'sale'){
         type = 'buy';
     }
-    if (listing.listing_type === 'rental'){
+    if (listing?.listing_type === 'rental'){
         type = 'rent';
     }
+
+    const handleFavoriteClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsFavorited(!isFavorited);
+    };
 
     return(
         <Box 
@@ -1162,115 +1209,210 @@ export const ListingItemCard = ({ listing, ...props }) => {
             {...props}
         >
             <Card 
-                shadow={'xl'} 
+                shadow="xl" 
                 p={0} 
-                w={'100%'} 
-                rounded={'2xl'}
+                w="100%" 
+                borderRadius="2xl"
                 overflow="hidden"
-                borderWidth="1px"
-                borderColor="gray.100"
+                borderWidth="2px"
+                borderColor="transparent"
+                bg="white"
                 _hover={{
                     shadow: '2xl',
-                    borderColor: 'primary'
+                    borderColor: '#F4A950',
+                    transform: 'translateY(-4px)'
                 }}
                 transition="all 0.3s ease"
+                cursor="pointer"
             >
                 <CardHeader p={0} position="relative">
+                    {/* Gradient Overlay for better text visibility */}
+                    <Box
+                        position="absolute"
+                        top={0}
+                        left={0}
+                        right={0}
+                        height="80px"
+                        bgGradient="linear(to-b, blackAlpha.400, transparent)"
+                        zIndex={1}
+                        pointerEvents="none"
+                    />
+
                     {/* Condition Badge */}
                     <Badge 
                         position="absolute" 
-                        top={3} 
-                        right={3} 
-                        zIndex={2}
+                        top={4} 
+                        right={4} 
+                        zIndex={3}
                         bg="white"
-                        color="gray.700"
-                        px={3}
-                        py={1}
+                        color="gray.800"
+                        px={4}
+                        py={2}
                         borderRadius="full"
                         fontWeight="bold"
                         fontSize="xs"
                         textTransform="uppercase"
-                        boxShadow="md"
+                        boxShadow="lg"
+                        border="1px solid"
+                        borderColor="gray.200"
                     >
-                        {listing?.vehicle?.condition}
+                        {vehicle?.condition || 'New'}
                     </Badge>
 
                     {/* Heart Icon for Favorites */}
                     <IconButton
                         position="absolute"
-                        top={3}
-                        left={3}
-                        zIndex={2}
-                        icon={<RiHeart2Line />}
-                        size="sm"
+                        top={4}
+                        left={4}
+                        zIndex={3}
+                        icon={isFavorited ? <RiHeart2Fill /> : <RiHeart2Line />}
+                        size="md"
                         bg="white"
-                        color="gray.600"
+                        color={isFavorited ? "red.500" : "gray.600"}
                         borderRadius="full"
-                        boxShadow="md"
+                        boxShadow="lg"
+                        border="1px solid"
+                        borderColor="gray.200"
                         _hover={{ 
-                            bg: 'red.50',
-                            color: 'red.500',
-                            transform: 'scale(1.1)'
+                            bg: isFavorited ? 'red.50' : 'gray.50',
+                            color: isFavorited ? 'red.600' : 'red.500',
+                            transform: 'scale(1.1)',
+                            borderColor: isFavorited ? 'red.200' : 'red.300'
                         }}
-                        aria-label="Add to favorites"
+                        _active={{ transform: 'scale(0.95)' }}
+                        onClick={handleFavoriteClick}
+                        aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
                     />
 
+                    {/* Main Image Container */}
                     <Box
-                        width={'100%'}
-                        height={'240px'}
-                        position={'relative'}
+                        width="100%"
+                        height="280px"
+                        position="relative"
                         overflow="hidden"
+                        bg="gray.100"
                     >
                         <NavLink to={`/${type}/${listing?.uuid}`}>
                           <LinkBox
                             flex={1} 
-                            w={'100%'} 
-                            height={'240px'}
-                            position={'relative'}
+                            w="100%" 
+                            height="280px"
+                            position="relative"
                             sx={{
-                              backgroundImage: `url(${image?.url})`,
+                              backgroundImage: image?.url ? `url(${image.url})` : 'none',
                               backgroundRepeat: 'no-repeat',
                               backgroundSize: 'cover',
                               backgroundPosition: 'center',
-                              transition: 'transform 0.3s ease',
+                              transition: 'transform 0.4s ease',
                               '&:hover': {
-                                transform: 'scale(1.05)'
+                                transform: 'scale(1.08)'
                               }
                             }}
-                          />
+                          >
+                            {/* Loading placeholder */}
+                            {isImageLoading && image?.url && (
+                                <Flex
+                                    position="absolute"
+                                    top={0}
+                                    left={0}
+                                    right={0}
+                                    bottom={0}
+                                    align="center"
+                                    justify="center"
+                                    bg="gray.100"
+                                    zIndex={1}
+                                >
+                                    <VStack spacing={3} color="gray.400">
+                                        <Box 
+                                            fontSize="3xl"
+                                            animation="pulse 2s infinite"
+                                            sx={{
+                                                '@keyframes pulse': {
+                                                    '0%, 100%': { opacity: 1 },
+                                                    '50%': { opacity: 0.5 }
+                                                }
+                                            }}
+                                        >
+                                            🚗
+                                        </Box>
+                                        <Text fontSize="sm">Loading...</Text>
+                                    </VStack>
+                                </Flex>
+                            )}
+                            
+                            {/* No image placeholder */}
+                            {!image?.url && (
+                                <Flex
+                                    position="absolute"
+                                    top={0}
+                                    left={0}
+                                    right={0}
+                                    bottom={0}
+                                    align="center"
+                                    justify="center"
+                                    bg="gray.50"
+                                >
+                                    <VStack spacing={3} color="gray.400">
+                                        <Box fontSize="4xl">🚗</Box>
+                                        <Text fontSize="sm" fontWeight="medium">No Image Available</Text>
+                                    </VStack>
+                                </Flex>
+                            )}
+                          </LinkBox>
                         </NavLink>
                         
                         {/* Image Navigation Arrows */}
                         {vehicle?.images?.length > 1 && (
                             <Flex
-                                position={'absolute'}
-                                w={'100%'}
+                                position="absolute"
+                                w="100%"
                                 justifyContent="space-between"
-                                px={3}
-                                top={'50%'}
+                                px={4}
+                                top="50%"
                                 transform="translateY(-50%)"
                                 gap={2}
+                                zIndex={2}
                             >
                                 <IconButton
                                     icon={<RxCaretLeft />}
-                                    onClick={() => nextImage(-1)}
-                                    size="sm"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        nextImage(-1);
+                                    }}
+                                    size="md"
                                     borderRadius="full"
                                     bg="whiteAlpha.900"
                                     color="gray.800"
-                                    _hover={{ bg: 'white', transform: 'scale(1.1)' }}
+                                    _hover={{ 
+                                        bg: 'white', 
+                                        transform: 'scale(1.1)',
+                                        shadow: 'xl'
+                                    }}
                                     boxShadow="lg"
+                                    border="1px solid"
+                                    borderColor="gray.200"
                                     aria-label="Previous image"
                                 />
                                 <IconButton
                                     icon={<RxCaretRight />}
-                                    onClick={() => nextImage(1)}
-                                    size="sm"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        nextImage(1);
+                                    }}
+                                    size="md"
                                     borderRadius="full"
                                     bg="whiteAlpha.900"
                                     color="gray.800"
-                                    _hover={{ bg: 'white', transform: 'scale(1.1)' }}
+                                    _hover={{ 
+                                        bg: 'white', 
+                                        transform: 'scale(1.1)',
+                                        shadow: 'xl'
+                                    }}
                                     boxShadow="lg"
+                                    border="1px solid"
+                                    borderColor="gray.200"
                                     aria-label="Next image"
                                 />
                             </Flex>
@@ -1280,139 +1422,320 @@ export const ListingItemCard = ({ listing, ...props }) => {
                         {vehicle?.images?.length > 1 && (
                             <Badge
                                 position="absolute"
-                                bottom={3}
-                                right={3}
-                                bg="blackAlpha.700"
+                                bottom={4}
+                                right={4}
+                                bg="blackAlpha.800"
                                 color="white"
-                                px={2}
+                                px={3}
                                 py={1}
-                                borderRadius="md"
+                                borderRadius="full"
                                 fontSize="xs"
+                                fontWeight="bold"
+                                zIndex={2}
                             >
                                 {index + 1} / {vehicle?.images?.length}
                             </Badge>
                         )}
+
+                        {/* Quick Action Buttons */}
+                        <HStack
+                            position="absolute"
+                            bottom={4}
+                            left={4}
+                            spacing={2}
+                            zIndex={2}
+                        >
+                            {listing?.listing_type === 'sale' && (
+                                <Badge
+                                    bg="#F4A950"
+                                    color="white"
+                                    px={3}
+                                    py={1}
+                                    borderRadius="full"
+                                    fontSize="xs"
+                                    fontWeight="bold"
+                                    display="flex"
+                                    alignItems="center"
+                                    gap={1}
+                                >
+                                    <Icon as={HiMiniReceiptPercent} boxSize={3} />
+                                    <Text>+0.5% fee</Text>
+                                </Badge>
+                            )}
+                        </HStack>
                     </Box>
                 </CardHeader>
 
-                <CardBody p={4}>
-                    {/* Title */}
-                    <Heading 
-                        size="md" 
-                        fontWeight="bold" 
-                        textTransform="capitalize"
-                        mb={3}
-                        noOfLines={1}
-                        color="gray.900"
-                    >
-                        {listing?.title}
-                    </Heading>
-
-                    {/* Vehicle Specs */}
-                    {listing?.listing_type === 'sale' ? (
-                        <HStack spacing={3} mb={3} fontSize="sm" color="gray.600" flexWrap="wrap">
-                            <HStack spacing={1}>
-                                <Icon as={RxTimer} />
-                                <Text>{commaInt(listing?.vehicle?.mileage) || 0}mi</Text>
-                            </HStack>
-                            <HStack spacing={1}>
-                                <Icon as={TbManualGearbox} />
-                                <Text>{listing?.vehicle?.transmission}</Text>
-                            </HStack>
-                            <HStack spacing={1}>
-                                <Icon as={RiGasStationLine} />
-                                <Text>{listing?.vehicle?.fuel_system}</Text>
-                            </HStack>
-                        </HStack>
-                    ) : (
-                        <HStack spacing={3} mb={3} fontSize="sm" color="gray.600">
-                            <HStack spacing={1}>
-                                <Text fontWeight="semibold">{(listing?.vehicle?.dealer?.rating) || 0}</Text>
-                                <StarIcon color="yellow.400" boxSize={3} />
-                            </HStack>
-                            <Text>({listing?.vehicle?.trips} Trips)</Text>
-                            <Badge colorScheme="blue">{listing?.vehicle?.dealer?.level}</Badge>
-                        </HStack>
-                    )}
-
-                    {/* Price Section */}
-                    <Flex alignItems="center" justifyContent="space-between" mb={3}>
-                        <VStack align="start" spacing={0}>
-                            <Text fontSize="2xl" fontWeight="bold" color="primary">
-                                ₦{commaInt(listing?.price)}
-                            </Text>
-                            {listing?.listing_type === 'rental' && (
-                                <Text fontSize="xs" color="gray.500">
-                                    per {listing?.payment_cycle}
-                                </Text>
-                            )}
-                        </VStack>
-                        {listing?.listing_type === 'sale' && (
-                            <Tag 
-                                size="sm" 
-                                colorScheme="orange" 
-                                borderRadius="full"
-                                px={3}
+                <CardBody p={6}>
+                    {/* Title and Year */}
+                    <VStack align="stretch" spacing={4}>
+                        <Box>
+                            <Heading 
+                                size="md" 
+                                fontWeight="bold" 
+                                mb={2}
+                                noOfLines={2}
+                                color="gray.900"
+                                lineHeight="1.3"
                             >
-                                <HStack spacing={1}>
-                                    <Icon as={HiMiniReceiptPercent} />
-                                    <Text fontSize="xs">+0.5% fee</Text>
-                                </HStack>
-                            </Tag>
-                        )}
-                    </Flex>
-
-                    <Divider mb={3} />
-
-                    {/* Location and Badges */}
-                    <Flex justifyContent={'space-between'} alignItems={'center'} gap={2}>
-                        <HStack spacing={1} fontSize="sm" color="gray.600" flex={1} minW={0}>
-                            <Icon as={LuMapPin} flexShrink={0} />
-                            <Text noOfLines={1}>{listing?.vehicle?.dealer?.location}</Text>
-                        </HStack>
-                        
-                        {listing?.listing_type === 'sale' ? (
-                            <HStack spacing={1} flexShrink={0}>
+                                {listing?.title}
+                            </Heading>
+                            
+                            {/* Vehicle Year and Make */}
+                            <HStack spacing={2} mb={3}>
                                 <Badge 
-                                    colorScheme="blue" 
-                                    display="flex" 
-                                    alignItems="center" 
-                                    gap={1}
-                                    px={2}
+                                    colorScheme="gray" 
+                                    variant="subtle"
+                                    px={3}
                                     py={1}
-                                    borderRadius="md"
+                                    borderRadius="full"
+                                    fontSize="xs"
                                 >
-                                    <Icon as={BsFillPatchCheckFill} boxSize={3} />
-                                    <Text fontSize="xs">Verified</Text>
+                                    {vehicle?.year || '2020'}
                                 </Badge>
-                                {listing?.vehicle?.custom_duty && (
+                                <Text fontSize="sm" color="gray.600" fontWeight="medium">
+                                    {vehicle?.make} {vehicle?.model}
+                                </Text>
+                            </HStack>
+                        </Box>
+
+                        {/* Vehicle Specs */}
+                        {listing?.listing_type === 'sale' ? (
+                            <SimpleGrid columns={3} spacing={3} fontSize="sm">
+                                <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                    <Icon as={RxTimer} color="#F4A950" boxSize={4} />
+                                    <Text color="gray.600" fontSize="xs" textAlign="center">Mileage</Text>
+                                    <Text fontWeight="bold" fontSize="xs" textAlign="center">
+                                        {commaInt(vehicle?.mileage) || 0}mi
+                                    </Text>
+                                </VStack>
+                                <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                    <Icon as={TbManualGearbox} color="#F4A950" boxSize={4} />
+                                    <Text color="gray.600" fontSize="xs" textAlign="center">Trans.</Text>
+                                    <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                        {vehicle?.transmission || 'Auto'}
+                                    </Text>
+                                </VStack>
+                                <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                    <Icon as={RiGasStationLine} color="#F4A950" boxSize={4} />
+                                    <Text color="gray.600" fontSize="xs" textAlign="center">Fuel</Text>
+                                    <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                        {vehicle?.fuel_system || 'Petrol'}
+                                    </Text>
+                                </VStack>
+                            </SimpleGrid>
+                        ) : (
+                            <VStack spacing={3} p={4} bg="gradient-to-br from-orange-50 to-yellow-50" borderRadius="xl" border="1px" borderColor="orange.100">
+                                {/* Host Rating and Status */}
+                                <HStack spacing={4} justify="space-between" w="100%">
+                                    <HStack spacing={2}>
+                                        <Box
+                                            w="8px"
+                                            h="8px"
+                                            borderRadius="full"
+                                            bg="green.400"
+                                            boxShadow="0 0 0 2px rgba(72, 187, 120, 0.3)"
+                                        />
+                                        <Text fontSize="xs" color="green.600" fontWeight="bold">
+                                            Available Now
+                                        </Text>
+                                    </HStack>
                                     <Badge 
-                                        colorScheme="purple" 
-                                        display="flex" 
-                                        alignItems="center" 
-                                        gap={1}
+                                        bg="#F4A950" 
+                                        color="white" 
+                                        variant="solid" 
+                                        borderRadius="full"
+                                        px={3}
+                                        py={1}
+                                        fontSize="xs"
+                                        fontWeight="bold"
+                                    >
+                                        Instant Book
+                                    </Badge>
+                                </HStack>
+
+                                {/* Host Rating */}
+                                <HStack spacing={4} justify="space-between" w="100%">
+                                    <HStack spacing={1}>
+                                        <StarIcon color="#F4A950" boxSize={4} />
+                                        <Text fontWeight="bold" color="gray.800" fontSize="sm">
+                                            {(vehicle?.dealer?.rating) || '4.8'}
+                                        </Text>
+                                        <Text fontSize="xs" color="gray.600">
+                                            ({vehicle?.trips || '25'} trips)
+                                        </Text>
+                                    </HStack>
+                                    <Badge 
+                                        colorScheme="blue" 
+                                        variant="subtle" 
+                                        borderRadius="full"
+                                        px={3}
+                                        py={1}
+                                        fontSize="xs"
+                                    >
+                                        {vehicle?.dealer?.level || 'Pro Host'}
+                                    </Badge>
+                                </HStack>
+
+                                {/* Rental Features */}
+                                <SimpleGrid columns={3} spacing={2} w="100%" fontSize="xs">
+                                    <VStack spacing={1} align="center">
+                                        <Icon as={RiGasStationLine} color="#F4A950" boxSize={4} />
+                                        <Text color="gray.600" textAlign="center" noOfLines={1}>
+                                            {vehicle?.fuel_system || 'Petrol'}
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center">
+                                        <Icon as={TbManualGearbox} color="#F4A950" boxSize={4} />
+                                        <Text color="gray.600" textAlign="center" noOfLines={1}>
+                                            {vehicle?.transmission || 'Auto'}
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center">
+                                        <Icon as={RxTimer} color="#F4A950" boxSize={4} />
+                                        <Text color="gray.600" textAlign="center" noOfLines={1}>
+                                            {vehicle?.seats || '5'} Seats
+                                        </Text>
+                                    </VStack>
+                                </SimpleGrid>
+
+                                {/* Rental Perks */}
+                                <HStack spacing={2} justify="center" flexWrap="wrap">
+                                    <Badge 
+                                        colorScheme="green" 
+                                        variant="subtle" 
+                                        fontSize="xs"
                                         px={2}
                                         py={1}
                                         borderRadius="md"
                                     >
-                                        <Icon as={BsFillPatchCheckFill} boxSize={3} />
-                                        <Text fontSize="xs">Duty</Text>
+                                        Free Cancel
+                                    </Badge>
+                                    <Badge 
+                                        colorScheme="purple" 
+                                        variant="subtle" 
+                                        fontSize="xs"
+                                        px={2}
+                                        py={1}
+                                        borderRadius="md"
+                                    >
+                                        Insurance
+                                    </Badge>
+                                    <Badge 
+                                        colorScheme="blue" 
+                                        variant="subtle" 
+                                        fontSize="xs"
+                                        px={2}
+                                        py={1}
+                                        borderRadius="md"
+                                    >
+                                        24/7 Support
+                                    </Badge>
+                                </HStack>
+                            </VStack>
+                        )}
+
+                        {/* Price Section */}
+                        <Flex alignItems="center" justifyContent="space-between">
+                            <VStack align="start" spacing={0}>
+                                <Text fontSize="2xl" fontWeight="bold" color="#F4A950">
+                                    ₦{commaInt(listing?.price)}
+                                </Text>
+                                {listing?.listing_type === 'rental' && (
+                                    <Text fontSize="xs" color="gray.500" fontWeight="medium">
+                                        per {listing?.payment_cycle || 'day'}
+                                    </Text>
+                                )}
+                            </VStack>
+                            
+                            {/* Quick Action Button */}
+                            <Button
+                                size="sm"
+                                bg="#F4A950"
+                                color="white"
+                                _hover={{ 
+                                    bg: 'orange.600',
+                                    transform: 'translateY(-2px)',
+                                    shadow: 'lg'
+                                }}
+                                _active={{ transform: 'translateY(0)' }}
+                                borderRadius="full"
+                                px={6}
+                                fontWeight="bold"
+                                fontSize="xs"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    // Handle quick action (e.g., add to cart, contact dealer)
+                                }}
+                            >
+                                {listing?.listing_type === 'sale' ? 'View Details' : 'Book Now'}
+                            </Button>
+                        </Flex>
+
+                        <Divider />
+
+                        {/* Location and Badges */}
+                        <Flex justifyContent="space-between" alignItems="center">
+                            <HStack spacing={2} fontSize="sm" color="gray.600" flex={1} minW={0}>
+                                <Icon as={LuMapPin} flexShrink={0} color="#F4A950" />
+                                <Text noOfLines={1} fontWeight="medium">
+                                    {vehicle?.dealer?.location || 'Abuja, Nigeria'}
+                                </Text>
+                            </HStack>
+                            
+                            <HStack spacing={2} flexShrink={0}>
+                                {listing?.listing_type === 'sale' ? (
+                                    <>
+                                        <Badge 
+                                            colorScheme="blue" 
+                                            variant="subtle"
+                                            display="flex" 
+                                            alignItems="center" 
+                                            gap={1}
+                                            px={2}
+                                            py={1}
+                                            borderRadius="full"
+                                            fontSize="xs"
+                                        >
+                                            <Icon as={BsFillPatchCheckFill} boxSize={2} />
+                                            <Text>Verified</Text>
+                                        </Badge>
+                                        {vehicle?.custom_duty && (
+                                            <Badge 
+                                                colorScheme="purple" 
+                                                variant="subtle"
+                                                display="flex" 
+                                                alignItems="center" 
+                                                gap={1}
+                                                px={2}
+                                                py={1}
+                                                borderRadius="full"
+                                                fontSize="xs"
+                                            >
+                                                <Icon as={BsFillPatchCheckFill} boxSize={2} />
+                                                <Text>Duty</Text>
+                                            </Badge>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Badge 
+                                        colorScheme="green" 
+                                        variant="subtle"
+                                        display="flex" 
+                                        alignItems="center" 
+                                        gap={1}
+                                        borderRadius="full"
+                                        px={3}
+                                        py={1}
+                                    >
+                                        <Icon as={Leaf} boxSize={3} />
+                                        <Text fontSize="xs">{vehicle?.fuel_system || 'Eco'}</Text>
                                     </Badge>
                                 )}
                             </HStack>
-                        ) : (
-                            <Tag 
-                                colorScheme="green" 
-                                display="flex" 
-                                alignItems="center" 
-                                gap={1}
-                                borderRadius="full"
-                            >
-                                <Icon as={Leaf} boxSize={3} />
-                                <Text fontSize="xs">{listing?.vehicle?.fuel_system}</Text>
-                            </Tag>
-                        )}
-                    </Flex>
+                        </Flex>
+                    </VStack>
                 </CardBody>
             </Card>
         </Box>
@@ -1867,3 +2190,6 @@ export const LocationBreadcrumb = ({ label }) => {
 
 
 
+
+// Export MechanicCard
+export { MechanicCard } from './MechanicCard';
