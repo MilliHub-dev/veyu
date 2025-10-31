@@ -429,15 +429,15 @@ export const CustomerNavbar = ({ props }) => {
               >{"Wallet"}</Button>
             }
 
-            <RLink to={'/chat'}><Icon viewBox='45' className='icon' color="white"><MessageCircleIcon size={18} /></Icon></RLink>
-            <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color="white"><BellIcon size={18} /></Icon></RLink>
-            <RLink to={'/cart'}><Icon viewBox='45' className='icon' color="white"><ShoppingCartIcon size={18} /></Icon></RLink>
+            <RLink to={'/chat'}><Icon viewBox='45' className='icon' color={navColor}><MessageCircleIcon size={18} /></Icon></RLink>
+            <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color={navColor}><BellIcon size={18} /></Icon></RLink>
+            <RLink to={'/cart'}><Icon viewBox='45' className='icon' color={navColor}><ShoppingCartIcon size={18} /></Icon></RLink>
             {!isLaptop &&
               <Menu to={`/dashboard`}>
                 {({ isOpen, onClose }) =>
                   <Fragment>
                     <MenuButton onClose={onClose} isOpen={isOpen}>
-                      <Icon viewBox='45' className='icon' color="white"><UserIcon size={18} /></Icon>
+                      <Icon viewBox='45' className='icon' color={navColor}><UserIcon size={18} /></Icon>
                     </MenuButton>
                     <MenuList px={2}>
                       <Box my={3} placeItems="center">
@@ -1141,17 +1141,17 @@ export const Sidebar = ({ show, onClose, }) => {
               // isMobile &&
               <Stack>
                 <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/home"}>Home</Text>
-                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/buy"}>Buy</Text>
+                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/buy"}>Buy Now</Text>
                 <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/rent"}>Rent</Text>
-                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/mechanics"}>Find Mechanics</Text>
+                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/mechanics"}>Search for Mechanics</Text>
                 <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/wallet"}>Wallet</Text>
               </Stack>
             ) : (
               <Stack>
-                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/#welcome"} >Home</Text>
-                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/#what-we-offer"} >About</Text>
-                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/#find-mechanics"} >Features</Text>
-                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/#partner-with-us"} >For Businesses</Text>
+                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/home"} >Home</Text>
+                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/about"} >About</Text>
+                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/services"} >Services</Text>
+                <Text onClick={onClose} py={1} px={4} my={2} as={NavLink} to={"/contact"} >Contact</Text>
               </Stack>
             )
           }
