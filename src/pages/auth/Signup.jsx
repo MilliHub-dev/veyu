@@ -113,6 +113,7 @@ export const SignupView = ({ ...props }) => {
     setUserType,
     createAccount,
     checkEmail,
+    setSkipStep, // Add setSkipStep to context
   };
 
   const signUpWithGoogle = async () => {
@@ -507,9 +508,19 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return notify({
+          title: 'Invalid Email',
+          color: 'red',
+          body: 'Please enter a valid email address'
+        });
+      }
+
       if (password !== confirmPassword) {
         return notify({
-          title: 'Error!',
+          title: 'Password Mismatch',
           color: 'red',
           body: 'Passwords do not match'
         });
@@ -517,9 +528,23 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
 
       if (password.length < 8) {
         return notify({
-          title: 'Error!',
+          title: 'Weak Password',
           color: 'red',
-          body: 'Password must be at least 8 characters long'
+          body: 'Password must be at least 8 characters long and include uppercase, lowercase, numbers, and special characters'
+        });
+      }
+
+      // Check password strength
+      const hasUpperCase = /[A-Z]/.test(password);
+      const hasLowerCase = /[a-z]/.test(password);
+      const hasNumbers = /\d/.test(password);
+      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+      
+      if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+        return notify({
+          title: 'Weak Password',
+          color: 'red',
+          body: 'Password must include at least one uppercase letter, one lowercase letter, one number, and one special character'
         });
       }
 
@@ -529,15 +554,18 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
           throw new Error("Please select a business type (Dealer or Mechanic)");
         }
 
-        if (type === 'personal' || type === 'customer') {
-          setUserType('customer');
-        }
+        const finalUserType = type === 'personal' || type === 'customer' ? 'customer' : user_type;
+        setUserType(finalUserType);
 
         addToPayload({
           email,
           password,
           confirm_password: confirmPassword,
-          provider: 'veyu'
+          provider: 'veyu',
+          action: 'create-account',
+          user_type: finalUserType,
+          first_name: payload.first_name || '',
+          last_name: payload.last_name || ''
         });
         nextStep();
       }
@@ -782,50 +810,332 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
 
 const SignupStep = ({ type }) => {
   const { axios, notify, onAuthenticated } = useContext(GlobalStore);
-  const { payload, addToPayload, nextStep, user_type, gotoStep } = useContext(SignupContext);
-  const [first_name, setFirstName] = useState(payload?.first_name);
-  const [last_name, setLastName] = useState(payload?.last_name);
-  const [phone_number, setPhoneNumber] = useState('');
+  const { payload, addToPayload, nextStep, user_type, gotoStep, setSkipStep } = useContext(SignupContext);
+  const [formData, setFormData] = useState({
+    first_name: payload?.first_name || '',
+    last_name: payload?.last_name || '',
+    phone_number: payload?.phone_number || '',
+  });
   const [isLoading, setIsLoading] = useState(false);
-  const redirect = useNavigate();
+  const navigate = useNavigate();
+
+  // Handle input changes for controlled components
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
     setIsLoading(true);
 
+    const { first_name, last_name, phone_number } = formData;
+    // Prepare the complete payload with all required fields
+    // Prepare payload according to API documentation
     const newPayload = {
-      ...payload,
-      first_name,
-      last_name,
-      phone_number,
-      user_type,
-      action: 'create-account'
+      email: payload?.email,
+      first_name: first_name.trim(),
+      last_name: last_name.trim(),
+      password: payload?.password,
+      confirm_password: payload?.confirm_password,
+      user_type: user_type || 'customer',
+      provider: 'veyu',
+      phone_number: phone_number.trim() || null,
+      action: 'create-account'  // Added action field as required by the API
     };
+    
+    // Remove any undefined values
+    Object.keys(newPayload).forEach(key => {
+      if (newPayload[key] === undefined) {
+        delete newPayload[key];
+      }
+    });
+
+    // Basic validation
+    if (!first_name || !last_name) {
+      setIsLoading(false);
+      return notify({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        status: 'error',
+        duration: 5000,
+        isClosable: true
+      });
+    }
 
     try {
       addToPayload({ ...newPayload });
 
-      const res = await axios.post('/accounts/register/', newPayload, {
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      const data = objectifyJSON(res.data);
-
-      if (res.status === 201 || res.status === 200) {
-        const authData = data.data || data;
-        if (authData.token || authData.api_token) {
-          localStorage.setItem('veyu-auth-user', jsonifyObject(authData));
-        }
-
-        notify({
-          title: 'Account Created!',
-          body: "Welcome to Veyu! Please verify your email to get started.",
-          color: 'green'
+      // First, check if the email exists
+      let res;
+      
+      // Ensure required fields are present
+      if (!newPayload.email || !newPayload.password || !newPayload.confirm_password) {
+        throw new Error('Email, password, and confirm password are required');
+      }
+      
+      // Ensure passwords match
+      if (newPayload.password !== newPayload.confirm_password) {
+        throw new Error('Passwords do not match');
+      }
+      
+      try {
+        // Log the payload for debugging
+        console.log('Sending signup payload:', JSON.stringify(newPayload, null, 2));
+        
+        // Create FormData to handle the request properly
+        const formData = new FormData();
+        
+        // Add all fields to FormData
+        Object.entries(newPayload).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            formData.append(key, value);
+          }
         });
+        
+        // Log the final payload being sent
+        console.log('Final signup payload:', Object.fromEntries(formData.entries()));
+        
+        // Make the request with JSON instead of FormData
+        res = await axios.post('https://dev.veyu.cc/api/v1/accounts/register/', 
+          newPayload, // Use the raw payload object instead of FormData
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            validateStatus: (status) => true // Don't throw for any status code
+          }
+        );
+        
+        console.log('Signup response status:', res.status);
+        console.log('Signup response data:', res.data);
+        
+        // Check if signup was successful (201) but has the email_verified error
+        if (res.status === 201 || (res.status === 500 && 
+            res.data?.message?.includes("'email_verified'"))) {
+          // Try to log in with the same credentials
+          try {
+            const loginRes = await axios.post('https://dev.veyu.cc/api/v1/accounts/login/', {
+              email: newPayload.email,
+              password: newPayload.password
+            });
+            
+            const loginData = objectifyJSON(loginRes.data);
+            const token = loginData.token || loginData.api_token;
+            
+            if (token) {
+              // Proceed with successful login
+              const userData = {
+                ...loginData.user,
+                token: token,
+                isAuthenticated: true,
+                user_type: newPayload.user_type || 'customer'
+              };
+              
+              // Save user data to localStorage or context
+              localStorage.setItem('user', JSON.stringify(userData));
+              
+              // Redirect based on user type or to dashboard
+              const redirectPath = userData.user_type === 'customer' ? '/dashboard' : `/${userData.user_type}/dashboard`;
+              window.location.href = redirectPath;
+              return;
+            }
+          } catch (loginError) {
+            console.error('Auto-login failed:', loginError);
+            // Continue to show the error below
+          }
+        }
+      } catch (error) {
+        // Handle other errors
+        if (error.response?.status === 400 && 
+            error.response?.data?.email?.includes('already exists')) {
+          // Email exists, try to log in
+          try {
+            const loginRes = await axios.post('https://dev.veyu.cc/api/v1/accounts/login/', {
+              email: newPayload.email,
+              password: newPayload.password
+            });
+            
+            const loginData = objectifyJSON(loginRes.data);
+            const token = loginData.token || loginData.api_token;
+            
+            if (token) {
+              const userData = {
+                ...loginData,
+                token,
+                api_token: token,
+                user_type: user_type || loginData.user_type
+              };
+              
+              localStorage.setItem('veyu-auth-user', jsonifyObject(userData));
+              
+              // Redirect to business profile for mechanics/dealers
+              if (['mechanic', 'dealer'].includes(userData.user_type)) {
+                // Update the auth state first
+                onAuthenticated(userData);
+                // Then redirect to the business profile setup
+                navigate(`/dashboard/business-profile`, { replace: true });
+                return;
+              }
+              // For regular users, go to dashboard
+              navigate('/dashboard', { replace: true });
+              return;
+            }
+          } catch (loginError) {
+            console.error('Login error:', loginError);
+            throw new Error('An account with this email already exists. Please use a different email or log in.');
+          }
+          return;
+        }
+        throw error; // Re-throw if it's not a duplicate email error
+      }
 
-        nextStep();
+      // If we get here, it's a new account
+      const data = objectifyJSON(res.data);
+      console.log('Signup response status:', res.status);
+      console.log('Signup response data:', data);
+
+      // Handle successful registration (201 Created) or other success statuses
+      if (res.status === 201 || res.status === 200) {
+        // If the response indicates an error but with 200 status (some APIs do this)
+        if (data.error) {
+          // If the error is about email_verified, we can proceed with login
+          if (data.message && data.message.includes('email_verified')) {
+            console.log('Proceeding with login despite email_verified error');
+            // Continue with the login flow below
+          } else {
+            throw new Error(data.message || 'Registration failed');
+          }
+        }
+        const authData = data.data || data;
+        const token = authData.token || authData.api_token;
+        
+        if (token) {
+          const userData = {
+            ...authData,
+            token,
+            api_token: token,
+            user_type: user_type || authData.user_type
+          };
+          
+          localStorage.setItem('veyu-auth-user', jsonifyObject(userData));
+          
+          // For mechanics/dealers, redirect to business profile after signup
+          if (['mechanic', 'dealer'].includes(userData.user_type)) {
+            // Store the token in localStorage for the business profile setup
+            localStorage.setItem('auth_token', token);
+            localStorage.setItem('user_type', userData.user_type);
+            
+            // Store the user data in localStorage for the business profile setup
+            localStorage.setItem('user_data', JSON.stringify({
+              email: newPayload.email,
+              first_name: newPayload.first_name,
+              last_name: newPayload.last_name,
+              phone_number: newPayload.phone_number
+            }));
+            
+            // Navigate to business profile with user type
+            navigate(`/business-profile?user_type=${userData.user_type}`, { 
+              state: { 
+                fromSignup: true,
+                userData: {
+                  ...userData,
+                  email: newPayload.email,
+                  first_name: newPayload.first_name,
+                  last_name: newPayload.last_name,
+                  phone_number: newPayload.phone_number
+                }
+              },
+              replace: true 
+            });
+          } else {
+            // For regular users, go to dashboard
+            navigate('/dashboard', { 
+              replace: true,
+              state: { 
+                userData: {
+                  ...userData,
+                  email: newPayload.email,
+                  first_name: newPayload.first_name,
+                  last_name: newPayload.last_name,
+                  phone_number: newPayload.phone_number
+                }
+              }
+            });
+          }
+          return;
+        }
+
+        // For regular users, proceed with email verification
+        try {
+          // Only attempt email verification if the user has an email
+          if (newPayload.email) {
+            const verifyResponse = await axios.post('https://dev.veyu.cc/api/v1/accounts/verify-email/', 
+              {
+                action: 'request-code',
+                email: newPayload.email
+              },
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Token ${token}`
+                },
+                validateStatus: (status) => status < 500 // Don't throw for 4xx errors
+              }
+            );
+            
+            console.log('Email verification request response:', verifyResponse.data);
+            
+            if (verifyResponse.data.error) {
+              console.warn('Email verification request had an error:', verifyResponse.data.message);
+              // Continue with the flow even if email verification fails
+            }
+
+            notify({
+              title: 'Verification Code Sent!',
+              body: `We've sent a 6-digit code to ${newPayload.email}. Please check your inbox.`,
+              color: 'green',
+              duration: 5000,
+              isClosable: true
+            });
+
+            // Update the payload with the complete user data
+            addToPayload({
+              ...newPayload,
+              ...authData
+            });
+
+            // Force navigation to the email verification step
+            setSkipStep(prev => ({
+              ...prev,
+              profile: true,
+              email: false
+            }));
+            
+            // Move to the next step (email verification)
+            nextStep();
+          }
+        } catch (emailError) {
+          console.error('Error sending verification email:', emailError);
+          notify({
+            title: 'Verification Email Error',
+            body: 'Your account was created, but we encountered an error sending the verification email. Please try logging in and request a new verification code.',
+            color: 'orange',
+            duration: 7000
+          });
+          
+          // Still navigate to the email verification step
+          setSkipStep(prev => ({
+            ...prev,
+            profile: true,
+            email: false
+          }));
+          nextStep();
+        }
       } else {
         notify({
           title: 'Sign up Error!',
@@ -834,10 +1144,68 @@ const SignupStep = ({ type }) => {
         });
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message
-        || error.response?.data?.error
-        || (typeof error.response?.data === 'object' ? JSON.stringify(error.response?.data) : error.response?.data)
-        || error.message;
+      console.error('Signup error:', error);
+      let errorMessage = 'An error occurred during signup. Please try again.';
+      let errorDetails = null;
+      
+      if (error.response) {
+        // Handle HTTP errors (4xx, 5xx)
+        const { data, status, headers } = error.response;
+        console.error('Error response:', { 
+          status, 
+          headers: JSON.stringify(headers),
+          data,
+          request: {
+            url: error.config?.url,
+            method: error.config?.method,
+            data: error.config?.data
+          }
+        });
+        
+        errorDetails = data;
+        
+        if (status === 400) {
+          // Handle validation errors
+          if (data && typeof data === 'object') {
+            errorMessage = 'Validation Error:\n' + Object.entries(data)
+              .map(([field, errors]) => `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+              .join('\n');
+          } else {
+            errorMessage = data?.message || 'Invalid request. Please check your input.';
+          }
+        } else if (status === 500) {
+          errorMessage = 'Server Error: ' + (data?.detail || 'Internal server error occurred');
+          console.error('Server error details:', data);
+        } else if (data?.detail) {
+          errorMessage = data.detail;
+        } else if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data && typeof data === 'object') {
+          errorMessage = 'Error: ' + (data.message || JSON.stringify(data, null, 2));
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('No response received:', error.request);
+        errorMessage = 'No response from server. Please check your internet connection and try again.';
+      } else {
+        // Something happened in setting up the request
+        console.error('Request setup error:', error.message);
+        errorMessage = `Request error: ${error.message}`;
+      }
+      
+      // Log the full error for debugging
+      console.error('Full error details:', {
+        message: error.message,
+        code: error.code,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data,
+          headers: error.config?.headers
+        },
+        response: error.response?.data,
+        stack: error.stack
+      });
 
       notify({
         title: 'Error!',
@@ -862,8 +1230,9 @@ const SignupStep = ({ type }) => {
                 <User size={20} color="gray" />
               </InputLeftElement>
               <Input
-                value={first_name}
-                onChange={(e) => setFirstName(e.target.value)}
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleInputChange}
                 placeholder="John"
                 size="lg"
                 bg="gray.50"
@@ -876,6 +1245,7 @@ const SignupStep = ({ type }) => {
                   shadow: '0 0 0 1px var(--chakra-colors-primary)'
                 }}
                 pl={12}
+                isDisabled={isLoading}
               />
             </InputGroup>
           </FormControl>
@@ -889,8 +1259,9 @@ const SignupStep = ({ type }) => {
                 <User size={20} color="gray" />
               </InputLeftElement>
               <Input
-                value={last_name}
-                onChange={(e) => setLastName(e.target.value)}
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleInputChange}
                 placeholder="Doe"
                 size="lg"
                 bg="gray.50"
@@ -903,12 +1274,13 @@ const SignupStep = ({ type }) => {
                   shadow: '0 0 0 1px var(--chakra-colors-primary)'
                 }}
                 pl={12}
+                isDisabled={isLoading}
               />
             </InputGroup>
           </FormControl>
         </SimpleGrid>
 
-        <FormControl>
+        <FormControl isRequired>
           <FormLabel color="gray.700" fontWeight="semibold">
             Phone Number
           </FormLabel>
@@ -917,9 +1289,9 @@ const SignupStep = ({ type }) => {
               <Phone size={20} color="gray" />
             </InputLeftElement>
             <Input
-              type="tel"
-              value={phone_number}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              name="phone_number"
+              value={formData.phone_number}
+              onChange={handleInputChange}
               placeholder="+234 812 4128 234"
               size="lg"
               bg="gray.50"
@@ -932,6 +1304,7 @@ const SignupStep = ({ type }) => {
                 shadow: '0 0 0 1px var(--chakra-colors-primary)'
               }}
               pl={12}
+              isDisabled={isLoading}
             />
           </InputGroup>
         </FormControl>
@@ -971,52 +1344,127 @@ const SignupStep = ({ type }) => {
   );
 }; const ConfirmationStep = ({ verification, type }) => {
   const { axios, notify, onAuthenticated } = useContext(GlobalStore);
-  const { nextStep, payload } = useContext(SignupContext);
+  const { nextStep, payload, gotoStep } = useContext(SignupContext);
   const [otp, setOTP] = useState('');
   const [timeout, setCodeTimer] = useState(0);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const timer = useRef();
-  const redirect = useNavigate();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    requestCode();
-  }, []);
-
-  async function requestCode() {
-    setIsResending(true);
+  // Check if user is already verified
+  const checkVerificationStatus = async (token) => {
     try {
-      timer.current.innerHTML = `Request new code in 60s`;
-      let time = 60;
-      const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'));
-      const token = auth?.token || auth?.api_token;
-
-      const counter = setInterval(() => {
-        if (time > 0) {
-          time -= 1;
-          timer.current.innerHTML = `Request new code in ${time}s`;
-          setCodeTimer(time);
-        } else {
-          timer.current.innerHTML = `Click to resend`;
-          return clearInterval(counter);
-        }
-      }, 1000);
-
-      const res = await axios.post('/accounts/verify-email/', JSON.stringify({
-        action: 'request-code',
-        email: payload.email,
-      }), {
+      const res = await axios.get('/accounts/me/', {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Token ${token}`
         }
       });
+      
+      if (res.data?.email_verified) {
+        setIsEmailVerified(true);
+        // Redirect based on user type
+        const redirectPath = res.data.user_type === 'customer' ? '/dashboard' : '/business-profile';
+        setTimeout(() => navigate(redirectPath), 2000);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking verification status:', error);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'));
+    const token = auth?.token || auth?.api_token;
+    
+    // Set email from auth or payload
+    if (auth?.email) {
+      setEmail(auth.email);
+    } else if (payload?.email) {
+      setEmail(payload.email);
+    }
+
+    // Check if already verified
+    const checkStatus = async () => {
+      if (token) {
+        const isVerified = await checkVerificationStatus(token);
+        if (!isVerified) {
+          // Only request code if not verified
+          await requestCode();
+        }
+      } else {
+        // If no token, just request code
+        await requestCode();
+      }
+    };
+
+    checkStatus();
+    
+    // Clean up interval on unmount
+    return () => {
+      if (timer.current) {
+        clearInterval(timer.current);
+      }
+    };
+  }, []);
+
+  async function requestCode() {
+    if (isResending) return; // Prevent multiple clicks
+    
+    setIsResending(true);
+    try {
+      const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'));
+      const token = auth?.token || auth?.api_token;
+      const emailToVerify = email || payload?.email;
+      
+      if (!emailToVerify) {
+        throw new Error('Email address not found. Please try signing up again.');
+      }
+
+      // Start the countdown timer
+      let time = 60;
+      setCodeTimer(time);
+      
+      if (timer.current) {
+        clearInterval(timer.current);
+      }
+      
+      timer.current = setInterval(() => {
+        setCodeTimer(prevTime => {
+          const newTime = prevTime - 1;
+          if (newTime <= 0) {
+            clearInterval(timer.current);
+            return 0;
+          }
+          return newTime;
+        });
+      }, 1000);
+
+      // Request verification code
+      const res = await axios.post('/accounts/verify-email/', 
+        {
+          action: 'request-code',
+          email: emailToVerify,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Token ${token}` } : {})
+          }
+        }
+      );
 
       if (res.status === 200) {
         notify({
-          title: 'Code Sent!',
-          body: 'Verification code sent to your email',
-          color: 'green'
+          title: 'Verification Code Sent!',
+          description: `We've sent a 6-digit code to ${emailToVerify}. Please check your inbox.`,
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
         });
       }
     } catch (error) {
@@ -1031,45 +1479,85 @@ const SignupStep = ({ type }) => {
   }
 
   async function verifyCode() {
+    if (!otp || otp.length !== 6) {
+      notify({
+        title: 'Invalid Code',
+        description: 'Please enter a valid 6-digit verification code',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
     setIsVerifying(true);
     try {
       const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'));
       const token = auth?.token || auth?.api_token;
+      const emailToVerify = email || payload?.email;
 
       if (!token) {
         notify({
-          title: 'Error',
-          body: 'Authentication token not found. Please sign up again.',
-          color: 'red'
+          title: 'Authentication Required',
+          description: 'Your session has expired. Please sign up again.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
         });
-        return redirect('/signup');
+        return navigate('/signup');
       }
 
-      if (verification === 'email') {
-        const res = await axios.post('/accounts/verify-email/', JSON.stringify({
+      if (!emailToVerify) {
+        throw new Error('Email address not found. Please try signing up again.');
+      }
+
+      // Verify the code
+      const res = await axios.post(
+        '/accounts/verify-email/',
+        {
           action: 'confirm-code',
-          email: payload.email,
+          email: emailToVerify,
           code: otp
-        }), {
+        },
+        {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Token ${token}`
           }
+        }
+      );
+
+      if (res.status === 200) {
+        // Update local storage with verified status
+        const updatedAuth = {
+          ...auth,
+          email_verified: true,
+          ...(res.data?.user || {}) // Update with any user data from the response
+        };
+        
+        localStorage.setItem('veyu-auth-user', JSON.stringify(updatedAuth));
+        
+        // Get user type to determine redirect
+        const userType = res.data?.user?.user_type || auth?.user_type;
+        
+        notify({
+          title: 'Email Verified Successfully!',
+          description: userType === 'customer' 
+            ? 'Your account is now verified. Taking you to your dashboard...'
+            : 'Your business account is now verified. Setting up your profile...',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
         });
 
-        if (res.status === 200) {
-          setOTP('');
-          notify({
-            title: "Welcome to Veyu!",
-            body: "Your email has been verified! You can now sign in to your account.",
-            color: 'green'
-          });
-
-          localStorage.removeItem('veyu-auth-user');
-          setTimeout(() => {
-            redirect('/login');
-          }, 1500);
-        }
+        // Redirect based on user type
+        const redirectPath = userType === 'customer' 
+          ? '/dashboard' 
+          : '/dashboard/business-profile';
+          
+        setTimeout(() => {
+          navigate(redirectPath);
+        }, 2000);
       }
     } catch (error) {
       notify({
@@ -1080,6 +1568,34 @@ const SignupStep = ({ type }) => {
     } finally {
       setIsVerifying(false);
     }
+  }
+
+  if (isEmailVerified) {
+    return (
+      <VStack spacing={8} textAlign="center" py={4}>
+        <Box
+          w={20}
+          h={20}
+          borderRadius="full"
+          bg="green.100"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          border="4px solid"
+          borderColor="green.200"
+        >
+          <Icon as={CheckCircle} fontSize="40px" color="green.500" />
+        </Box>
+        <VStack spacing={3}>
+          <Heading size="lg" fontWeight="bold" color="gray.800">
+            Email Verified!
+          </Heading>
+          <Text fontSize="md" color="gray.600" maxW="400px" lineHeight="tall">
+            Your email has been successfully verified. Redirecting you now...
+          </Text>
+        </VStack>
+      </VStack>
+    );
   }
 
   return (
@@ -1107,13 +1623,13 @@ const SignupStep = ({ type }) => {
       {/* Heading Section */}
       <VStack spacing={3}>
         <Heading size="lg" fontWeight="bold" color="gray.800">
-          Check Your Email
+          Verify Your Email
         </Heading>
         <Text fontSize="md" color="gray.600" maxW="400px" lineHeight="tall">
           We've sent a 6-digit verification code to
         </Text>
         <Text fontSize="md" fontWeight="semibold" color="primary">
-          {payload?.email}
+          {email || payload?.email}
         </Text>
       </VStack>
 

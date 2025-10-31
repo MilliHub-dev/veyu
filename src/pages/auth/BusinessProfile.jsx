@@ -59,7 +59,11 @@ function BusinessProfile({ onSubmit, ...props }) {
   const user_type = params.get('user_type') || 'dealer';
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [completionProgress, setCompletionProgress] = useState(0);
+  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   const toast = useToast();
+  const navigate = useNavigate();
   
   const [businessProfile, setBusinessProfile] = useState({
     logo: null,
@@ -123,92 +127,151 @@ function BusinessProfile({ onSubmit, ...props }) {
   const textColor = useColorModeValue('gray.600', 'gray.300');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  // Calculate completion progress
+  // Update completion progress when businessProfile changes
   useEffect(() => {
-    const fields = [
-      businessProfile.logo,
-      businessProfile.business_name,
-      businessProfile.headline,
-      businessProfile.about,
-      businessProfile.contact_email,
-      businessProfile.contact_phone,
-      businessProfile.services.length > 0,
-      businessProfile.location.street_address
-    ];
-    const completed = fields.filter(Boolean).length;
-    setCompletionProgress((completed / fields.length) * 100);
+    setCompletionProgress(calculateCompletion(businessProfile));
   }, [businessProfile]);
 
-  const changeValue = (key, value) => {
-    setBusinessProfile(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
-
-  const addService = (service) => {
-    if (!businessProfile.services.includes(service)) {
-      changeValue('services', [...businessProfile.services, service]);
-    }
-  };
-
-  const removeService = (service) => {
-    const updatedServices = businessProfile.services.filter(s => s !== service);
-    changeValue('services', updatedServices);
-  };
-
-  async function setupBusinessProfile(e) {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    if (!businessProfile.logo) {
-      setIsSubmitting(false);
-      return notify({
-        color: 'red',
-        title: 'Logo Required',
-        body: 'Please upload your business logo to continue'
-      });
-    }
-    
-    if (businessProfile.logo && businessProfile.logo.size / 10**6 > 2.048) {
-      setIsSubmitting(false);
-      return notify({
-        color: 'red',
-        title: 'File Too Large',
-        body: 'Your logo file size exceeds 2MB. Please choose a smaller file.',
-        timeout: 4500,
-      });
-    }
-
-    try {
-      const authUser = objectifyJSON(localStorage.getItem('veyu-auth-user')) 
-                    || objectifyJSON(localStorage.getItem('motaa-auth-user'));
-      
-      if (!authUser) {
-        setIsSubmitting(false);
-        return notify({
-          title: 'Authentication Error',
-          body: 'Please log in first to set up your business profile',
-          color: 'red'
-        });
+  // Auto-submit if verification is successful
+  useEffect(() => {
+    const submitAfterVerification = async () => {
+      if (verificationCode && emailVerificationSent) {
+        await handleSubmit(new Event('submit'));
       }
+    };
+    
+    submitAfterVerification();
+  }, [verificationCode, emailVerificationSent]);
 
-      const payload = new FormData();
-      payload.append('action', 'setup-business-profile');
-      payload.append('user_type', user_type);
-      payload.append('logo', businessProfile?.logo, businessProfile.logo?.name);
-      payload.append('business_type', businessProfile.business_type);
-      payload.append('about', businessProfile.about);
-      payload.append('headline', businessProfile.headline);
-      payload.append('business_name', businessProfile.business_name);
-      payload.append('contact_phone', businessProfile.contact_phone);
-      payload.append('contact_email', businessProfile.contact_email);
-      payload.append('services', businessProfile.services);
-      payload.append('location', JSON.stringify(businessProfile.location));
+  // Calculate form completion percentage
+  const calculateCompletion = (profile) => {
+    let completedFields = 0;
+    const requiredFields = [
+      'business_name',
+      'business_type',
+      'contact_phone',
+      'contact_email',
+      'services',
+      'location',
+      'headline'
+    ];
+
+    requiredFields.forEach(field => {
+      if (field === 'services' && profile[field]?.length > 0) {
+        completedFields++;
+      } else if (field === 'location' && profile[field]?.street_address) {
+        completedFields++;
+      } else if (profile[field]) {
+        completedFields++;
+      }
+    });
+
+    // Add logo as optional but recommended
+    if (profile.logo) completedFields += 0.5;
+    if (profile.about) completedFields += 0.5;
+
+    return Math.min(100, Math.round((completedFields / requiredFields.length) * 100));
+  };
+
+  // Send verification email
+  const sendVerificationEmail = async (email) => {
+    try {
+      const response = await axios.post('/accounts/send-verification-email/', { email });
+      toast({
+        title: 'Verification Email Sent',
+        description: `We've sent a verification code to ${email}. Please check your inbox.`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      return true;
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Failed to send verification email';
+      throw new Error(errorMessage);
+    }
+  };
+
+  // Verify email with code
+  const verifyEmailCode = async (email, code) => {
+    try {
+      const response = await axios.post('/accounts/verify-email/', {
+        email,
+        code
+      });
+      return response.data.verified === true;
+    } catch (error) {
+      console.error('Verification error:', error);
+      return false;
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setIsSubmitting(true);
+      
+      // Check if email needs verification
+      if (!emailVerificationSent && businessProfile.contact_email) {
+        await sendVerificationEmail(businessProfile.contact_email);
+        setEmailVerificationSent(true);
+        return;
+      }
+      
+      // If verification is required but not completed
+      if (emailVerificationSent && !verificationCode) {
+        toast({
+          title: 'Verification Required',
+          description: 'Please enter the verification code sent to your email',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        return;
+      }
+      
+      // Verify email if code is provided
+      if (verificationCode) {
+        setIsVerifying(true);
+        try {
+          const verified = await verifyEmailCode(businessProfile.contact_email, verificationCode);
+          if (!verified) {
+            throw new Error('Invalid verification code. Please try again.');
+          }
+        } finally {
+          setIsVerifying(false);
+        }
+      }
+      
+      const authUser = JSON.parse(localStorage.getItem('veyu-auth-user'));
+      if (!authUser) {
+        throw new Error('Session expired. Please log in again.');
+      }
+      
+      // Create form data for submission
+      const formData = new FormData();
+      
+      // Append files if they exist
+      if (businessProfile.logo) {
+        formData.append('logo', businessProfile.logo);
+      }
+      
+      // Append other form data
+      formData.append('action', 'setup-business-profile');
+      formData.append('user_type', user_type);
+      formData.append('business_type', businessProfile.business_type);
+      formData.append('about', businessProfile.about || '');
+      formData.append('headline', businessProfile.headline);
+      formData.append('business_name', businessProfile.business_name);
+      formData.append('contact_phone', businessProfile.contact_phone);
+      formData.append('contact_email', businessProfile.contact_email);
+      formData.append('services', JSON.stringify(businessProfile.services));
+      formData.append('location', JSON.stringify(businessProfile.location));
       
       const token = authUser?.api_token || authUser?.token;
       
-      const res = await axios.post('/accounts/register/', payload, {
+      // Submit the form
+      const res = await axios.post('/accounts/register/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Token ${token}`
@@ -218,26 +281,24 @@ function BusinessProfile({ onSubmit, ...props }) {
       const data = objectifyJSON(res.data);
 
       if (res.status === 200 || res.status === 201) {
-        notify({
+        toast({
           title: 'Success!',
-          body: "Business profile created successfully! Welcome to Veyu!",
-          color: 'green'
+          description: 'Business profile created successfully! Welcome to Veyu!',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
         });
         
         if (data.data || data.user) {
           localStorage.setItem('veyu-auth-user', JSON.stringify(data.data || data.user || data));
         }
         
+        // Redirect to dashboard after a short delay
         setTimeout(() => {
-          redirect('/dashboard');
+          navigate('/dashboard');
         }, 1500);
       } else {
-        notify({
-          title: 'Setup Failed',
-          timeout: 5000,
-          body: data.message || 'Failed to set up business profile',
-          color: 'red'
-        });
+        throw new Error(data.message || 'Failed to set up business profile');
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message 
@@ -245,11 +306,12 @@ function BusinessProfile({ onSubmit, ...props }) {
         || (typeof error.response?.data === 'object' ? JSON.stringify(error.response?.data) : error.response?.data)
         || error.message;
       
-      notify({
+      toast({
         title: 'Error',
-        timeout: 5000,
-        body: errorMessage,
-        color: 'red'
+        description: errorMessage,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
       });
     } finally {
       setIsSubmitting(false);
@@ -272,6 +334,100 @@ function BusinessProfile({ onSubmit, ...props }) {
       transition: { duration: 0.5 }
     }
   };
+
+  // Render email verification form if verification is in progress
+  if (emailVerificationSent) {
+    return (
+      <Box bg={bgGradient} minH="100vh" display="flex" alignItems="center" py={8}>
+        <Container maxW="md">
+          <MotionCard
+            bg={cardBg}
+            p={8}
+            borderRadius="2xl"
+            shadow="2xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <VStack spacing={6} textAlign="center">
+              <Box p={4} bg="green.100" borderRadius="full">
+                <Mail size={40} color="#38A169" />
+              </Box>
+              
+              <Heading size="lg">Verify Your Email</Heading>
+              
+              <Text color={textColor}>
+                We've sent a verification code to <strong>{businessProfile.contact_email}</strong>.
+                Please enter the 6-digit code below to continue.
+              </Text>
+              
+              <VStack spacing={4} w="full">
+                <PinInput
+                  otp
+                  size="lg"
+                  value={verificationCode}
+                  onChange={(value) => setVerificationCode(value)}
+                  autoFocus
+                  isDisabled={isVerifying}
+                >
+                  {[...Array(6)].map((_, i) => (
+                    <PinInputField 
+                      key={i} 
+                      borderColor={borderColor}
+                      _focus={{
+                        borderColor: '#F4A950',
+                        boxShadow: '0 0 0 1px #F4A950'
+                      }}
+                      _hover={{ borderColor: 'orange.300' }}
+                    />
+                  ))}
+                </PinInput>
+                
+                {isVerifying ? (
+                  <Button
+                    isLoading
+                    loadingText="Verifying..."
+                    colorScheme="orange"
+                    size="lg"
+                    w="full"
+                    mt={4}
+                  />
+                ) : (
+                  <Button
+                    colorScheme="orange"
+                    size="lg"
+                    w="full"
+                    mt={4}
+                    onClick={() => handleSubmit(new Event('submit'))}
+                    isDisabled={verificationCode.length !== 6}
+                    _disabled={{
+                      opacity: 0.7,
+                      cursor: 'not-allowed',
+                      _hover: { bg: 'orange.500' }
+                    }}
+                  >
+                    Verify & Continue
+                  </Button>
+                )}
+                
+                <HStack justify="center" mt={4}>
+                  <Text color={textColor}>Didn't receive a code?</Text>
+                  <Button 
+                    variant="link" 
+                    color="#F4A950"
+                    onClick={() => sendVerificationEmail(businessProfile.contact_email)}
+                    isDisabled={isVerifying}
+                  >
+                    Resend Code
+                  </Button>
+                </HStack>
+              </VStack>
+            </VStack>
+          </MotionCard>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box bg={bgGradient} minH="100vh" py={8}>

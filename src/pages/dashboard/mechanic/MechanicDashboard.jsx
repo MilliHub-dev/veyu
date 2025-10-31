@@ -25,69 +25,96 @@ import {
   Tr,
   Badge,
   Tag,
+  SimpleGrid,
+  Card,
+  CardBody,
+  CardHeader,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  StatArrow,
+  useColorModeValue,
+  Container,
+  VStack,
+  Divider,
 } from "@chakra-ui/react"
 import {
   FaChevronDown,
   FaChevronRight,
-
 } from 'react-icons/fa6'
-// import { ChevronDownIcon, ChevronRightIcon, ClockIcon, Filter, MapPin, MoreVertical, Search, Star, User, X } from "react-feather"
 import {useState, useEffect, useContext, Fragment} from 'react';
 import {GlobalStore} from '../../../App';
 import { Link } from 'react-router-dom';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
-import {MapPin, Search, MoreVertical} from 'lucide-react'
+import {MapPin, Search, MoreVertical, TrendingUp, Users, Calendar, DollarSign, Clock, CheckCircle} from 'lucide-react'
 
-// Metric Card Component
-const MetricCard = ({ title, value, change, trend, icon, suffix }) => {
+// Modern Metric Card Component
+const MetricCard = ({ title, value, change, icon: IconComponent, suffix, color = "blue" }) => {
   const isPositive = change > 0
   const trendColor = isPositive ? "green.500" : "red.500"
-  const changeText = `${isPositive ? "+" : ""}${change}% ${isPositive ? "increase" : "decrease"} this month`
+  const changeText = `${isPositive ? "+" : ""}${change}%`
+  const bgColor = useColorModeValue("white", "gray.800")
+  const borderColor = useColorModeValue("gray.100", "gray.700")
 
   return (
-    <Box borderWidth="1px" borderColor="gray.200" borderRadius="lg" p={4} position="relative" bg="white">
-      <Flex justify="space-between" align="center" mb={2}>
-        <Text fontSize="sm" fontWeight="medium" color="gray.600">
-          {title}
-        </Text>
-      </Flex>
-      <Flex align="center" mb={2}>
-        <Text fontSize="2xl" fontWeight="bold">
-          {value}
-        </Text>
-        {suffix && <Box ml={1}>{suffix}</Box>}
-      </Flex>
-
-      {
-        change &&
-        <Fragment>
-        <Flex align="center">
-          <Text fontSize="sm" color={trendColor} fontWeight="medium">
-            {changeText}
-          </Text>
+    <Card bg={bgColor} borderColor={borderColor} shadow="sm" _hover={{ shadow: "md", transform: "translateY(-2px)" }} transition="all 0.2s">
+      <CardBody p={6}>
+        <Flex justify="space-between" align="flex-start" mb={4}>
+          <Box>
+            <Text fontSize="sm" fontWeight="medium" color="gray.600" mb={1}>
+              {title}
+            </Text>
+            <Flex align="baseline">
+              <Text fontSize="2xl" fontWeight="bold" color="gray.900">
+                {value}
+              </Text>
+              {suffix && <Text ml={1} fontSize="sm" color="gray.500">{suffix}</Text>}
+            </Flex>
+          </Box>
+          <Box p={3} bg={`${color}.50`} borderRadius="lg">
+            <IconComponent size={20} color={`var(--chakra-colors-${color}-500)`} />
+          </Box>
         </Flex>
-        <Box position="absolute" bottom="0" left="0" right="0" h="40px" overflow="hidden">
-          <svg width="100%" height="40" viewBox="0 0 200 40" preserveAspectRatio="none">
-            <path d={trend} fill="none" stroke={isPositive ? "green" : "red"} strokeWidth="1.5" opacity="0.5" />
-          </svg>
-        </Box>
-        </Fragment>
-      }
-    </Box>
+        
+        {change && (
+          <Stat>
+            <StatHelpText>
+              <Flex align="center">
+                <StatArrow type={isPositive ? "increase" : "decrease"} />
+                <Text as="span" fontSize="sm" color={trendColor} fontWeight="medium" mr={1}>
+                  {changeText}
+                </Text>
+                <Text as="span" fontSize="sm" color="gray.500">
+                  this month
+                </Text>
+              </Flex>
+            </StatHelpText>
+          </Stat>
+        )}
+      </CardBody>
+    </Card>
   )
 }
 
-// Client Info Component
-const ClientInfo = ({ customer, location, }) => (
+// Enhanced Client Info Component
+const ClientInfo = ({ customer, location }) => (
   <Flex align="center">
-    <Box mr={3} w="40px" h="40px" borderRadius="full" overflow="hidden">
-      <Avatar src={customer?.image} name={customer?.name} w="100%" h="100%" objectFit="cover" />
-    </Box>
+    <Avatar 
+      src={customer?.image} 
+      name={customer?.name} 
+      size="md"
+      mr={3}
+      border="2px solid"
+      borderColor="gray.100"
+    />
     <Box>
-      <Text fontWeight="medium">{customer?.name}</Text>
-      <Flex align="center" color="gray.500" fontSize="xs">
+      <Text fontWeight="semibold" fontSize="sm" color="gray.900">
+        {customer?.name}
+      </Text>
+      <Flex align="center" color="gray.500" fontSize="xs" mt={1}>
         <MapPin size={12} style={{ marginRight: "4px" }} />
-        {location}
+        <Text>{location}</Text>
       </Flex>
     </Box>
   </Flex>
@@ -177,197 +204,292 @@ export const MechanicOverview = () => {
   }
 
   return (
-    <Box p={4} maxW="1200px" mx="auto">
-      {/* Header */}
-      <Box mb={6}>
-        <Heading as="h1" size="lg" mb={1}>
-          Welcome back, {authUser?.first_name}
-          <span role="img" aria-label="wave">
-            👋
-          </span>
-        </Heading>
-        <Text color="gray.600">Track, manage and forecast your customers and orders.</Text>
-      </Box>
-
-      {/* Metrics */}
-      <Flex flexWrap="wrap" gap={4} mb={6}>
-        <Box flex={{ base: "1 1 100%", md: "1 1 calc(25% - 12px)" }}>
-          <MetricCard
-            title="Total Revenue"
-            value={`₦${parseInt(dashboardData?.total_revenue).toFixed(2)}`}
-            // change={10}
-            // trend="M0,30 Q40,25 60,20 T100,15 T150,5 T200,0"
-          />
-        </Box>
-        
-        <Box flex={{ base: "1 1 100%", md: "1 1 calc(25% - 12px)" }}>
-          <MetricCard
-           title="Total Hires"
-           value={parseInt(dashboardData?.total_hires)}
-           // change={-2} 
-           // trend="M0,5 Q40,10 60,15 T100,20 T150,25 T200,30"
-          />
-        </Box>
-
-        <Box flex={{ base: "1 1 100%", md: "1 1 calc(25% - 12px)" }}>
-          <MetricCard
-           title="Bookings"
-           value={`${parseInt(dashboardData?.total_bookings)}`}
-           // change={14}
-           // trend="M0,30 Q40,25 60,20 T100,15 T150,5 T200,0"
-          />
-        </Box>
-        
-      </Flex>
-
-      {/* Pending Requests */}
+    <Container maxW="7xl" py={8}>
+      {/* Modern Header */}
       <Box mb={8}>
-        <Heading as="h2" size="md" mb={4}>
-          Pending Requests
-        </Heading>
-        <Box borderWidth="1px" borderColor="gray.200" borderRadius="lg" overflow="hidden">
-          <Table variant="simple">
-            <Thead bg="gray.50">
-              <Tr>
-                <Th>ID</Th>
-                <Th>Client</Th>
-                <Th>Services</Th>
-                <Th>Date</Th>
-                <Th></Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {pendingRequests.map((request, idx) => (
-                <Tr key={request?.id}>
-                  <Td>{idx+1}</Td>
-                  <Td>
-                    <Avatar name={request?.customer?.name} src={request?.customer?.image} size="md" />
-                    {/*<ClientInfo name={request?.client} location={request.location} hasAvatar={request.hasAvatar} />*/}
-                  </Td>
-                  <Td>{request?.services?.map((service, idx) => <Tag> {service} </Tag> )}</Td>
-                  <Td>
-                    <Text>{naturalDate(new Date(request?.date_created))} | 
-                       {naturalTime(new Date(request?.date_created))}
-                    </Text>
-                  </Td>
-                  <Td>
-                    <HStack spacing={2}>
-                      <Button onClick={(e) => handleAcceptRequest(request?.uuid)} colorScheme="blue" size="sm">
-                        Accept
-                      </Button>
-                      <Button onClick={(e) => handleDeclineRequest(request?.uuid)} colorScheme="red" size="sm">
-                        Decline
-                      </Button>
-                    </HStack>
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
-      </Box>
-
-      {/* Booking History */}
-      <Box>
-        <Heading as="h2" size="md" mb={4}>
-          Booking History
-        </Heading>
-       
-        <Flex justify="space-between" mb={4} flexDir={{ base: "column", sm: "row" }} gap={3}>
-          <HStack>
-            <Menu>
-              <MenuButton as={Button} rightIcon={<FaChevronDown size={16} />} variant="outline" size="sm">
-                Recents
-              </MenuButton>
-              <MenuList>
-                <MenuItem>Last 7 days</MenuItem>
-                <MenuItem>Last 30 days</MenuItem>
-                <MenuItem>Last 90 days</MenuItem>
-              </MenuList>
-            </Menu>
-          </HStack>
-
-          <InputGroup maxW={{ base: "full", sm: "300px" }}>
-            <InputLeftElement pointerEvents="none">
-              <Search size={18} color="#667085" />
-            </InputLeftElement>
-            <Input placeholder="Search" />
-          </InputGroup>
+        <Flex justify="space-between" align="center" mb={2}>
+          <Box>
+            <Heading as="h1" size="xl" color="gray.900" mb={2}>
+              Welcome back, {authUser?.first_name}
+              <span role="img" aria-label="wave" style={{ marginLeft: "8px" }}>
+                👋
+              </span>
+            </Heading>
+            <Text color="gray.600" fontSize="lg">
+              Track, manage and forecast your customers and orders.
+            </Text>
+          </Box>
+          <Button colorScheme="blue" size="lg" leftIcon={<Calendar size={20} />}>
+            View Calendar
+          </Button>
         </Flex>
-
-        <Box borderWidth="1px" borderColor="gray.200" borderRadius="lg" overflow="hidden">
-          <Table variant="simple">
-            <Thead bg="gray.50">
-              <Tr>
-                <Th>Client</Th>
-                <Th>Service</Th>
-                <Th>Date</Th>
-                <Th>Status</Th>
-                <Th></Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {bookingHistory?.map((booking) => (
-                <Tr key={booking.id}>
-                  <Td>
-                    <ClientInfo customer={booking?.customer} location={booking?.location} />
-                  </Td>
-                  <Td>{booking?.services[0]} {booking?.services?.length > 1 && `+ ${booking?.services?.length - 1} other services`}</Td>
-                  <Td>
-                    <Text>{naturalDate(new Date(booking?.date_created))} | 
-                       {naturalTime(new Date(booking?.date_created))}
-                    </Text>
-                  </Td>
-                  <Td>
-                    <Badge
-                      colorScheme={StatusColor[booking?.status?.toLowerCase()]}
-                      px={2}
-                      py={1}
-                      borderRadius="full"
-                      textTransform="capitalize"
-                    >
-                      {booking?.status}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    <Flex gap={3}>
-                      {
-                        booking?.status === 'accepted' ?
-                        <Button size="sm" colorScheme="blue"> Start Job </Button>
-                        : booking?.status === 'working' ?
-                        <Fragment>
-                          <Button size="sm" colorScheme="blue"> Finish Job </Button>
-                          <Button size="sm" colorScheme="red"> Cancel Job </Button>
-                        </Fragment>
-                        : null
-                      }
-
-                      {
-                        !['expired', 'canceled', 'declined'].includes(booking?.status) &&
-                        <Menu>
-                          <MenuButton
-                            as={IconButton}
-                            aria-label="Options"
-                            icon={<MoreVertical size={16} />}
-                            variant="ghost"
-                            size="sm"
-                          />
-                          <MenuList>
-                            <MenuItem>View details</MenuItem>
-                            <MenuItem>Contact client</MenuItem>
-                            <MenuItem>Download invoice</MenuItem>
-                          </MenuList>
-                        </Menu>
-                      }
-                    </Flex>
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
       </Box>
-    </Box>
+
+      {/* Enhanced Metrics Grid */}
+      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
+        <MetricCard
+          title="Total Revenue"
+          value={`₦${parseInt(dashboardData?.total_revenue || 0).toLocaleString()}`}
+          change={10}
+          icon={DollarSign}
+          color="green"
+        />
+        
+        <MetricCard
+          title="Total Hires"
+          value={parseInt(dashboardData?.total_hires || 0)}
+          change={-2}
+          icon={Users}
+          color="blue"
+        />
+
+        <MetricCard
+          title="Total Bookings"
+          value={parseInt(dashboardData?.total_bookings || 0)}
+          change={14}
+          icon={Calendar}
+          color="purple"
+        />
+
+        <MetricCard
+          title="Completion Rate"
+          value="94%"
+          change={5}
+          icon={CheckCircle}
+          color="teal"
+        />
+      </SimpleGrid>
+
+      {/* Modern Pending Requests */}
+      <Card mb={8} shadow="sm">
+        <CardHeader pb={4}>
+          <Flex justify="space-between" align="center">
+            <Box>
+              <Heading as="h2" size="lg" color="gray.900">
+                Pending Requests
+              </Heading>
+              <Text color="gray.600" fontSize="sm" mt={1}>
+                {pendingRequests.length} requests awaiting your response
+              </Text>
+            </Box>
+            <Badge colorScheme="orange" px={3} py={1} borderRadius="full">
+              {pendingRequests.length} Pending
+            </Badge>
+          </Flex>
+        </CardHeader>
+        <CardBody pt={0}>
+          {pendingRequests.length > 0 ? (
+            <Box borderWidth="1px" borderColor="gray.100" borderRadius="lg" overflow="hidden">
+              <Table variant="simple">
+                <Thead bg="gray.50">
+                  <Tr>
+                    <Th color="gray.600" fontWeight="semibold">Client</Th>
+                    <Th color="gray.600" fontWeight="semibold">Services</Th>
+                    <Th color="gray.600" fontWeight="semibold">Date</Th>
+                    <Th color="gray.600" fontWeight="semibold">Actions</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {pendingRequests.map((request, idx) => (
+                    <Tr key={request?.id} _hover={{ bg: "gray.50" }}>
+                      <Td>
+                        <ClientInfo customer={request?.customer} location={request?.location} />
+                      </Td>
+                      <Td>
+                        <Flex flexWrap="wrap" gap={1}>
+                          {request?.services?.map((service, idx) => (
+                            <Tag key={idx} size="sm" colorScheme="blue" variant="subtle">
+                              {service}
+                            </Tag>
+                          ))}
+                        </Flex>
+                      </Td>
+                      <Td>
+                        <VStack align="start" spacing={0}>
+                          <Text fontSize="sm" fontWeight="medium">
+                            {naturalDate(new Date(request?.date_created))}
+                          </Text>
+                          <Text fontSize="xs" color="gray.500">
+                            {naturalTime(new Date(request?.date_created))}
+                          </Text>
+                        </VStack>
+                      </Td>
+                      <Td>
+                        <HStack spacing={2}>
+                          <Button 
+                            onClick={() => handleAcceptRequest(request?.uuid)} 
+                            colorScheme="green" 
+                            size="sm"
+                            leftIcon={<CheckCircle size={16} />}
+                          >
+                            Accept
+                          </Button>
+                          <Button 
+                            onClick={() => handleDeclineRequest(request?.uuid)} 
+                            variant="outline"
+                            colorScheme="red" 
+                            size="sm"
+                          >
+                            Decline
+                          </Button>
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          ) : (
+            <Box textAlign="center" py={8}>
+              <Clock size={48} color="var(--chakra-colors-gray-400)" style={{ margin: "0 auto 16px" }} />
+              <Text color="gray.500" fontSize="lg">No pending requests</Text>
+              <Text color="gray.400" fontSize="sm">New requests will appear here</Text>
+            </Box>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* Modern Booking History */}
+      <Card shadow="sm">
+        <CardHeader pb={4}>
+          <Flex justify="space-between" align="center" mb={4}>
+            <Box>
+              <Heading as="h2" size="lg" color="gray.900">
+                Recent Bookings
+              </Heading>
+              <Text color="gray.600" fontSize="sm" mt={1}>
+                Your latest booking activities
+              </Text>
+            </Box>
+            <Button as={Link} to="/bookings" variant="outline" size="sm">
+              View All
+            </Button>
+          </Flex>
+          
+          <Flex justify="space-between" flexDir={{ base: "column", sm: "row" }} gap={3}>
+            <HStack>
+              <Menu>
+                <MenuButton as={Button} rightIcon={<FaChevronDown size={16} />} variant="outline" size="sm">
+                  Last 30 days
+                </MenuButton>
+                <MenuList>
+                  <MenuItem>Last 7 days</MenuItem>
+                  <MenuItem>Last 30 days</MenuItem>
+                  <MenuItem>Last 90 days</MenuItem>
+                </MenuList>
+              </Menu>
+            </HStack>
+
+            <InputGroup maxW={{ base: "full", sm: "300px" }}>
+              <InputLeftElement pointerEvents="none">
+                <Search size={18} color="#667085" />
+              </InputLeftElement>
+              <Input placeholder="Search bookings..." borderColor="gray.200" />
+            </InputGroup>
+          </Flex>
+        </CardHeader>
+
+        <CardBody pt={0}>
+          {bookingHistory?.length > 0 ? (
+            <Box borderWidth="1px" borderColor="gray.100" borderRadius="lg" overflow="hidden">
+              <Table variant="simple">
+                <Thead bg="gray.50">
+                  <Tr>
+                    <Th color="gray.600" fontWeight="semibold">Client</Th>
+                    <Th color="gray.600" fontWeight="semibold">Service</Th>
+                    <Th color="gray.600" fontWeight="semibold">Date</Th>
+                    <Th color="gray.600" fontWeight="semibold">Status</Th>
+                    <Th color="gray.600" fontWeight="semibold">Actions</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {bookingHistory?.slice(0, 5).map((booking) => (
+                    <Tr key={booking.id} _hover={{ bg: "gray.50" }}>
+                      <Td>
+                        <ClientInfo customer={booking?.customer} location={booking?.location} />
+                      </Td>
+                      <Td>
+                        <Text fontWeight="medium" fontSize="sm">
+                          {booking?.services[0]}
+                        </Text>
+                        {booking?.services?.length > 1 && (
+                          <Text fontSize="xs" color="gray.500">
+                            + {booking?.services?.length - 1} more services
+                          </Text>
+                        )}
+                      </Td>
+                      <Td>
+                        <VStack align="start" spacing={0}>
+                          <Text fontSize="sm" fontWeight="medium">
+                            {naturalDate(new Date(booking?.date_created))}
+                          </Text>
+                          <Text fontSize="xs" color="gray.500">
+                            {naturalTime(new Date(booking?.date_created))}
+                          </Text>
+                        </VStack>
+                      </Td>
+                      <Td>
+                        <Badge
+                          colorScheme={StatusColor[booking?.status?.toLowerCase()]}
+                          px={3}
+                          py={1}
+                          borderRadius="full"
+                          textTransform="capitalize"
+                          fontSize="xs"
+                        >
+                          {booking?.status}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <Flex gap={2}>
+                          {booking?.status === 'accepted' && (
+                            <Button size="sm" colorScheme="blue" leftIcon={<CheckCircle size={14} />}>
+                              Start Job
+                            </Button>
+                          )}
+                          {booking?.status === 'working' && (
+                            <Fragment>
+                              <Button size="sm" colorScheme="green">
+                                Finish Job
+                              </Button>
+                              <Button size="sm" variant="outline" colorScheme="red">
+                                Cancel
+                              </Button>
+                            </Fragment>
+                          )}
+                          {!['expired', 'canceled', 'declined'].includes(booking?.status) && (
+                            <Menu>
+                              <MenuButton
+                                as={IconButton}
+                                aria-label="Options"
+                                icon={<MoreVertical size={16} />}
+                                variant="ghost"
+                                size="sm"
+                              />
+                              <MenuList>
+                                <MenuItem>View details</MenuItem>
+                                <MenuItem>Contact client</MenuItem>
+                                <MenuItem>Download invoice</MenuItem>
+                              </MenuList>
+                            </Menu>
+                          )}
+                        </Flex>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          ) : (
+            <Box textAlign="center" py={8}>
+              <Calendar size={48} color="var(--chakra-colors-gray-400)" style={{ margin: "0 auto 16px" }} />
+              <Text color="gray.500" fontSize="lg">No bookings yet</Text>
+              <Text color="gray.400" fontSize="sm">Your booking history will appear here</Text>
+            </Box>
+          )}
+        </CardBody>
+      </Card>
+    </Container>
   )
 }
 

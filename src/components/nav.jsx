@@ -875,7 +875,7 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
       top={'0px'}
       bg={!authUser ? 'primary' : 'white'}
       as={motion.div}
-      color={!mechanicAuthUser ? "white" : "black"}
+      color={!authUser ? "white" : "black"}
       flex={1} w={'100%'}
       animate={{ opacity: 1, }}
       initial={{ opacity: 0.6, }}

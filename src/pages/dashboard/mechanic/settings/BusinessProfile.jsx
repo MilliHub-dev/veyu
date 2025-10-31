@@ -3,13 +3,14 @@ import {
   Input, Stack, Switch, Textarea, VStack, Heading,
   Image, Tabs, TabList, TabPanels, Tab, TabPanel,
   IconButton, Select, Avatar, Flex, HStack, Text,
-  Divider, Tag,
+  Divider, Tag, Card, CardBody, CardHeader, Container,
+  useColorModeValue, SimpleGrid,
 } from "@chakra-ui/react";
 import { useState, useEffect, useContext, useRef } from "react";
 import { FaUpload } from "react-icons/fa";
 import {GlobalStore} from '../../../../App'
 import {objectifyJSON, jsonifyObject} from '../../../../utils'
-import { Search, Bell, CloudUpload, ChevronDown, ArrowRight } from "lucide-react";
+import { Search, Bell, CloudUpload, ChevronDown, ArrowRight, User, Building, Phone, Mail, FileText } from "lucide-react";
 
 
 let mechServices = [
@@ -111,141 +112,256 @@ export const BusinessProfile = ({  }) => {
   }, [])
 
   return (
-    <VStack spacing={6} align="stretch" py={6} maxW="container.xl" w="100%">
-      {/* Logo Upload Card */}
-      <Box bg="white" border="1px solid" borderColor="#d0d5dd" borderRadius="xl" p={6} mb={6}>
-        <VStack>
-          {
-            mechanic?.logo?.file ? (
-              <Image src={mechanic?.logo?.preview} w="80px"  />
-            ): (
-              <Image src={mechanic?.logo} w="80px"  />
-            )
-          }
+    <Container maxW="4xl" py={8}>
+      {/* Modern Header */}
+      <Box mb={8}>
+        <Heading as="h1" size="xl" color="gray.900" mb={2}>
+          Business Profile
+        </Heading>
+        <Text color="gray.600" fontSize="lg">
+          Manage your business information and settings
+        </Text>
+      </Box>
 
-          <Button onClick={e => imageRef.current.click()} variant="link" color="#0460cc" fontSize="sm" fontWeight="medium" leftIcon={<CloudUpload size={16} />}>
-            Upload image
+      <VStack spacing={8} align="stretch">
+        {/* Profile Overview Card */}
+        <Card shadow="sm">
+          <CardHeader>
+            <Heading size="md" color="gray.900">Profile Overview</Heading>
+          </CardHeader>
+          <CardBody>
+            <VStack spacing={6}>
+              {/* Logo Upload Section */}
+              <Box textAlign="center">
+                <Avatar
+                  size="2xl"
+                  src={mechanic?.logo?.file ? mechanic?.logo?.preview : mechanic?.logo}
+                  name={mechanic?.business_name}
+                  mb={4}
+                />
+                <Button 
+                  onClick={e => imageRef.current.click()} 
+                  variant="outline" 
+                  leftIcon={<CloudUpload size={16} />}
+                  size="sm"
+                >
+                  Upload Logo
+                </Button>
+                <Input type="file" hidden ref={imageRef} accept="image/*" onInput={handleImageUpload} />
+                
+                <VStack mt={4} spacing={1}>
+                  <Heading as="h3" fontSize="lg" fontWeight="semibold" color="gray.900">
+                    {mechanic?.business_name || "Business Name"}
+                  </Heading>
+                  <Text fontSize="sm" color="gray.500">
+                    @{slugify(mechanic?.business_name || "")}
+                  </Text>
+                  <Text fontSize="sm" color="gray.500">
+                    {mechanic?.location}
+                  </Text>
+                  <HStack spacing={4} mt={2} fontSize="sm" color="gray.500">
+                    <Flex align="center">
+                      <Mail size={14} style={{ marginRight: "4px" }} />
+                      <Text>{mechanic?.contact_email}</Text>
+                    </Flex>
+                    <Flex align="center">
+                      <Phone size={14} style={{ marginRight: "4px" }} />
+                      <Text>{mechanic?.contact_phone}</Text>
+                    </Flex>
+                  </HStack>
+                </VStack>
+              </Box>
+            </VStack>
+          </CardBody>
+        </Card>
+
+        {/* Business Information */}
+        <Card shadow="sm">
+          <CardHeader>
+            <Flex align="center">
+              <Building size={20} style={{ marginRight: "8px" }} />
+              <Heading size="md" color="gray.900">Business Information</Heading>
+            </Flex>
+          </CardHeader>
+          <CardBody>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+              <FormControl>
+                <FormLabel fontWeight="semibold" color="gray.700">Business Name</FormLabel>
+                <Input 
+                  name="business_name" 
+                  value={mechanic?.business_name} 
+                  onChange={handleChange}
+                  placeholder="Enter your business name"
+                />
+              </FormControl>
+              
+              <FormControl>
+                <FormLabel fontWeight="semibold" color="gray.700">Headline</FormLabel>
+                <Input 
+                  name="headline" 
+                  value={mechanic?.headline} 
+                  onInput={handleChange}
+                  placeholder="Brief description of your business"
+                />
+              </FormControl>
+
+              <FormControl gridColumn={{ base: "1", md: "1 / -1" }}>
+                <FormLabel fontWeight="semibold" color="gray.700">About Your Business</FormLabel>
+                <Textarea 
+                  name="about" 
+                  value={mechanic?.about} 
+                  onInput={handleChange} 
+                  maxLength={400}
+                  rows={4}
+                  placeholder="Tell customers about your business, experience, and what makes you special..."
+                />
+                <Text fontSize="xs" color="gray.500" mt={1}>
+                  {mechanic?.about?.length || 0}/400 characters
+                </Text>
+              </FormControl>
+
+              <FormControl>
+                <FormLabel fontWeight="semibold" color="gray.700">CAC Number</FormLabel>
+                <Input name="cac_number" disabled value={mechanic?.cac_number} bg="gray.50" />
+              </FormControl>
+
+              <FormControl>
+                <FormLabel fontWeight="semibold" color="gray.700">TIN Number</FormLabel>
+                <Input name="tin_number" disabled value={mechanic?.tin_number} bg="gray.50" />
+              </FormControl>
+            </SimpleGrid>
+          </CardBody>
+        </Card>
+
+        {/* Services Offered */}
+        <Card shadow="sm">
+          <CardHeader>
+            <Flex align="center">
+              <FileText size={20} style={{ marginRight: "8px" }} />
+              <Box>
+                <Heading size="md" color="gray.900">Services Offered</Heading>
+                <Text fontSize="sm" color="gray.600" mt={1}>
+                  Select the services you provide to customers
+                </Text>
+              </Box>
+            </Flex>
+          </CardHeader>
+          <CardBody>
+            <Box border="1px solid" borderColor="gray.200" borderRadius="lg" overflow="hidden">
+              <Box p={4} borderBottom="1px solid" borderColor="gray.200" bg="gray.50">
+                <Text fontWeight="semibold" mb={3} color="gray.700">Available Services</Text>
+                <Flex flexWrap="wrap" gap={2}>
+                  {mechServices?.map((service) => {
+                    const selected = mechanic?.services?.includes(service);
+                    if (selected) return null;
+                    return (
+                      <Tag
+                        key={service}
+                        variant="outline"
+                        size="lg"
+                        cursor="pointer"
+                        borderRadius="full"
+                        fontSize="sm"
+                        bg="white"
+                        color="gray.700"
+                        borderColor="gray.300"
+                        _hover={{ bg: "blue.50", borderColor: "blue.300", color: "blue.700" }}
+                        onClick={() => changeValue('services', [...mechanic?.services, service])}
+                      >
+                        + {service}
+                      </Tag>
+                    );
+                  })}
+                </Flex>
+              </Box>
+
+              <Box p={4}>
+                <Text fontWeight="semibold" mb={3} color="gray.700">Selected Services</Text>
+                <Flex flexWrap="wrap" gap={2}>
+                  {mechanic?.services?.map((service, index) => (
+                    <Tag
+                      key={index}
+                      variant="solid"
+                      cursor="pointer"
+                      size="lg"
+                      borderRadius="full"
+                      fontSize="sm"
+                      colorScheme="blue"
+                      _hover={{ bg: "blue.600" }}
+                      onClick={() => removeService(service)}
+                    >
+                      {service?.service} @ ₦{commaInt(service?.charge)} ✕
+                    </Tag>
+                  ))}
+                  {mechanic?.services?.length < 1 && (
+                    <Text color="gray.500" fontSize="sm">
+                      Select at least one service you offer from the available services above
+                    </Text>
+                  )}
+                </Flex>
+              </Box>
+            </Box>
+          </CardBody>
+        </Card>
+
+        {/* Contact Information */}
+        <Card shadow="sm">
+          <CardHeader>
+            <Flex align="center">
+              <Phone size={20} style={{ marginRight: "8px" }} />
+              <Box>
+                <Heading size="md" color="gray.900">Contact Information</Heading>
+                <Text fontSize="sm" color="gray.600" mt={1}>
+                  Customer care contact details
+                </Text>
+              </Box>
+            </Flex>
+          </CardHeader>
+          <CardBody>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+              <FormControl>
+                <FormLabel fontWeight="semibold" color="gray.700">
+                  <Flex align="center">
+                    <Mail size={16} style={{ marginRight: "8px" }} />
+                    Email Address
+                  </Flex>
+                </FormLabel>
+                <Input 
+                  type="email" 
+                  name="contact_email" 
+                  value={mechanic?.contact_email} 
+                  onInput={handleChange}
+                  placeholder="business@example.com"
+                />
+              </FormControl>
+
+              <FormControl>
+                <FormLabel fontWeight="semibold" color="gray.700">
+                  <Flex align="center">
+                    <Phone size={16} style={{ marginRight: "8px" }} />
+                    Phone Number
+                  </Flex>
+                </FormLabel>
+                <Input 
+                  type="tel" 
+                  name="contact_phone" 
+                  value={mechanic?.contact_phone} 
+                  onInput={handleChange}
+                  placeholder="+234 xxx xxx xxxx"
+                />
+              </FormControl>
+            </SimpleGrid>
+          </CardBody>
+        </Card>
+
+        {/* Save Button */}
+        <Flex justify="flex-end">
+          <Button colorScheme="blue" size="lg" onClick={handleSubmit} px={8}>
+            Save Changes
           </Button>
-          <Input type="file" hidden ref={imageRef} accept="image/*" onInput={handleImageUpload} />
-          <VStack mt={4} spacing={0}>
-            <Heading as="h3" fontSize="md" fontWeight="semibold" color="#101828">
-              {mechanic?.business_name}
-            </Heading>
-            <Text fontSize="xs" color="#667085">
-              {mechanic?.location}
-            </Text>
-            <HStack flexWrap={{base: 'wrap', md: 'nowrap'}} justifyContent="center" mt={2} fontSize="sm" color="#667085">
-              <Text>{mechanic?.contact_email}</Text>
-              <Text>•</Text>
-              <Text>{mechanic?.contact_phone}</Text>
-            </HStack>
-          </VStack>
-        </VStack>
-      </Box>
-
-      <FormControl>
-        <FormLabel>Business Name</FormLabel>
-        <Input name="business_name" value={mechanic?.business_name} onChange={handleChange} />
-
-        <Text size="xs" color="gray.500" mt={2}> @{slugify(mechanic?.business_name)} </Text>
-      </FormControl>
-      
-      <FormControl>
-        <FormLabel>Headline</FormLabel>
-        <Input name="headline" value={mechanic?.headline} onInput={handleChange} />
-      </FormControl>
-
-      <FormControl>
-        <FormLabel>About</FormLabel>
-        <Textarea name="about" value={mechanic?.about} onInput={handleChange} maxLength={400} />
-      </FormControl>
-
-      <FormControl>
-        <FormLabel>CAC Number</FormLabel>
-        <Input name="cac_number" disabled value={mechanic?.cac_number}/>
-      </FormControl>
-
-      <FormControl>
-        <FormLabel>TIN Number</FormLabel>
-        <Input name="tin_number" disabled value={mechanic?.tin_number}/>
-      </FormControl>
-
-      {/* Choose Services */}
-      <Box mb={6}>
-        <FormLabel fontWeight="medium" mb={2}> Services Offered </FormLabel>
-        <Box border="1px solid" borderColor="#d0d5dd" borderRadius="lg" overflow="hidden">
-          <Box p={3} borderBottom="1px solid" borderColor="#d0d5dd">
-            <FormLabel fontWeight="medium" mb={2}> Choose services </FormLabel>
-            <Flex flexWrap="wrap" gap={2}>
-            {
-              mechServices?.map((service) => {
-                const selected = mechanic?.services?.includes(service);
-                if (selected) return null;
-                return (
-                  <Tag
-                    variant={selected ? "solid" : "outline"}
-                    size="lg"
-                    cursor="pointer"
-                    borderRadius="full"
-                    fontSize="sm"
-                    bg={selected ? "#f2f4f7" : "white"}
-                    color={selected ? "#101828" : "#667085"}
-                    borderColor="#d0d5dd"
-                    _hover={{ bg: selected ? "#e4e7ec" : "gray.50" }}
-                    onClick={() => changeValue('services', [...mechanic?.services, service])}
-                  >
-                    {service?.service}
-                  </Tag>
-                )
-              }
-            )}
-            </Flex>
-          </Box>
-
-          <Box p={3}>
-            <Flex flexWrap="wrap" gap={2}>
-              {
-                mechanic?.services?.map((service) => 
-                  <Tag
-                    variant={"solid"}
-                    cursor="pointer"
-                    size="lg"
-                    borderRadius="full"
-                    fontSize="sm"
-                    bg={"#0460cc"}
-                    color={"white"}
-                    borderColor={"#0460cc"}
-                    _hover={{ bg: "#0354b4"}}
-                    onClick={() => removeService(service)}
-                  >
-                    {service?.service} @ {commaInt(service?.charge)}
-                  </Tag>
-                )
-              }
-              {mechanic?.services.length < 1 && <Text> Select at least one service you offer </Text>}
-            </Flex>
-          </Box>
-        </Box>
-      </Box>
-
-      <Divider my={4} />
-
-      {/* Customer Care Details */}
-      <Heading size="md" pb={0} mb={0}> Contact Details </Heading>
-      <Text as="small"> Customer care contact details  </Text>
-
-      <FormControl>
-        <FormLabel>Email</FormLabel>
-        <Input type="email" name="contact_email" value={mechanic?.contact_email} onInput={handleChange} />
-      </FormControl>
-
-      <FormControl>
-        <FormLabel> Phone Number</FormLabel>
-        <Input type="tel" name="contact_phone" value={mechanic?.contact_phone} onInput={handleChange} />
-      </FormControl>
-
-      <Button colorScheme="blue" onClick={handleSubmit}>Save Changes</Button>
-    </VStack>
+        </Flex>
+      </VStack>
+    </Container>
   );
 }
 
