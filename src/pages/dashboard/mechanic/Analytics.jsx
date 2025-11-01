@@ -19,6 +19,8 @@ import {GlobalStore} from '../../../App';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import { useState, useContext, useEffect, useRef} from 'react';
 import { TrendingUp, DollarSign, Users, Calendar, BarChart3 } from 'lucide-react';
+import { mechanicService } from '../../../services';
+import { useToast } from '@chakra-ui/react';
 
 
 
@@ -111,63 +113,90 @@ const ModernStatCard = ({ title, value, icon: IconComponent, color = "blue", cha
 
 
 export default function MechanicAnalytics() {
-  const [charts, setCharts] = useState({});
-  const [loading, setLoadingState] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [timeframe, setTimeframe] = useState('30');
   const [chartsData, setChartsData] = useState({
+    revenue: { amount: 0, chart_data: null },
+    jobs: { hires: 0, pending: 0, canceled: 0 },
     revenue_chart: {
-      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun",],
+      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
       datasets: [{
         label: "Revenue",
-        data: [0, 0, 0, 0, 0, 0, 0, null, null, null, null, null],
+        data: [0, 0, 0, 0, 0, 0],
         backgroundColor: "#3182CE",
-      }],
-    },
-    sales_chart: {
-      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-      datasets: [{
-        label: "Deals",
-        data: [0, 0, 0, 0, 0, 0, 0, null, null, null, null, null],
-        borderColor: "#E53E3E",
-        fill: false,
       }],
     }
   });
-  const {axios, notify} = useContext(GlobalStore);
+  const toast = useToast();
 
-  async function getChartData(){
-    const res = await axios.get('/admin/mechanics/analytics/?charts=all')
-    const data = objectifyJSON(res.data);
-
-    if (res.status === 200){
-      console.log("Analytics Data:", data.data);
-      setChartsData(data.data);
-    }else{
-      notify({
-        title: 'An error occured',
-        body: data?.message,
-        color: 'red'
-      })
+  async function getAnalyticsData(){
+    try {
+      setError(null);
+      const params = { 
+        charts: 'all',
+        timeframe: timeframe === '7' ? 'week' : timeframe === '30' ? 'month' : 'quarter'
+      };
+      
+      const data = await mechanicService.getAnalytics(params);
+      console.log("Analytics Data:", data);
+      
+      setChartsData(data.data || data);
+    } catch (error) {
+      console.error("Error fetching analytics data:", error);
+      setError(error.message);
+      toast({
+        title: 'Error',
+        description: 'Failed to load analytics data. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
-
   }
 
-  function makeCharts(){
-
+  async function init(){
+    setLoading(true);
+    await getAnalyticsData();
+    setLoading(false);
   }
 
-
-  function init(){
-    getChartData();
-    setTimeout(() => setLoadingState(false), 2000)
-  }
+  const handleTimeframeChange = async (newTimeframe) => {
+    setTimeframe(newTimeframe);
+    setLoading(true);
+    await getAnalyticsData();
+    setLoading(false);
+  };
 
   useEffect(() => {
     init();
-  }, [])
-
+  }, []);
 
   if (loading){
-    return null
+    return (
+      <Container maxW="7xl" py={8}>
+        <VStack spacing={8}>
+          <Box textAlign="center">
+            <Text fontSize="lg" color="gray.600">Loading analytics...</Text>
+          </Box>
+        </VStack>
+      </Container>
+    )
+  }
+
+  if (error && !chartsData) {
+    return (
+      <Container maxW="7xl" py={8}>
+        <VStack spacing={8}>
+          <Box textAlign="center">
+            <Text fontSize="lg" color="red.500" mb={4}>Failed to load analytics</Text>
+            <Button onClick={init} colorScheme="blue">
+              Try Again
+            </Button>
+          </Box>
+        </VStack>
+      </Container>
+    )
   }
 
   return (
@@ -184,7 +213,12 @@ export default function MechanicAnalytics() {
             </Text>
           </Box>
           <HStack>
-            <Select size="sm" defaultValue="30" maxW="120px">
+            <Select 
+              size="sm" 
+              value={timeframe} 
+              onChange={(e) => handleTimeframeChange(e.target.value)}
+              maxW="120px"
+            >
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
               <option value="90">Last 90 days</option>

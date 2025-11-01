@@ -47,7 +47,9 @@ import {useState, useEffect, useContext, Fragment} from 'react';
 import {GlobalStore} from '../../../App';
 import { Link } from 'react-router-dom';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
-import {MapPin, Search, MoreVertical, TrendingUp, Users, Calendar, DollarSign, Clock, CheckCircle} from 'lucide-react'
+import {MapPin, Search, MoreVertical, TrendingUp, Users, Calendar, DollarSign, Clock, CheckCircle} from 'lucide-react';
+import { mechanicService } from '../../../services';
+import { useToast } from '@chakra-ui/react';
 
 // Modern Metric Card Component
 const MetricCard = ({ title, value, change, icon: IconComponent, suffix, color = "blue" }) => {
@@ -133,64 +135,117 @@ const StatusColor = {
 
 
 export const MechanicOverview = () => {
-  const {authUser, axios, notify, naturalDate, naturalTime} = useContext(GlobalStore);
+  const {authUser, naturalDate, naturalTime} = useContext(GlobalStore);
   const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState();
+  const [error, setError] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [bookingHistory, setBookingHistory] = useState([]);
+  const toast = useToast();
 
   async function getData(){
-    const res = await axios.get('/admin/mechanics/dashboard/');
-    const data = objectifyJSON(res.data);
-
-    if (res.status === 200){
-      // console.log("Dashboard Data:", data.data)
-      setDashboardData(data.data)
-      setPendingRequests(data.data.pending_requests)
-      setBookingHistory(data.data.booking_history)
+    try {
+      setError(null);
+      const data = await mechanicService.getDashboardData();
+      
+      console.log("Dashboard Data:", data);
+      setDashboardData(data.data || data);
+      setPendingRequests(data.data?.pending_requests || data.pending_requests || []);
+      setBookingHistory(data.data?.booking_history || data.booking_history || []);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      setError(error.message);
+      toast({
+        title: 'Error',
+        description: 'Failed to load dashboard data. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   }
 
-  function init(){
+  async function init(){
     setLoading(true);
-    getData();
-    setTimeout(() => setLoading(false), 2000);
+    await getData();
+    setLoading(false);
   }
 
-
-
-
   async function handleAcceptRequest(requestId){
-    const res = await axios.post(`/admin/mechanics/bookings/${requestId}/`, jsonifyObject({
-      action: 'accept'
-    }));
-    const data = await objectifyJSON(res.data);
-    if (res.status === 200){
-      notify({
+    try {
+      await mechanicService.acceptBooking(requestId);
+      
+      toast({
         title: 'Success',
-        body: 'Request Accepted!',
-        level: 'info'
+        description: 'Request accepted successfully!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
       });
 
-      init();
-
+      // Refresh data
+      await getData();
+    } catch (error) {
+      console.error("Error accepting request:", error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to accept request. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   }
   
   async function handleDeclineRequest(requestId){
-    const res = await axios.post(`/admin/mechanics/bookings/${requestId}/`, jsonifyObject({
-      action: 'decline'
-    }));
-    const data = await objectifyJSON(res.data);
-    if (res.status === 200){
-      notify({
+    try {
+      await mechanicService.declineBooking(requestId, 'Declined by mechanic');
+      
+      toast({
         title: 'Success',
-        body: 'Request Declined!',
-        level: 'info'
+        description: 'Request declined successfully!',
+        status: 'info',
+        duration: 3000,
+        isClosable: true,
       });
 
-      init();
+      // Refresh data
+      await getData();
+    } catch (error) {
+      console.error("Error declining request:", error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to decline request. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  }
 
+  async function handleStartJob(bookingId) {
+    try {
+      await mechanicService.startJob(bookingId);
+      
+      toast({
+        title: 'Success',
+        description: 'Job started successfully!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+
+      // Refresh data
+      await getData();
+    } catch (error) {
+      console.error("Error starting job:", error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to start job. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   }
 
@@ -200,7 +255,30 @@ export const MechanicOverview = () => {
   }, []);
 
   if (loading){
-    return null
+    return (
+      <Container maxW="7xl" py={8}>
+        <VStack spacing={8}>
+          <Box textAlign="center">
+            <Text fontSize="lg" color="gray.600">Loading dashboard...</Text>
+          </Box>
+        </VStack>
+      </Container>
+    )
+  }
+
+  if (error && !dashboardData) {
+    return (
+      <Container maxW="7xl" py={8}>
+        <VStack spacing={8}>
+          <Box textAlign="center">
+            <Text fontSize="lg" color="red.500" mb={4}>Failed to load dashboard</Text>
+            <Button onClick={init} colorScheme="blue">
+              Try Again
+            </Button>
+          </Box>
+        </VStack>
+      </Container>
+    )
   }
 
   return (
@@ -443,7 +521,12 @@ export const MechanicOverview = () => {
                       <Td>
                         <Flex gap={2}>
                           {booking?.status === 'accepted' && (
-                            <Button size="sm" colorScheme="blue" leftIcon={<CheckCircle size={14} />}>
+                            <Button 
+                              size="sm" 
+                              colorScheme="blue" 
+                              leftIcon={<CheckCircle size={14} />}
+                              onClick={() => handleStartJob(booking?.uuid || booking?.id)}
+                            >
                               Start Job
                             </Button>
                           )}

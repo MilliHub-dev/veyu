@@ -34,51 +34,111 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react"
 import {ArrowLeft, Plus, DollarSign, Clock} from 'lucide-react';
-import {Link, useNavigate} from 'react-router-dom'
+import {Link, useNavigate} from 'react-router-dom';
+import { mechanicService } from '../../../../services';
+import { useToast } from '@chakra-ui/react';
 
 
 export const CreateServiceOffering = () => {
   const [services, setServices] = useState([]);
   const [serviceOffering, setServiceOffering] = useState({
-    service: '',
+    title: '',
     charge: '',
     charge_rate: 'flat',
     description: '',
   });
-  const {axios, notify, authUser } = useContext(GlobalStore);
-  const redirect = useNavigate()
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const toast = useToast();
 
   async function init(){
-    const res = await axios.get('/admin/mechanics/services/add/');
-    const data = await objectifyJSON(res.data);
-
-    if (res.status === 200){
-      setServices(data?.data);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const data = await mechanicService.getAvailableServices();
+      console.log("Available Services:", data);
+      
+      setServices(data?.data || data || []);
+    } catch (error) {
+      console.error("Error fetching available services:", error);
+      setError(error.message);
+      toast({
+        title: 'Error',
+        description: 'Failed to load available services. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
     }
-
   }
-
 
   async function handleCreate(e){
     e.preventDefault();
-    const payload = {
-      ...serviceOffering
+    
+    if (!serviceOffering.title || !serviceOffering.charge || !serviceOffering.charge_rate) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
     }
-    const res = await axios.post('/admin/mechanics/services/add/', jsonifyObject(payload));
-    const data = await objectifyJSON(res.data);
 
-    if (res.status === 201){
-      console.log("Bookings:", data);
-      notify({
-        'title': 'Successfully created new service'
-      })
-      return redirect('/services');
+    try {
+      setSubmitting(true);
+      
+      const payload = {
+        ...serviceOffering,
+        service: serviceOffering.title, // Map title to service for API compatibility
+      };
+      
+      await mechanicService.createServiceOffering(payload);
+      
+      toast({
+        title: 'Success',
+        description: 'Service created successfully!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      
+      navigate('/services');
+    } catch (error) {
+      console.error("Error creating service:", error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create service. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setSubmitting(false);
     }
   }
 
   useEffect(() => {
     init();
-  }, [])
+  }, []);
+
+  if (loading) {
+    return (
+      <Container maxW="4xl" py={8}>
+        <VStack spacing={8}>
+          <Box textAlign="center">
+            <Text fontSize="lg" color="gray.600">Loading...</Text>
+          </Box>
+        </VStack>
+      </Container>
+    )
+  }
 
   return (
     <Container maxW="4xl" py={8}>
@@ -210,6 +270,8 @@ export const CreateServiceOffering = () => {
                   size="lg" 
                   type="submit"
                   leftIcon={<Plus size={20} />}
+                  isLoading={submitting}
+                  loadingText="Creating Service..."
                   isDisabled={!serviceOffering?.title || !serviceOffering?.charge || !serviceOffering?.charge_rate}
                 >
                   Create Service

@@ -10,6 +10,8 @@ import { FaUpload } from "react-icons/fa";
 import {GlobalStore} from '../../../../App'
 import {objectifyJSON, jsonifyObject} from '../../../../utils'
 import { Search, Bell, CloudUpload, ChevronDown, ArrowRight } from "lucide-react";
+import { apiClient } from '../../../../services/api';
+import authService from '../../../../services/authService';
 
 
 
@@ -57,17 +59,14 @@ export const BusinessProfile = ({  }) => {
 
   async function getDealership() {
     try {
-      const response = await axios.get('/accounts/dealership/me/');
-      if (response.status === 200) {
-        const data = response.data;
-        console.log('Fetched dealership data:', data);
-        setDealership(prev => ({
-          ...prev,
-          ...data,
-          // Preserve any existing file preview
-          logo: prev.logo?.preview ? prev.logo : data.logo
-        }));
-      }
+      const data = await authService.getProfile();
+      console.log('Fetched dealership data:', data);
+      setDealership(prev => ({
+        ...prev,
+        ...data,
+        // Preserve any existing file preview
+        logo: prev.logo?.preview ? prev.logo : data.logo
+      }));
     } catch (error) {
       console.error('Error fetching dealership data:', error);
       notify({
@@ -105,16 +104,36 @@ export const BusinessProfile = ({  }) => {
         payload.append('logo', dealership.logo.file);
       }
 
-      console.log('Saving dealership settings...');
-      const response = await axios.patch('/accounts/dealership/me/', payload, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'X-CSRFToken': document.cookie.match(/csrftoken=([^ ;]+)/)?.[1] || ''
+      console.log(`🔄 NEW CODE [${new Date().toISOString()}]: Saving dealership settings with authService.updateProfile...`);
+      console.log('🔄 NEW CODE: Profile data:', profileData);
+      
+      // Convert FormData to regular object for authService
+      const profileData = {};
+      for (let [key, value] of payload.entries()) {
+        if (key === 'services' || key === 'location') {
+          try {
+            profileData[key] = JSON.parse(value);
+          } catch {
+            profileData[key] = value;
+          }
+        } else {
+          profileData[key] = value;
         }
-      });
-
-      if (response.status === 200) {
-        const data = response.data;
+      }
+      
+      // Handle file upload separately if there's a logo
+      if (dealership.logo && typeof dealership.logo === 'object' && dealership.logo.file) {
+        try {
+          await authService.uploadProfilePhoto(dealership.logo.file);
+        } catch (logoError) {
+          console.error('Logo upload failed:', logoError);
+          // Continue with profile update even if logo fails
+        }
+      }
+      
+      const data = await authService.updateProfile(profileData);
+      
+      if (data) {
         notify({
           title: 'Success!',
           description: 'Dealership settings saved successfully.',

@@ -39,7 +39,9 @@ import {
   StatNumber,
 } from "@chakra-ui/react"
 import {MoreVertical, Plus, Settings, TrendingUp, Users, DollarSign} from 'lucide-react';
-import {Link} from 'react-router-dom'
+import {Link} from 'react-router-dom';
+import { mechanicService } from '../../../../services';
+import { useToast } from '@chakra-ui/react';
 
 const BookingStatusColors = {
   'accepted': 'blue',
@@ -67,35 +69,130 @@ const PreviewCard = ({ service, charge, images, charge_rate, description }) => (
 )
 
 export const ServiceOfferings = () => {
-  const [services, setServices] = useState([]);
   const [serviceOfferings, setServiceOfferings] = useState([]);
-  const {axios, notify, authUser } = useContext(GlobalStore);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const toast = useToast();
 
   async function init(){
-    const res = await axios.get('/admin/mechanics/services/');
-    const data = await objectifyJSON(res.data);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const data = await mechanicService.getServiceOfferings();
+      console.log("Service Offerings:", data);
+      
+      setServiceOfferings(data.data || data || []);
+    } catch (error) {
+      console.error("Error fetching service offerings:", error);
+      setError(error.message);
+      toast({
+        title: 'Error',
+        description: 'Failed to load service offerings. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
 
-    if (res.status === 200){
-      console.log("Bookings:", data);
-      // setServices(data.data);
-      setServiceOfferings(data.data);
+  const handleToggleService = async (serviceId, isActive) => {
+    try {
+      await mechanicService.toggleServiceStatus(serviceId, isActive);
+      
+      toast({
+        title: 'Success',
+        description: isActive ? 'Service activated successfully!' : 'Service deactivated successfully!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+
+      // Update local state
+      setServiceOfferings(prev => 
+        prev.map(service => 
+          service.uuid === serviceId || service.id === serviceId 
+            ? { ...service, is_active: isActive }
+            : service
+        )
+      );
+    } catch (error) {
+      console.error("Error toggling service status:", error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update service status. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleDeleteService = async (serviceId) => {
+    if (!window.confirm('Are you sure you want to delete this service? This action cannot be undone.')) {
+      return;
     }
 
-  }
+    try {
+      await mechanicService.deleteServiceOffering(serviceId);
+      
+      toast({
+        title: 'Success',
+        description: 'Service deleted successfully!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+
+      // Remove from local state
+      setServiceOfferings(prev => 
+        prev.filter(service => 
+          service.uuid !== serviceId && service.id !== serviceId
+        )
+      );
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete service. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
 
   useEffect(() => {
     init();
-  }, [])
+  }, []);
 
-  // Filter bookings based on selected filter
-  const handleFilterChange = (filter) => {
-    setActiveFilter(filter)
+  if (loading) {
+    return (
+      <Container maxW="7xl" py={8}>
+        <VStack spacing={8}>
+          <Box textAlign="center">
+            <Text fontSize="lg" color="gray.600">Loading services...</Text>
+          </Box>
+        </VStack>
+      </Container>
+    )
+  }
 
-    if (filter === "All") {
-      setFilteredBookings(bookingHistory)
-    } else {
-      setFilteredBookings(bookingHistory.filter((booking) => booking.status === filter))
-    }
+  if (error && !serviceOfferings.length) {
+    return (
+      <Container maxW="7xl" py={8}>
+        <VStack spacing={8}>
+          <Box textAlign="center">
+            <Text fontSize="lg" color="red.500" mb={4}>Failed to load services</Text>
+            <Button onClick={init} colorScheme="blue">
+              Try Again
+            </Button>
+          </Box>
+        </VStack>
+      </Container>
+    )
   }
 
   return (
@@ -237,14 +334,8 @@ export const ServiceOfferings = () => {
                       <Td>
                         <Switch 
                           colorScheme="green"
-                          defaultChecked
-                          onChange={(e) => {
-                            notify({
-                              color: 'blue',
-                              level: 'info',
-                              title: e.target.checked ? 'Service Activated' : 'Service Deactivated'
-                            })
-                          }} 
+                          isChecked={offering?.is_active !== false}
+                          onChange={(e) => handleToggleService(offering?.uuid || offering?.id, e.target.checked)}
                         />
                       </Td>
                       <Td>
@@ -260,7 +351,12 @@ export const ServiceOfferings = () => {
                             <MenuItem>Edit service</MenuItem>
                             <MenuItem>View analytics</MenuItem>
                             <MenuItem>Duplicate service</MenuItem>
-                            <MenuItem color="red.500">Delete service</MenuItem>
+                            <MenuItem 
+                              color="red.500"
+                              onClick={() => handleDeleteService(offering?.uuid || offering?.id)}
+                            >
+                              Delete service
+                            </MenuItem>
                           </MenuList>
                         </Menu>
                       </Td>

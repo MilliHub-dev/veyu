@@ -40,6 +40,8 @@ import {
   TabPanel,
 } from "@chakra-ui/react"
 import {MoreVertical, MapPin, Search, CheckCircle, Clock, Filter} from 'lucide-react';
+import { mechanicService } from '../../../services';
+import { useToast } from '@chakra-ui/react';
 
 const BookingStatusColors = {
   'accepted': 'blue',
@@ -80,7 +82,11 @@ const Bookings = () => {
   const [bookingHistory, setBookingHistory] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [filteredBookings, setFilteredBookings] = useState([]);
-  const {axios, notify, authUser, naturalDate, naturalTime } = useContext(GlobalStore);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const {naturalDate, naturalTime } = useContext(GlobalStore);
+  const toast = useToast();
 
   const filters = [
     'All',
@@ -91,84 +97,175 @@ const Bookings = () => {
   ]
 
   async function init(){
-    const res = await axios.get('/admin/mechanics/bookings/');
-    const data = await objectifyJSON(res.data);
-
-    if (res.status === 200){
-      console.log("Bookings:", data.bookings);
-      setPendingRequests(data.bookings.requests);
-      setBookingHistory(data.bookings.history);
-      setFilteredBookings(data.bookings.history);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const data = await mechanicService.getBookings();
+      console.log("Bookings:", data);
+      
+      const requests = data.bookings?.requests || data.requests || [];
+      const history = data.bookings?.history || data.history || [];
+      
+      setPendingRequests(requests);
+      setBookingHistory(history);
+      setFilteredBookings(history);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      setError(error.message);
+      toast({
+        title: 'Error',
+        description: 'Failed to load bookings. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
     }
   }
 
-
   async function handleStartJob(requestId){
-    const res = await axios.post(`/admin/mechanics/bookings/${requestId}/`, jsonifyObject({
-      action: 'start-job'
-    }));
-    const data = await objectifyJSON(res.data);
-    if (res.status === 200){
-      notify({
+    try {
+      await mechanicService.startJob(requestId);
+      
+      toast({
         title: 'Success',
-        body: 'Job Started!',
-        level: 'info'
+        description: 'Job started successfully!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
       });
 
-      init();
-
+      await init();
+    } catch (error) {
+      console.error("Error starting job:", error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to start job. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   }
   
-
   // Filter bookings based on selected filter
   const handleFilterChange = (filter) => {
     setActiveFilter(filter)
 
-    if (filter === "All") {
-      setFilteredBookings(bookingHistory)
-    } else {
-      setFilteredBookings(bookingHistory.filter((booking) => booking.status.toLowerCase() === filter.toLowerCase()))
+    let filtered = bookingHistory;
+    
+    if (filter !== "All") {
+      filtered = bookingHistory.filter((booking) => 
+        booking.status.toLowerCase() === filter.toLowerCase()
+      );
     }
+
+    // Apply search filter if there's a search query
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((booking) =>
+        booking.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        booking.services?.some(service => 
+          service.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      );
+    }
+
+    setFilteredBookings(filtered);
   }
 
+  const handleSearchChange = (query) => {
+    setSearchQuery(query);
+    handleFilterChange(activeFilter); // Re-apply current filter with search
+  };
 
   async function handleAcceptRequest(requestId){
-    const res = await axios.post(`/admin/mechanics/bookings/${requestId}/`, jsonifyObject({
-      action: 'accept'
-    }));
-    const data = await objectifyJSON(res.data);
-    if (res.status === 200){
-      notify({
+    try {
+      await mechanicService.acceptBooking(requestId);
+      
+      toast({
         title: 'Success',
-        body: 'Request Accepted!',
-        level: 'info'
+        description: 'Request accepted successfully!',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
       });
 
-      init();
+      await init();
 
+    } catch (error) {
+      console.error("Error accepting request:", error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to accept request. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   }
   
   async function handleDeclineRequest(requestId){
-    const res = await axios.post(`/admin/mechanics/bookings/${requestId}/`, jsonifyObject({
-      action: 'decline'
-    }));
-    const data = await objectifyJSON(res.data);
-    if (res.status === 200){
-      notify({
+    try {
+      await mechanicService.declineBooking(requestId, 'Declined by mechanic');
+      
+      toast({
         title: 'Success',
-        body: 'Request Declined!',
-        level: 'info'
+        description: 'Request declined successfully!',
+        status: 'info',
+        duration: 3000,
+        isClosable: true,
       });
 
-      init();
-
+      await init();
+    } catch (error) {
+      console.error("Error declining request:", error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to decline request. Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     }
   }
 
-
   useEffect(() => {
+    init();
+  }, []);
+
+  // Apply filters when activeFilter or searchQuery changes
+  useEffect(() => {
+    handleFilterChange(activeFilter);
+  }, [activeFilter, searchQuery, bookingHistory]);
+
+  if (loading) {
+    return (
+      <Container maxW="7xl" py={8}>
+        <VStack spacing={8}>
+          <Box textAlign="center">
+            <Text fontSize="lg" color="gray.600">Loading bookings...</Text>
+          </Box>
+        </VStack>
+      </Container>
+    )
+  }
+
+  if (error && !bookingHistory.length) {
+    return (
+      <Container maxW="7xl" py={8}>
+        <VStack spacing={8}>
+          <Box textAlign="center">
+            <Text fontSize="lg" color="red.500" mb={4}>Failed to load bookings</Text>
+            <Button onClick={init} colorScheme="blue">
+              Try Again
+            </Button>
+          </Box>
+        </VStack>
+      </Container>
+    )
+  }
     init();
   }, [])
 
@@ -301,7 +398,12 @@ const Bookings = () => {
               <InputLeftElement pointerEvents="none">
                 <Search size={18} color="#667085" />
               </InputLeftElement>
-              <Input placeholder="Search bookings..." borderColor="gray.200" />
+              <Input 
+                placeholder="Search bookings..." 
+                borderColor="gray.200" 
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
             </InputGroup>
           </Flex>
 

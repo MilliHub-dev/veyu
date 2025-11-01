@@ -104,7 +104,36 @@ function App() {
   };
 
   const onAuthenticated = (data) => {
+    // Store user data
     localStorage.setItem("veyu-auth-user", JSON.stringify(data));
+    localStorage.setItem("veyu_user_data", JSON.stringify(data.user || data));
+    
+    // Store tokens - check different possible formats
+    let accessToken = null;
+    if (data.token) {
+      if (typeof data.token === 'string') {
+        // Token is a string directly
+        accessToken = data.token;
+      } else if (data.token.access) {
+        // Token is an object with access/refresh
+        accessToken = data.token.access;
+        if (data.token.refresh) {
+          localStorage.setItem("veyu_refresh_token", data.token.refresh);
+        }
+      }
+    } else if (data.access_token) {
+      accessToken = data.access_token;
+      if (data.refresh_token) {
+        localStorage.setItem("veyu_refresh_token", data.refresh_token);
+      }
+    } else if (data.api_token) {
+      accessToken = data.api_token;
+    }
+    
+    if (accessToken) {
+      localStorage.setItem("veyu_access_token", accessToken);
+    }
+    
     setAuthUser(data);
     setAuthState(true);
   };
@@ -112,7 +141,13 @@ function App() {
   const onLogout = () => {
     setAuthState(false);
     setAuthUser(null);
-    localStorage.removeItem("veyu-auth-user");
+    
+    // Clear all possible auth data
+    ['veyu-auth-user', 'veyu_user_data', 'veyu_access_token', 'veyu_refresh_token',
+     'access_token', 'refresh_token', 'token', 'user_data'].forEach(key => {
+      localStorage.removeItem(key);
+    });
+    
     window.location.href = '/login';
   };
 

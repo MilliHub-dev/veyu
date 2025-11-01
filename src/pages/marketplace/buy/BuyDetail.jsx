@@ -1,12 +1,13 @@
 import {
   Avatar, Badge, Box, Button, Container,
-  Divider, Flex, Heading, Icon, Image, List,
-  ListItem, Stack, Text, IconButton, SimpleGrid,
-  useMediaQuery, Tag, LinkBox, Grid, GridItem,
+  Divider, Flex, Heading, Icon, List,
+  ListItem, Text, IconButton, SimpleGrid,
+  Tag, LinkBox, Grid, GridItem,
   LinkOverlay, HStack, VStack, Card, CardBody,
   Stat, StatLabel, StatNumber, StatHelpText,
   Tabs, TabList, TabPanels, Tab, TabPanel,
   useColorModeValue, Tooltip, Alert, AlertIcon,
+  Spinner,
 } from "@chakra-ui/react";
 import { useContext, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -15,6 +16,7 @@ import { ImageCarousel, LocationBreadcrumb, ListingItemCard } from "../../../com
 import { ListingDetailSkeleton } from "../../../components/loaders";
 import { ChatPopup } from "../../../components/chat";
 import { objectifyJSON } from "../../../utils";
+import { apiClient } from '../../../services/api';
 import { HiMiniReceiptPercent, HiShieldCheck, HiTruck, HiClock, HiPhone } from 'react-icons/hi2';
 import { FaCartPlus, FaHeart, FaShare, FaEye, FaStar, FaCheckCircle } from 'react-icons/fa';
 import { MdVerified, MdLocationOn, MdSpeed, MdLocalGasStation } from 'react-icons/md';
@@ -30,41 +32,205 @@ export const BuyDetail = ({ }) => {
   const [listing, setListing] = useState({});
   const [isFavorited, setIsFavorited] = useState(false);
   const [viewCount, setViewCount] = useState(0);
-  const { axios, notify, commaInt } = useContext(GlobalStore);
-  const [isMobile] = useMediaQuery('(max-width: 768px)');
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const { notify, commaInt } = useContext(GlobalStore);
+
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   async function getData() {
-    const res = await axios.get(`/listings/buy/${listingId}/`);
-    if (res.status === 200) {
-      let data = objectifyJSON(res.data);
-      setListing(data.data.listing);
-      setRecommended(data.data.recommended);
-      setViewCount(Math.floor(Math.random() * 500) + 50); // Mock view count
+    try {
+      // Debug: Check authentication state
+      const token = localStorage.getItem('veyu_access_token');
+      const userData = localStorage.getItem('veyu_user_data');
+      console.log('🔍 Auth Debug - Token exists:', !!token);
+      console.log('🔍 Auth Debug - User data exists:', !!userData);
+      
+      const res = await apiClient.get(`/listings/buy/${listingId}/`);
+      if (res.status === 200) {
+        let data = objectifyJSON(res.data);
+        setListing(data.data.listing);
+        setRecommended(data.data.recommended);
+        setViewCount(Math.floor(Math.random() * 500) + 50); // Mock view count
+      }
+    } catch (error) {
+      console.error('Error fetching listing:', error);
+      
+      if (error.response?.status === 401) {
+        // Check if user should be redirected to login
+        const token = localStorage.getItem('veyu_access_token');
+        if (!token) {
+          console.log('No token found, redirecting to login');
+          notify({
+            title: 'Login Required',
+            body: 'Please log in to view listing details.',
+            color: 'orange',
+            duration: 3000,
+            onClose: () => {
+              window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+            }
+          });
+        } else {
+          console.log('Token exists but invalid, clearing and redirecting');
+          // Clear invalid tokens
+          ['veyu_access_token', 'veyu_refresh_token', 'veyu_user_data'].forEach(key => {
+            localStorage.removeItem(key);
+          });
+          notify({
+            title: 'Session Expired',
+            body: 'Your session has expired. Please log in again.',
+            color: 'orange',
+            duration: 3000,
+            onClose: () => {
+              window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+            }
+          });
+        }
+      } else if (error.response?.status === 404) {
+        notify({
+          title: 'Listing Not Found',
+          body: 'The requested listing could not be found.',
+          color: 'red',
+          duration: 3000
+        });
+      } else {
+        notify({
+          title: 'Error',
+          body: 'Failed to load listing details. Please try again.',
+          color: 'red',
+          duration: 3000
+        });
+      }
+    }
+  }
+
+  async function checkAuth() {
+    try {
+      // Use the same token keys as the API service
+      const accessToken = localStorage.getItem('veyu_access_token') || 
+                         localStorage.getItem('access_token') || 
+                         localStorage.getItem('token');
+      const userData = localStorage.getItem('veyu_user_data') || 
+                      localStorage.getItem('user_data') || 
+                      localStorage.getItem('veyu-auth-user');
+      
+      if (!accessToken || !userData) {
+        return false;
+      }
+      
+      // Basic token format validation (JWT tokens have 3 parts separated by dots)
+      if (accessToken.split('.').length !== 3) {
+        console.log('Invalid token format');
+        return false;
+      }
+      
+      // Check if token is expired (basic check)
+      try {
+        const tokenPayload = JSON.parse(atob(accessToken.split('.')[1]));
+        const currentTime = Math.floor(Date.now() / 1000);
+        
+        if (tokenPayload.exp && tokenPayload.exp < currentTime) {
+          console.log('Token expired');
+          return false;
+        }
+      } catch (tokenError) {
+        console.log('Could not parse token, but proceeding anyway');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      // Clear all possible auth data
+      ['veyu_access_token', 'veyu_refresh_token', 'veyu_user_data', 
+       'access_token', 'refresh_token', 'token', 'user_data', 'veyu-auth-user'].forEach(key => {
+        localStorage.removeItem(key);
+      });
+      return false;
     }
   }
 
   async function addToCart() {
-    const res = await axios.post(`/listings/buy/${listingId}/`, JSON.stringify({
-      action: 'add-to-cart',
-      item_type: 'sale',
-    })
-    )
-
-    if (res.status === 200) {
+    const isAuthenticated = await checkAuth();
+    
+    if (!isAuthenticated) {
       notify({
-        title: 'Success!',
-        body: `${listing?.vehicle?.name} was added to your cart!`
-      })
-    } else {
-      const data = await objectifyJSON(res.data)
-      notify({
-        title: 'An error occurred!',
-        body: `${data?.message}`
-      })
+        title: 'Session Expired',
+        body: 'Your session has expired. Please log in again.',
+        color: 'orange',
+        duration: 3000,
+        onClose: () => {
+          window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+        }
+      });
+      return;
     }
-  }
+
+    setIsAddingToCart(true);
+    
+    try {
+      const res = await apiClient.post(`/cart/items/`, {
+        listing_id: listingId,
+        quantity: 1,
+        type: 'sale'  // or 'rental' if applicable
+      });
+
+      if (res.status === 200 || res.status === 201) {
+        // Update cart count in global state or local storage
+        const cartCount = localStorage.getItem('cartCount') || 0;
+        localStorage.setItem('cartCount', parseInt(cartCount) + 1);
+        
+        // Dispatch event to update cart count in other components
+        window.dispatchEvent(new Event('cartUpdated'));
+        
+        notify({
+          title: 'Added to Cart',
+          body: `${listing?.title || 'Item'} was added to your cart!`,
+          color: 'green',
+          duration: 3000,
+          position: 'top-right'
+        });
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      let errorMessage = 'Failed to add item to cart';
+      let shouldRetry = false;
+      
+      if (error.response) {
+        // Handle specific error messages from the server
+        if (error.response.status === 401) {
+          errorMessage = 'Your session has expired. Please log in again.';
+          // Optionally clear invalid token
+          localStorage.removeItem('token');
+        } else if (error.response.status === 400) {
+          errorMessage = error.response.data?.message || 'Invalid request. Please check your input.';
+        } else if (error.response.status === 404) {
+          errorMessage = 'Item not found or no longer available';
+        } else if (error.response.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+          shouldRetry = true;
+        }
+      } else if (error.request) {
+        errorMessage = 'No response from server. Please check your internet connection.';
+        shouldRetry = true;
+      }
+      
+      notify({
+        title: 'Error',
+        body: errorMessage,
+        color: 'red',
+        duration: 5000,
+        position: 'top-right',
+        actions: shouldRetry ? [
+          {
+            label: 'Retry',
+            onClick: () => addToCart()
+          }
+        ] : []
+      });
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
 
   const toggleFavorite = () => {
     setIsFavorited(!isFavorited);
@@ -195,7 +361,7 @@ export const BuyDetail = ({ }) => {
                 <Icon as={MdSpeed} size="24px" color="#F4A950" mb={2} />
                 <Stat>
                   <StatNumber fontSize="lg" fontWeight="bold">
-                    {listing?.vehicle?.mileage || "0"}
+                    {listing?.vehicle?.mileage ? `${commaInt(listing.vehicle.mileage)} mi` : "N/A"}
                   </StatNumber>
                   <StatLabel fontSize="sm" color="gray.600">Miles</StatLabel>
                 </Stat>
@@ -207,7 +373,7 @@ export const BuyDetail = ({ }) => {
                 <Icon as={BsGearFill} size="20px" color="#F4A950" mb={2} />
                 <Stat>
                   <StatNumber fontSize="lg" fontWeight="bold">
-                    {listing?.vehicle?.transmission}
+                    {listing?.vehicle?.transmission || 'N/A'}
                   </StatNumber>
                   <StatLabel fontSize="sm" color="gray.600">Transmission</StatLabel>
                 </Stat>
@@ -219,7 +385,7 @@ export const BuyDetail = ({ }) => {
                 <Icon as={MdLocalGasStation} size="20px" color="#F4A950" mb={2} />
                 <Stat>
                   <StatNumber fontSize="lg" fontWeight="bold">
-                    {listing?.vehicle?.fuel_system}
+                    {listing?.vehicle?.fuel_system || 'N/A'}
                   </StatNumber>
                   <StatLabel fontSize="sm" color="gray.600">Fuel Type</StatLabel>
                 </Stat>
@@ -231,7 +397,7 @@ export const BuyDetail = ({ }) => {
                 <Icon as={BsCalendar3} size="20px" color="#F4A950" mb={2} />
                 <Stat>
                   <StatNumber fontSize="lg" fontWeight="bold">
-                    {new Date().getFullYear() - 5}
+                    {listing?.vehicle?.year || 'N/A'}
                   </StatNumber>
                   <StatLabel fontSize="sm" color="gray.600">Year</StatLabel>
                 </Stat>
@@ -323,8 +489,23 @@ export const BuyDetail = ({ }) => {
               {/* Action Buttons */}
               <VStack spacing={3}>
                 <Button
-                  as={Link}
-                  to={`/checkout/?listingId=${listingId}`}
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    const isAuthenticated = await checkAuth();
+                    if (!isAuthenticated) {
+                      notify({
+                        title: 'Login Required',
+                        body: 'Please log in to proceed to checkout',
+                        color: 'orange',
+                        duration: 3000,
+                        onClose: () => {
+                          window.location.href = `/login?next=${encodeURIComponent(`/checkout?listingId=${listingId}`)}`;
+                        }
+                      });
+                      return;
+                    }
+                    window.location.href = `/checkout?listingId=${listingId}`;
+                  }}
                   bg={'#F4A950'}
                   color="white"
                   size="lg"
@@ -340,8 +521,11 @@ export const BuyDetail = ({ }) => {
                     variant="outline"
                     colorScheme="orange"
                     flex={1}
-                    leftIcon={<FaCartPlus />}
+                    leftIcon={isAddingToCart ? <Spinner size="sm" /> : <FaCartPlus />}
                     onClick={addToCart}
+                    isLoading={isAddingToCart}
+                    loadingText="Adding..."
+                    isDisabled={isAddingToCart}
                   >
                     Add to Cart
                   </Button>

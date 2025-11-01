@@ -41,8 +41,49 @@ import {
   useRadioGroup,
   useMediaQuery,
   useDisclosure,
+  Card,
+  CardBody,
+  CardHeader,
+  useColorModeValue,
+  Progress,
+  Stepper,
+  Step,
+  StepIndicator,
+  StepStatus,
+  StepIcon,
+  StepNumber,
+  StepTitle,
+  StepDescription,
+  StepSeparator,
+  useSteps,
+  Alert,
+  AlertIcon,
+  Tooltip,
 } from '@chakra-ui/react'
-import { Clock, Gauge, Zap, MoreVertical, PiggyBank, Wallet, CreditCard, Warehouse, BanknoteIcon } from 'lucide-react';
+import { 
+  Clock, 
+  Gauge, 
+  Zap, 
+  MoreVertical, 
+  PiggyBank, 
+  Wallet, 
+  CreditCard, 
+  Warehouse, 
+  BanknoteIcon,
+  Shield,
+  CheckCircle,
+  MapPin,
+  Calendar,
+  User,
+  Mail,
+  Phone,
+  Home,
+  ArrowLeft,
+  Lock,
+  Star,
+  Truck,
+  FileText
+} from 'lucide-react';
 import { HiMiniReceiptPercent } from 'react-icons/hi2'
 import { LuMapPin } from 'react-icons/lu'
 import { RxCaretLeft, RxCaretRight, RxTimer } from 'react-icons/rx';
@@ -65,71 +106,123 @@ import {
 import {CalendarPicker} from '../../../components';
 import {CustomPlacesAutocomplete} from '../../../components/maps';
 
+const MotionBox = motion(Box);
+const MotionCard = motion(Card);
+
 
 
 
 const PaymentOptions = [
-  { icon: EmptyWalletIcon, label: 'Pay with Wallet', value: 'wallet' },
-  { icon: PayOnlineIcon, label: 'Pay Online', value: 'online-payment' },
-  { icon: CashMoneyIcon, label: 'Pay After Inspection', value: 'pay-after-inspection' },
-  { icon: CarParkingIcon, label: 'Reserve Vehicle', disabled: true, value: 'reserve-vehicle' },
-  { icon: CarFinancingIcon, label: 'Car Financing', disabled: true, value: 'finance-aid' },
+  { 
+    icon: Wallet, 
+    label: 'Pay with Wallet', 
+    value: 'wallet',
+    description: 'Use your Veyu wallet balance',
+    color: 'purple'
+  },
+  { 
+    icon: CreditCard, 
+    label: 'Pay Online', 
+    value: 'online-payment',
+    description: 'Card, bank transfer, or USSD',
+    color: 'blue'
+  },
+  { 
+    icon: Shield, 
+    label: 'Pay After Inspection', 
+    value: 'pay-after-inspection',
+    description: 'Pay inspection fee now, full amount later',
+    color: 'green'
+  },
+  { 
+    icon: Lock, 
+    label: 'Reserve Vehicle', 
+    disabled: true, 
+    value: 'reserve-vehicle',
+    description: 'Hold the vehicle for 24 hours',
+    color: 'gray'
+  },
+  { 
+    icon: FileText, 
+    label: 'Car Financing', 
+    disabled: true, 
+    value: 'finance-aid',
+    description: 'Apply for vehicle financing',
+    color: 'orange'
+  },
 ]
 
 
 const RadioCard = ({ option, onInput, ...props }) => {
   const { getInputProps, getRadioProps } = useRadio(props);
   const input = getInputProps();
-  const [order, setOrder] = useState({})
   const checkbox = getRadioProps();
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   return(
-    <VStack as={'label'} isDisabled={option.disabled ? true : false}>
-      <Box
-        p={4} {...checkbox}
-        isDisabled={option.disabled ? true : false}
-        borderWidth={4}
-        borderRadius="20px"
-        opacity={option?.disabled && 0.7}
-        spacing={2}
-        cursor={option.disabled ? 'not-allowed' : 'pointer'}
+    <Box as={'label'} cursor={option.disabled ? 'not-allowed' : 'pointer'}>
+      <MotionCard
+        {...checkbox}
+        isDisabled={option.disabled}
+        borderWidth="2px"
+        borderColor={borderColor}
+        bg={bgColor}
+        opacity={option?.disabled ? 0.6 : 1}
         position="relative"
-        width={'120px'}
-        height={'120px'}
-        display="flex"
-        alignItems="center"
-        // isChecked={checkoutPayload?.payment_option === option?.value}
-        justifyContent="center"
+        minW="200px"
+        h="120px"
         _checked={{
-          borderColor: 'primary',
-          color: 'white',
+          borderColor: `${option.color}.500`,
+          bg: `${option.color}.50`,
+          transform: 'scale(1.02)',
         }}
-        _focus={{
-          boxShadow: 'outline',
-        }}
+        _hover={!option.disabled ? {
+          borderColor: `${option.color}.300`,
+          transform: 'translateY(-2px)',
+          shadow: 'lg'
+        } : {}}
+        transition="all 0.2s"
+        whileHover={!option.disabled ? { y: -4 } : {}}
+        whileTap={!option.disabled ? { scale: 0.98 } : {}}
       >
-      <option.icon width={'40px'} height="40px" viewBox="0 0 50 55" />
-      {option.disabled && (
-        <Text
-         color="white"
-         fontWeight="600"
-         position="absolute"
-         textAlign="center"
-         left={'0px'}
-         width={'100%'}
-         bottom={"0px"}
-         bgColor="primary"
-         fontSize="xs"
-         py={1.5}
-         borderRadius="0px 0px 20px 20px"
-        >Coming Soon!</Text>
-      )}
-      </Box>
-      <Text fontSize="sm" textAlign="center">
-        {option.label}
-      </Text>
+        <CardBody p={4} display="flex" flexDirection="column" alignItems="center" justifyContent="center">
+          <Box 
+            p={3} 
+            borderRadius="full" 
+            bg={`${option.color}.100`} 
+            mb={3}
+            _groupChecked={{ bg: `${option.color}.500`, color: 'white' }}
+          >
+            <option.icon size={24} />
+          </Box>
+          
+          <VStack spacing={1} textAlign="center">
+            <Text fontWeight="semibold" fontSize="sm" color="gray.900">
+              {option.label}
+            </Text>
+            <Text fontSize="xs" color="gray.600" noOfLines={2}>
+              {option.description}
+            </Text>
+          </VStack>
+
+          {option.disabled && (
+            <Badge
+              position="absolute"
+              top={2}
+              right={2}
+              colorScheme="orange"
+              fontSize="xs"
+              px={2}
+              py={1}
+            >
+              Coming Soon
+            </Badge>
+          )}
+        </CardBody>
+      </MotionCard>
       <input {...input} />
-    </VStack>
+    </Box>
   )
 }
 
@@ -270,227 +363,582 @@ function CheckoutPage({ props }) {
   total += Number(order?.inspection_fee)
 
 
+  const bgGradient = useColorModeValue(
+    'linear(to-br, blue.50, purple.50, pink.50)',
+    'linear(to-br, gray.900, blue.900, purple.900)'
+  );
+
+  const steps = [
+    { title: 'Personal Details', description: 'Your information' },
+    { title: 'Payment Method', description: 'Choose how to pay' },
+    { title: 'Review & Confirm', description: 'Final confirmation' }
+  ];
+
+  const { activeStep } = useSteps({
+    index: 0,
+    count: steps.length,
+  });
+
   return (
-    <Box bg="white" minH="100vh">
-      <Box bg="blue.600" py={8} mb={8}>
-        <Container maxW="container.xl" textAlign="center">
-          <Heading color="white" size="lg" className="subtitle" fontWeight="400">Checkout</Heading>
-          <Text color="whiteAlpha.900" mt={2}>
-            {listing?.listing_type === 'sale' ? 'Get Ready to own a Car!' : 'Setup Your Rental'}
-          </Text>
+    <Box bg={bgGradient} minH="100vh">
+      {/* Modern Header */}
+      <Box py={8} mb={8}>
+        <Container maxW="7xl">
+          <MotionBox
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Button
+              leftIcon={<ArrowLeft size={20} />}
+              variant="ghost"
+              mb={4}
+              onClick={() => window.history.back()}
+            >
+              Back to Listing
+            </Button>
+            
+            <Heading size="2xl" color="gray.900" mb={2}>
+              Secure Checkout
+            </Heading>
+            <Text color="gray.600" fontSize="lg" mb={6}>
+              {listing?.listing_type === 'sale' ? 'Complete your vehicle purchase' : 'Finalize your rental booking'}
+            </Text>
+
+            {/* Progress Stepper */}
+            <Box maxW="2xl">
+              <Stepper index={activeStep} colorScheme="blue" size="lg">
+                {steps.map((step, index) => (
+                  <Step key={index}>
+                    <StepIndicator>
+                      <StepStatus
+                        complete={<StepIcon />}
+                        incomplete={<StepNumber />}
+                        active={<StepNumber />}
+                      />
+                    </StepIndicator>
+                    <Box flexShrink="0" display={{ base: 'none', md: 'block' }}>
+                      <StepTitle>{step.title}</StepTitle>
+                      <StepDescription>{step.description}</StepDescription>
+                    </Box>
+                    <StepSeparator />
+                  </Step>
+                ))}
+              </Stepper>
+            </Box>
+          </MotionBox>
         </Container>
       </Box>
 
-      <Container maxW="container.xl" pb={10}>
-        <Flex gap={8} flexWrap={{base: 'wrap', lg: 'unset'}}>
+      <Container maxW="7xl" pb={10}>
+        <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={8}>
           {/* Form Section */}
-          <Box pb={10} w={'100%'}>
-            <Text className="bold" fontSize="22px" mb={6}>Confirm your details</Text>
-            <VStack spacing={6} align="stretch">
-              <SimpleGrid spacing={4} columns={{base: 1, md: 2}}>
-                <FormControl isDisabled flex={1}>
-                  <FormLabel>First name</FormLabel>
-                  <Input onInput={(e) => changeValue({ first_name: e.target.value})} defaultValue={checkoutPayload?.first_name} px={4} py={5} />
-                </FormControl>
-
-                <FormControl isDisabled flex={1}>
-                  <FormLabel>Last name</FormLabel>
-                  <Input onInput={(e) => changeValue({ last_name: e.target.value})} defaultValue={checkoutPayload?.last_name} px={4} py={5} />
-                </FormControl>
-              </SimpleGrid>
-
-              <SimpleGrid spacing={4} columns={{base: 1, md: 2}}>
-                <FormControl isRequired={!authUser?.phone_number} isDisabled={authUser?.phone_number}>
-                  <FormLabel>Phone Number</FormLabel>
-                  <InputGroup>
-                    <InputLeftAddon px={0} w="70px">
-                      <Select
-                        minW="auto"
-                        flexShrink={1}
-                        onChange={(e) => {
-                          const selectedCountry = countryList.find(c => c.name === e.target.value);
-                          setCheckoutPayload({ ...checkoutPayload, country: e.target.value, state: '', city: '' });
-                          setStateList(selectedCountry ? State.getStatesOfCountry(selectedCountry.isoCode) : []);
-                          setCityList([]);
+          <Box gridColumn={{ base: 1, lg: "1 / 3" }}>
+            <MotionCard
+              shadow="xl"
+              borderRadius="2xl"
+              bg="white"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <CardHeader>
+                <Flex align="center" mb={2}>
+                  <Box p={2} bg="blue.100" borderRadius="lg" mr={3}>
+                    <User size={20} color="var(--chakra-colors-blue-600)" />
+                  </Box>
+                  <Heading size="lg" color="gray.900">Personal Information</Heading>
+                </Flex>
+                <Text color="gray.600">Please confirm your details for delivery and contact</Text>
+              </CardHeader>
+              <CardBody pt={0}>
+                <VStack spacing={6} align="stretch">
+                  <SimpleGrid spacing={4} columns={{base: 1, md: 2}}>
+                    <FormControl>
+                      <FormLabel fontWeight="semibold" color="gray.700">
+                        <Flex align="center">
+                          <User size={16} style={{ marginRight: "8px" }} />
+                          First Name
+                        </Flex>
+                      </FormLabel>
+                      <Input 
+                        onInput={(e) => changeValue({ first_name: e.target.value})} 
+                        defaultValue={checkoutPayload?.first_name} 
+                        size="lg"
+                        bg="gray.50"
+                        border="2px solid"
+                        borderColor="gray.200"
+                        _hover={{ borderColor: 'blue.300' }}
+                        _focus={{
+                          borderColor: 'blue.500',
+                          bg: 'white',
+                          shadow: '0 0 0 1px var(--chakra-colors-blue-500)'
                         }}
-                      >
-                        {countryList.map((place) => (
-                          <option key={place.isoCode} value={place.name}>
-                            <Icon as={'svg'} xmlns="http://www.w3.org/2000/svg">{place.flag}</Icon>
-                            {" " + place.name}
-                          </option>
-                        ))}
-                      </Select>
-                    </InputLeftAddon>
-                    <Input placeholder={'+'} flex={1} value={checkoutPayload.phone_number} onChange={(e) => setCheckoutPayload({ ...checkoutPayload, phone_number: e.target.value })} />
-                  </InputGroup>
-                </FormControl>
+                      />
+                    </FormControl>
 
-                <FormControl isDisabled>
-                  <FormLabel>Email</FormLabel>
-                  <Input onInput={(e) => changeValue({ email: e.target.value})} defaultValue={checkoutPayload?.email} type="email" px={4} py={5} />
-                </FormControl>
-              </SimpleGrid>
+                    <FormControl>
+                      <FormLabel fontWeight="semibold" color="gray.700">
+                        <Flex align="center">
+                          <User size={16} style={{ marginRight: "8px" }} />
+                          Last Name
+                        </Flex>
+                      </FormLabel>
+                      <Input 
+                        onInput={(e) => changeValue({ last_name: e.target.value})} 
+                        defaultValue={checkoutPayload?.last_name} 
+                        size="lg"
+                        bg="gray.50"
+                        border="2px solid"
+                        borderColor="gray.200"
+                        _hover={{ borderColor: 'blue.300' }}
+                        _focus={{
+                          borderColor: 'blue.500',
+                          bg: 'white',
+                          shadow: '0 0 0 1px var(--chakra-colors-blue-500)'
+                        }}
+                      />
+                    </FormControl>
+                  </SimpleGrid>
 
-              <FormControl isRequired>
-                <FormLabel>Delivery Location</FormLabel>
-                <CustomPlacesAutocomplete
-                  value={checkoutPayload?.location?.formatted_address}
-                  onPlaceChange={onLocationChanged}
-                  inputProps={{border: '1px solid lavender', name: 'address', type: 'address'}}
-                />
-              </FormControl>
+                  <SimpleGrid spacing={4} columns={{base: 1, md: 2}}>
+                    <FormControl isRequired={!authUser?.phone_number}>
+                      <FormLabel fontWeight="semibold" color="gray.700">
+                        <Flex align="center">
+                          <Phone size={16} style={{ marginRight: "8px" }} />
+                          Phone Number
+                        </Flex>
+                      </FormLabel>
+                      <InputGroup>
+                        <InputLeftAddon px={0} w="70px" bg="gray.100">
+                          <Select
+                            minW="auto"
+                            flexShrink={1}
+                            border="none"
+                            bg="transparent"
+                            onChange={(e) => {
+                              const selectedCountry = countryList.find(c => c.name === e.target.value);
+                              setCheckoutPayload({ ...checkoutPayload, country: e.target.value, state: '', city: '' });
+                              setStateList(selectedCountry ? State.getStatesOfCountry(selectedCountry.isoCode) : []);
+                              setCityList([]);
+                            }}
+                          >
+                            {countryList.map((place) => (
+                              <option key={place.isoCode} value={place.name}>
+                                {place.flag} {place.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </InputLeftAddon>
+                        <Input 
+                          placeholder="Enter phone number" 
+                          flex={1} 
+                          value={checkoutPayload.phone_number} 
+                          onChange={(e) => setCheckoutPayload({ ...checkoutPayload, phone_number: e.target.value })}
+                          size="lg"
+                          bg="gray.50"
+                          border="2px solid"
+                          borderColor="gray.200"
+                          _hover={{ borderColor: 'blue.300' }}
+                          _focus={{
+                            borderColor: 'blue.500',
+                            bg: 'white',
+                            shadow: '0 0 0 1px var(--chakra-colors-blue-500)'
+                          }}
+                        />
+                      </InputGroup>
+                    </FormControl>
 
-              <SimpleGrid spacing={4} columns={{base: 1, md: 2}}>
-                <FormControl isRequired>
-                  <FormLabel>Street Address</FormLabel>
-                  <Input name="street-address" px={4} py={5} />
-                </FormControl>
+                    <FormControl>
+                      <FormLabel fontWeight="semibold" color="gray.700">
+                        <Flex align="center">
+                          <Mail size={16} style={{ marginRight: "8px" }} />
+                          Email Address
+                        </Flex>
+                      </FormLabel>
+                      <Input 
+                        onInput={(e) => changeValue({ email: e.target.value})} 
+                        defaultValue={checkoutPayload?.email} 
+                        type="email" 
+                        size="lg"
+                        bg="gray.50"
+                        border="2px solid"
+                        borderColor="gray.200"
+                        _hover={{ borderColor: 'blue.300' }}
+                        _focus={{
+                          borderColor: 'blue.500',
+                          bg: 'white',
+                          shadow: '0 0 0 1px var(--chakra-colors-blue-500)'
+                        }}
+                      />
+                    </FormControl>
+                  </SimpleGrid>
 
-                <FormControl>
-                  <FormLabel>Postal Code (optional)</FormLabel>
-                  <Input name="postal-code" px={4} py={5} />
-                </FormControl>
-              </SimpleGrid>
-
-              {
-                listing?.listing_type === 'rental' &&
-                <Box>
-                  <FormControl>
-                    <FormLabel>Rental Period</FormLabel>
-                    <CalendarPicker
-                     defaultValue={null}
-                     onSelect={(val) => {
-                      console.log("Rental Range", val)
-                      changeValue({ start_date: val })
-                     }}
-                     mode='range'
-                     border={'1px solid lavender'}
-                     rounded="md"
-                     // fromDate={''} // get from url params
-                     // toDate={''}
-                    />
+                  <FormControl isRequired>
+                    <FormLabel fontWeight="semibold" color="gray.700">
+                      <Flex align="center">
+                        <MapPin size={16} style={{ marginRight: "8px" }} />
+                        Delivery Location
+                      </Flex>
+                    </FormLabel>
+                    <Box
+                      border="2px solid"
+                      borderColor="gray.200"
+                      borderRadius="lg"
+                      bg="gray.50"
+                      _hover={{ borderColor: 'blue.300' }}
+                      _focusWithin={{
+                        borderColor: 'blue.500',
+                        bg: 'white',
+                        shadow: '0 0 0 1px var(--chakra-colors-blue-500)'
+                      }}
+                    >
+                      <CustomPlacesAutocomplete
+                        value={checkoutPayload?.location?.formatted_address}
+                        onPlaceChange={onLocationChanged}
+                        inputProps={{
+                          border: 'none', 
+                          name: 'address', 
+                          type: 'address',
+                          size: 'lg',
+                          bg: 'transparent',
+                          placeholder: 'Enter delivery address'
+                        }}
+                      />
+                    </Box>
                   </FormControl>
-                </Box>
-              }
 
-              <Divider my={4} />
+                  <SimpleGrid spacing={4} columns={{base: 1, md: 2}}>
+                    <FormControl isRequired>
+                      <FormLabel fontWeight="semibold" color="gray.700">
+                        <Flex align="center">
+                          <Home size={16} style={{ marginRight: "8px" }} />
+                          Street Address
+                        </Flex>
+                      </FormLabel>
+                      <Input 
+                        name="street-address" 
+                        size="lg"
+                        bg="gray.50"
+                        border="2px solid"
+                        borderColor="gray.200"
+                        _hover={{ borderColor: 'blue.300' }}
+                        _focus={{
+                          borderColor: 'blue.500',
+                          bg: 'white',
+                          shadow: '0 0 0 1px var(--chakra-colors-blue-500)'
+                        }}
+                        placeholder="Enter street address"
+                      />
+                    </FormControl>
 
-              <Box>
-                <SimpleGrid columns={2} spacing={4} mb={4}>
-                  <Text fontWeight="600">Price:</Text>
-                  <Text fontWeight="600" textAlign="right">₦{commaInt(listing?.price)}</Text>
-                  <Text fontWeight="600">0.5% fee + Tax </Text>
-                  <Text fontWeight="600" textAlign="right">₦{commaInt(order?.tax + order?.motaa_fee)}</Text>
-                  <Text fontWeight="600">Inspection fee:</Text>
-                  <Text fontWeight="600" textAlign="right">₦{commaInt(order?.inspection_fee)}</Text>
-                </SimpleGrid>
+                    <FormControl>
+                      <FormLabel fontWeight="semibold" color="gray.700">
+                        Postal Code (optional)
+                      </FormLabel>
+                      <Input 
+                        name="postal-code" 
+                        size="lg"
+                        bg="gray.50"
+                        border="2px solid"
+                        borderColor="gray.200"
+                        _hover={{ borderColor: 'blue.300' }}
+                        _focus={{
+                          borderColor: 'blue.500',
+                          bg: 'white',
+                          shadow: '0 0 0 1px var(--chakra-colors-blue-500)'
+                        }}
+                        placeholder="Enter postal code"
+                      />
+                    </FormControl>
+                  </SimpleGrid>
 
-                <form method="POST" onSubmit={redeemCoupon}>
-                  <Flex gap={8}>
-                    <Input placeholder="Enter Promo Code" px={4} py={5} />
-                    <Button w={'100px'} colorScheme="blue" bg="primary"> Apply </Button>
-                  </Flex>
-                </form>
-
-                <Divider my={4} />
-                <Flex justify="space-between" fontWeight="bold">
-                  <Heading size="md">Total:</Heading>
-                  <Heading size="md">₦{commaInt(total)}</Heading>
-                </Flex>
-              </Box>
-
-              <Box>
-                <Text fontWeight="medium" mb={4}>Choose a payment option</Text>
-                <Flex flexWrap="nowrap" w="100%" overflowX="auto" py={2} px={2} flexDirection="row" className="hidden-scroll" gap={4}>
-                  {PaymentOptions.map((option, index) => {
-                    const radio = getRadioProps({ value: option.value, isDisabled: option.disabled });
-                    return (
-                      <RadioCard key={index} option={option} value={option.value} {...radio} />
-                    )}
+                  {listing?.listing_type === 'rental' && (
+                    <Card bg="blue.50" borderColor="blue.200" borderWidth="2px">
+                      <CardBody>
+                        <FormControl>
+                          <FormLabel fontWeight="semibold" color="gray.700">
+                            <Flex align="center">
+                              <Calendar size={16} style={{ marginRight: "8px" }} />
+                              Rental Period
+                            </Flex>
+                          </FormLabel>
+                          <CalendarPicker
+                            defaultValue={null}
+                            onSelect={(val) => {
+                              console.log("Rental Range", val)
+                              changeValue({ start_date: val })
+                            }}
+                            mode='range'
+                            border="2px solid"
+                            borderColor="blue.300"
+                            borderRadius="lg"
+                            bg="white"
+                          />
+                        </FormControl>
+                      </CardBody>
+                    </Card>
                   )}
-                </Flex>
-              </Box>
 
-              <Divider my={3} />
+                  <Divider my={6} />
 
-              <Text fontSize="sm" color="gray.600">
-                {
-                  checkoutPayload.payment_option === 'wallet' ?
-                  "The amount for this order will be charged from your wallet balance. \
-                  If your balance is not sufficient to cover the charge, you will not be able to complete your order." :
-                  checkoutPayload.payment_option === 'online-payment' ? 
-                  "You will be redirected to a Flutterwave payment page where you can pay with your card or bank transfer." :
-                  checkoutPayload.payment_option === 'pay-after-inspection' ?
-                  "You will be redirected to a Flutterwave payment page to pay a small inspection fee."
-                  : "Select a payment option"
-                }
-              </Text>
+                  {/* Promo Code Section */}
+                  <Card bg="yellow.50" borderColor="yellow.200" borderWidth="2px">
+                    <CardBody>
+                      <Heading size="sm" mb={3} color="gray.900">Have a Promo Code?</Heading>
+                      <form method="POST" onSubmit={redeemCoupon}>
+                        <HStack spacing={3}>
+                          <Input 
+                            placeholder="Enter promo code" 
+                            size="lg"
+                            bg="white"
+                            border="2px solid"
+                            borderColor="yellow.300"
+                            _hover={{ borderColor: 'yellow.400' }}
+                            _focus={{
+                              borderColor: 'yellow.500',
+                              shadow: '0 0 0 1px var(--chakra-colors-yellow-500)'
+                            }}
+                            flex={1}
+                          />
+                          <Button 
+                            colorScheme="yellow" 
+                            size="lg"
+                            px={8}
+                            type="submit"
+                          >
+                            Apply
+                          </Button>
+                        </HStack>
+                      </form>
+                    </CardBody>
+                  </Card>
 
-              <Box placeItems="center">
-                <HStack spacing={4} p={4} borderWidth={1} borderColor="primary" bg="blue.50" borderRadius="lg">
-                  <Checkbox defaultChecked />
-                  <Text fontSize="sm">
-                    Motaa does not sell cars. If you're buying online, any funds deducted from your card or
-                    wallet are kept in an escrow account until you are satisfied with the dealer.
-                  </Text>
-                </HStack>
-                <Button variant="link" colorScheme="blue" mt={2} textDecoration="underline" size="sm">
-                  What is escrow?
-                </Button>
-              </Box>
+                  <Card bg="gray.50" borderWidth="2px" borderColor="gray.200">
+                    <CardHeader>
+                      <Flex align="center">
+                        <Box p={2} bg="green.100" borderRadius="lg" mr={3}>
+                          <CreditCard size={20} color="var(--chakra-colors-green-600)" />
+                        </Box>
+                        <Box>
+                          <Heading size="md" color="gray.900">Payment Method</Heading>
+                          <Text color="gray.600" fontSize="sm">Choose how you'd like to pay</Text>
+                        </Box>
+                      </Flex>
+                    </CardHeader>
+                    <CardBody pt={0}>
+                      <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4} {...groupy}>
+                        {PaymentOptions.map((option, index) => {
+                          const radio = getRadioProps({ value: option.value, isDisabled: option.disabled });
+                          return (
+                            <RadioCard key={index} option={option} value={option.value} {...radio} />
+                          )}
+                        )}
+                      </SimpleGrid>
+                    </CardBody>
+                  </Card>
 
-              <VStack spacing={4}>
-                <Button onClick={proceedToCheckout} colorScheme="blue" bg="primary" size="lg" width="100%">
-                  PROCEED
-                </Button>
+                  <Divider my={6} />
 
-                <Button bgColor="blue.50" p="12px" color="primary" variant="ghost" width="100%" as={Link} to="/">
-                  CANCEL
-                </Button>
-              </VStack>
-            </VStack>
+                  {/* Payment Information */}
+                  <Alert 
+                    status="info" 
+                    borderRadius="lg" 
+                    bg="blue.50" 
+                    borderColor="blue.200"
+                    borderWidth="2px"
+                  >
+                    <AlertIcon />
+                    <Box>
+                      <Text fontSize="sm" fontWeight="semibold" color="blue.800" mb={1}>
+                        Payment Information
+                      </Text>
+                      <Text fontSize="sm" color="blue.700">
+                        {
+                          checkoutPayload.payment_option === 'wallet' ?
+                          "The amount will be charged from your Veyu wallet balance. Ensure you have sufficient funds." :
+                          checkoutPayload.payment_option === 'online-payment' ? 
+                          "You'll be redirected to a secure payment page for card or bank transfer." :
+                          checkoutPayload.payment_option === 'pay-after-inspection' ?
+                          "Pay the inspection fee now, then the full amount after vehicle inspection."
+                          : "Please select a payment method above to continue."
+                        }
+                      </Text>
+                    </Box>
+                  </Alert>
+
+                  {/* Escrow Protection */}
+                  <Card bg="green.50" borderColor="green.200" borderWidth="2px">
+                    <CardBody>
+                      <HStack spacing={3} align="start">
+                        <Box p={2} bg="green.100" borderRadius="lg">
+                          <Shield size={20} color="var(--chakra-colors-green-600)" />
+                        </Box>
+                        <VStack align="start" spacing={2}>
+                          <Checkbox defaultChecked colorScheme="green">
+                            <Text fontWeight="semibold" color="green.800">
+                              Buyer Protection Enabled
+                            </Text>
+                          </Checkbox>
+                          <Text fontSize="sm" color="green.700">
+                            Your payment is held securely in escrow until you're satisfied with the vehicle. 
+                            Veyu doesn't sell cars - we protect your transaction.
+                          </Text>
+                          <Button variant="link" colorScheme="green" size="sm" textDecoration="underline">
+                            Learn more about escrow protection
+                          </Button>
+                        </VStack>
+                      </HStack>
+                    </CardBody>
+                  </Card>
+
+                  {/* Action Buttons */}
+                  <VStack spacing={4} pt={4}>
+                    <Button 
+                      onClick={proceedToCheckout} 
+                      colorScheme="blue" 
+                      size="xl" 
+                      width="100%"
+                      h="60px"
+                      fontSize="lg"
+                      fontWeight="bold"
+                      leftIcon={<CheckCircle size={24} />}
+                      _hover={{ transform: 'translateY(-2px)', shadow: 'xl' }}
+                      transition="all 0.2s"
+                      isDisabled={!checkoutPayload.payment_option}
+                    >
+                      Complete Purchase
+                    </Button>
+
+                    <Button 
+                      variant="outline" 
+                      size="lg" 
+                      width="100%" 
+                      as={Link} 
+                      to="/"
+                      leftIcon={<ArrowLeft size={20} />}
+                      _hover={{ bg: 'gray.50' }}
+                    >
+                      Continue Shopping
+                    </Button>
+                  </VStack>
+                </VStack>
+              </CardBody>
+            </MotionCard>
           </Box>
 
-          {/* Car Details Section */}
-          <Box w="100%" maxW="350px">
-            <Box
-              borderWidth={1}
-              borderRadius="30px"
-              position="relative"
+          {/* Modern Vehicle Details Sidebar */}
+          <Box>
+            <MotionCard
+              shadow="xl"
+              borderRadius="2xl"
+              bg="white"
+              position="sticky"
+              top={8}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <Box w="100%" h="250px" px={3} py={3} >
-                <Image
-                  src={listing?.vehicle?.images[0]?.url}
-                  alt={listing?.title}
-                  w="100%"
-                  h="100%"
-                  borderRadius={'20px'}
-                />
-              </Box>
-              <Box p={6}>
-                <Flex justifyContent={'space-between'} alignItems={'center'}>
-                    <Heading size="md" className="subtitle"> {listing?.title} </Heading>
-                    <Badge color="grey.500" className="bold"> {listing?.vehicle?.condition} </Badge>
-                </Flex>
+              <CardBody p={0}>
+                {/* Vehicle Image */}
+                <Box position="relative" borderRadius="2xl" overflow="hidden">
+                  <Image
+                    src={listing?.vehicle?.images[0]?.url}
+                    alt={listing?.title}
+                    w="100%"
+                    h="250px"
+                    objectFit="cover"
+                  />
+                  <Badge
+                    position="absolute"
+                    top={4}
+                    right={4}
+                    colorScheme="green"
+                    px={3}
+                    py={1}
+                    borderRadius="full"
+                    textTransform="uppercase"
+                    fontSize="xs"
+                    fontWeight="bold"
+                  >
+                    {listing?.vehicle?.condition}
+                  </Badge>
+                </Box>
 
-                <Flex justifyContent={'flex-start'} alignItems={'center'} gap={2} my={2}>
-                    <Text as={Flex} gap={1} alignItems={'center'} fontWeight="600"> <RxTimer /> {commaInt(listing?.vehicle?.mileage) || 0} miles</Text>
-                    <Text as={Flex} gap={1} alignItems={'center'} fontWeight="600"> <TbManualGearbox /> {listing?.vehicle?.transmission}</Text>
-                    <Text as={Flex} gap={1} alignItems={'center'} fontWeight="600"> <RiGasStationLine /> {listing?.vehicle?.fuel_system}</Text>
-                </Flex>
+                <Box p={6}>
+                  {/* Vehicle Title and Price */}
+                  <VStack align="start" spacing={3} mb={4}>
+                    <Heading size="md" color="gray.900" noOfLines={2}>
+                      {listing?.title}
+                    </Heading>
+                    <Text fontSize="2xl" fontWeight="bold" color="blue.600">
+                      ₦{commaInt(listing?.price)}
+                    </Text>
+                  </VStack>
 
-                <Divider my={3} />
+                  {/* Vehicle Specs */}
+                  <VStack spacing={3} mb={4}>
+                    <HStack justify="space-between" w="full">
+                      <Flex align="center" color="gray.600">
+                        <Clock size={16} style={{ marginRight: "8px" }} />
+                        <Text fontSize="sm">{commaInt(listing?.vehicle?.mileage) || 0} miles</Text>
+                      </Flex>
+                      <Flex align="center" color="gray.600">
+                        <Gauge size={16} style={{ marginRight: "8px" }} />
+                        <Text fontSize="sm">{listing?.vehicle?.transmission}</Text>
+                      </Flex>
+                    </HStack>
+                    
+                    <HStack justify="space-between" w="full">
+                      <Flex align="center" color="gray.600">
+                        <Zap size={16} style={{ marginRight: "8px" }} />
+                        <Text fontSize="sm">{listing?.vehicle?.fuel_system}</Text>
+                      </Flex>
+                      <Flex align="center" color="gray.600">
+                        <MapPin size={16} style={{ marginRight: "8px" }} />
+                        <Text fontSize="sm">{listing?.vehicle?.dealer?.location}</Text>
+                      </Flex>
+                    </HStack>
+                  </VStack>
 
-                <Flex justifyContent={'space-between'} alignItems={'center'} my={2}>
-                    <Text className="small bold" color="gray.600" as={Flex} alignItems="baseline" gap={1}> <Icon> <LuMapPin size={25} /> </Icon> {listing?.vehicle?.dealer?.location} </Text>
-                    {
-                      listing?.vehicle?.custom_duty &&
-                      <Tag fontWeight={'bold'} gap={1.5}> <span> Custom Duty </span> <Icon> <BsFillPatchCheckFill color="#de06bc" size={25} /> </Icon> </Tag>
-                    }
-                </Flex>
-              </Box>
-            </Box>
+                  <Divider mb={4} />
+
+                  {/* Price Breakdown */}
+                  <VStack spacing={3} align="stretch">
+                    <Heading size="sm" color="gray.900">Order Summary</Heading>
+                    
+                    <HStack justify="space-between">
+                      <Text color="gray.600">Vehicle Price</Text>
+                      <Text fontWeight="semibold">₦{commaInt(listing?.price)}</Text>
+                    </HStack>
+                    
+                    <HStack justify="space-between">
+                      <Text color="gray.600">Service Fee (0.5%)</Text>
+                      <Text fontWeight="semibold">₦{commaInt(order?.motaa_fee + order?.tax)}</Text>
+                    </HStack>
+                    
+                    <HStack justify="space-between">
+                      <Text color="gray.600">Inspection Fee</Text>
+                      <Text fontWeight="semibold">₦{commaInt(order?.inspection_fee)}</Text>
+                    </HStack>
+
+                    <Divider />
+                    
+                    <HStack justify="space-between">
+                      <Text fontSize="lg" fontWeight="bold" color="gray.900">Total</Text>
+                      <Text fontSize="lg" fontWeight="bold" color="blue.600">₦{commaInt(total)}</Text>
+                    </HStack>
+                  </VStack>
+
+                  {listing?.vehicle?.custom_duty && (
+                    <Alert status="info" borderRadius="lg" mt={4}>
+                      <AlertIcon />
+                      <Text fontSize="sm">Custom duty included</Text>
+                    </Alert>
+                  )}
+                </Box>
+              </CardBody>
+            </MotionCard>
           </Box>
         </Flex>
 

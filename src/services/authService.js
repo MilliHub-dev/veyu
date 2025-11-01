@@ -1,4 +1,4 @@
-import { apiClient, handleApiResponse, handleApiError } from './api';
+import { apiClient, handleApiResponse, handleApiError, TokenManager } from './api';
 
 class AuthService {
   // Login with email and password
@@ -17,12 +17,35 @@ class AuthService {
       });
 
       const data = handleApiResponse(response);
+      console.log('🔐 Login Response:', data);
       
-      // Store tokens
+      // Store tokens using TokenManager - handle different formats
+      let accessToken = null;
+      let refreshToken = null;
+      
       if (data.token) {
-        localStorage.setItem('access_token', data.token.access);
-        localStorage.setItem('refresh_token', data.token.refresh);
-        localStorage.setItem('user_data', JSON.stringify(data.user));
+        if (typeof data.token === 'string') {
+          console.log('🔐 Storing token as string');
+          accessToken = data.token;
+        } else if (data.token.access) {
+          console.log('🔐 Storing tokens from data.token object');
+          accessToken = data.token.access;
+          refreshToken = data.token.refresh;
+        }
+      } else if (data.access_token) {
+        console.log('🔐 Storing tokens from data.access_token');
+        accessToken = data.access_token;
+        refreshToken = data.refresh_token;
+      } else if (data.api_token) {
+        console.log('🔐 Storing token from data.api_token');
+        accessToken = data.api_token;
+      }
+      
+      if (accessToken) {
+        TokenManager.setTokens(accessToken, refreshToken);
+        localStorage.setItem('veyu_user_data', JSON.stringify(data.user || data));
+      } else {
+        console.log('🔐 No tokens found in login response');
       }
 
       return data;
@@ -34,8 +57,23 @@ class AuthService {
   // Register new user
   async register(userData) {
     try {
-      const response = await apiClient.post('/accounts/register/', userData);
-      return handleApiResponse(response);
+      // Ensure required fields are present
+      const payload = {
+        action: 'create-account',
+        provider: 'veyu',
+        ...userData,
+      };
+
+      const response = await apiClient.post('/accounts/register/', payload);
+      const data = handleApiResponse(response);
+      
+      // Store tokens if provided
+      if (data.token) {
+        TokenManager.setTokens(data.token.access, data.token.refresh);
+        localStorage.setItem('veyu_user_data', JSON.stringify(data.user));
+      }
+      
+      return data;
     } catch (error) {
       handleApiError(error);
     }
@@ -44,11 +82,21 @@ class AuthService {
   // Register business account (mechanic/dealer)
   async registerBusiness(businessData) {
     try {
-      const response = await apiClient.post('/accounts/register/', {
+      const payload = {
         action: 'create-business-account',
         ...businessData,
-      });
-      return handleApiResponse(response);
+      };
+
+      const response = await apiClient.post('/accounts/register/', payload);
+      const data = handleApiResponse(response);
+      
+      // Store tokens if provided
+      if (data.token) {
+        TokenManager.setTokens(data.token.access, data.token.refresh);
+        localStorage.setItem('veyu_user_data', JSON.stringify(data.user));
+      }
+      
+      return data;
     } catch (error) {
       handleApiError(error);
     }
@@ -66,9 +114,8 @@ class AuthService {
       const data = handleApiResponse(response);
       
       if (data.token) {
-        localStorage.setItem('access_token', data.token.access);
-        localStorage.setItem('refresh_token', data.token.refresh);
-        localStorage.setItem('user_data', JSON.stringify(data.user));
+        TokenManager.setTokens(data.token.access, data.token.refresh);
+        localStorage.setItem('veyu_user_data', JSON.stringify(data.user));
       }
 
       return data;
@@ -82,7 +129,7 @@ class AuthService {
     try {
       const response = await apiClient.get('/accounts/profile/');
       const data = handleApiResponse(response);
-      localStorage.setItem('user_data', JSON.stringify(data));
+      localStorage.setItem('veyu_user_data', JSON.stringify(data));
       return data;
     } catch (error) {
       handleApiError(error);
@@ -94,7 +141,7 @@ class AuthService {
     try {
       const response = await apiClient.put('/accounts/profile/', profileData);
       const data = handleApiResponse(response);
-      localStorage.setItem('user_data', JSON.stringify(data));
+      localStorage.setItem('veyu_user_data', JSON.stringify(data));
       return data;
     } catch (error) {
       handleApiError(error);
@@ -259,7 +306,7 @@ class AuthService {
   // Token management
   async refreshToken() {
     try {
-      const refreshToken = localStorage.getItem('refresh_token');
+      const refreshToken = TokenManager.getRefreshToken();
       if (!refreshToken) {
         throw new Error('No refresh token available');
       }
@@ -269,8 +316,7 @@ class AuthService {
       });
 
       const data = handleApiResponse(response);
-      localStorage.setItem('access_token', data.access);
-      localStorage.setItem('refresh_token', data.refresh);
+      TokenManager.setTokens(data.access, data.refresh);
 
       return data;
     } catch (error) {
@@ -289,25 +335,23 @@ class AuthService {
 
   // Logout
   logout() {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_data');
+    TokenManager.clearTokens();
   }
 
   // Check if user is authenticated
   isAuthenticated() {
-    return !!localStorage.getItem('access_token');
+    return TokenManager.isAuthenticated();
   }
 
   // Get current user data
   getCurrentUser() {
-    const userData = localStorage.getItem('user_data');
+    const userData = localStorage.getItem('veyu_user_data');
     return userData ? JSON.parse(userData) : null;
   }
 
   // Get access token
   getAccessToken() {
-    return localStorage.getItem('access_token');
+    return TokenManager.getAccessToken();
   }
 }
 

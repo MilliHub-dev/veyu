@@ -48,6 +48,7 @@ import { motion } from 'framer-motion';
 import { CenteredLayout, OTPField } from "../../components";
 import { redirect, useNavigate, useSearchParams, useParams, Link as RLink } from "react-router-dom";
 import { RiCircleFill, RiCircleLine, RiMailCloseFill, RiMailFill, RiMessage2Line, RiMessage3Line, RiMessageLine } from "react-icons/ri";
+import authService from '../../services/authService';
 import { FcSms, FcVoicemail } from "react-icons/fc";
 import { FaGoogle, FaFacebook, FaArrowRight, FaEye, FaEyeSlash } from "react-icons/fa";
 import { RxChatBubble, RxEnvelopeOpen } from "react-icons/rx";
@@ -170,10 +171,12 @@ export const SignupView = ({ ...props }) => {
   });
 
   function nextStep() {
+    console.log('nextStep called: current step', step, 'going to step', step + 1);
     setStepValue((step + 1));
   }
 
   function gotoStep(num) {
+    console.log('gotoStep called: current step', step, 'going to step', num);
     setStepValue(num);
   }
 
@@ -214,10 +217,18 @@ export const SignupView = ({ ...props }) => {
     const currentStep = steps[step];
 
     useEffect(() => {
+      console.log('StepComponent useEffect:', {
+        currentStepKey: currentStep.key,
+        skipConfirmation,
+        shouldSkip: skipConfirmation[`${currentStep.key}`]
+      });
+
       if (skipConfirmation[`${currentStep.key}`]) {
+        console.log('Auto-skipping step:', currentStep.key);
         nextStep();
       }
-    }, []);
+    }, [currentStep.key, skipConfirmation]);
+
     return currentStep.component;
   };
 
@@ -539,7 +550,7 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
       const hasLowerCase = /[a-z]/.test(password);
       const hasNumbers = /\d/.test(password);
       const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-      
+
       if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
         return notify({
           title: 'Weak Password',
@@ -846,7 +857,7 @@ const SignupStep = ({ type }) => {
       phone_number: phone_number.trim() || null,
       action: 'create-account'  // Added action field as required by the API
     };
-    
+
     // Remove any undefined values
     Object.keys(newPayload).forEach(key => {
       if (newPayload[key] === undefined) {
@@ -871,288 +882,250 @@ const SignupStep = ({ type }) => {
 
       // First, check if the email exists
       let res;
-      
+
       // Ensure required fields are present
       if (!newPayload.email || !newPayload.password || !newPayload.confirm_password) {
         throw new Error('Email, password, and confirm password are required');
       }
-      
+
       // Ensure passwords match
       if (newPayload.password !== newPayload.confirm_password) {
         throw new Error('Passwords do not match');
       }
-      
+
       try {
         // Log the payload for debugging
         console.log('Sending signup payload:', JSON.stringify(newPayload, null, 2));
-        
+
         // Create FormData to handle the request properly
         const formData = new FormData();
-        
+
         // Add all fields to FormData
         Object.entries(newPayload).forEach(([key, value]) => {
           if (value !== null && value !== undefined) {
             formData.append(key, value);
           }
         });
-        
+
         // Log the final payload being sent
         console.log('Final signup payload:', Object.fromEntries(formData.entries()));
-        
-        // Make the request with JSON instead of FormData
-        res = await axios.post('https://dev.veyu.cc/api/v1/accounts/register/', 
-          newPayload, // Use the raw payload object instead of FormData
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            validateStatus: (status) => true // Don't throw for any status code
-          }
-        );
-        
-        console.log('Signup response status:', res.status);
-        console.log('Signup response data:', res.data);
-        
-        // Check if signup was successful (201) but has the email_verified error
-        if (res.status === 201 || (res.status === 500 && 
-            res.data?.message?.includes("'email_verified'"))) {
-          // Try to log in with the same credentials
-          try {
-            const loginRes = await axios.post('https://dev.veyu.cc/api/v1/accounts/login/', {
-              email: newPayload.email,
-              password: newPayload.password
-            });
-            
-            const loginData = objectifyJSON(loginRes.data);
-            const token = loginData.token || loginData.api_token;
-            
-            if (token) {
-              // Proceed with successful login
-              const userData = {
-                ...loginData.user,
-                token: token,
-                isAuthenticated: true,
-                user_type: newPayload.user_type || 'customer'
-              };
-              
-              // Save user data to localStorage or context
-              localStorage.setItem('user', JSON.stringify(userData));
-              
-              // Redirect based on user type or to dashboard
-              const redirectPath = userData.user_type === 'customer' ? '/dashboard' : `/${userData.user_type}/dashboard`;
-              window.location.href = redirectPath;
-              return;
-            }
-          } catch (loginError) {
-            console.error('Auto-login failed:', loginError);
-            // Continue to show the error below
-          }
-        }
-      } catch (error) {
-        // Handle other errors
-        if (error.response?.status === 400 && 
-            error.response?.data?.email?.includes('already exists')) {
-          // Email exists, try to log in
-          try {
-            const loginRes = await axios.post('https://dev.veyu.cc/api/v1/accounts/login/', {
-              email: newPayload.email,
-              password: newPayload.password
-            });
-            
-            const loginData = objectifyJSON(loginRes.data);
-            const token = loginData.token || loginData.api_token;
-            
-            if (token) {
-              const userData = {
-                ...loginData,
-                token,
-                api_token: token,
-                user_type: user_type || loginData.user_type
-              };
-              
-              localStorage.setItem('veyu-auth-user', jsonifyObject(userData));
-              
-              // Redirect to business profile for mechanics/dealers
-              if (['mechanic', 'dealer'].includes(userData.user_type)) {
-                // Update the auth state first
-                onAuthenticated(userData);
-                // Then redirect to the business profile setup
-                navigate(`/dashboard/business-profile`, { replace: true });
-                return;
-              }
-              // For regular users, go to dashboard
-              navigate('/dashboard', { replace: true });
-              return;
-            }
-          } catch (loginError) {
-            console.error('Login error:', loginError);
-            throw new Error('An account with this email already exists. Please use a different email or log in.');
-          }
-          return;
-        }
-        throw error; // Re-throw if it's not a duplicate email error
-      }
 
-      // If we get here, it's a new account
-      const data = objectifyJSON(res.data);
-      console.log('Signup response status:', res.status);
-      console.log('Signup response data:', data);
+        // Create a seamless signup experience that handles server errors gracefully
+        let registrationData = null;
+        let accountCreated = false;
 
-      // Handle successful registration (201 Created) or other success statuses
-      if (res.status === 201 || res.status === 200) {
-        // If the response indicates an error but with 200 status (some APIs do this)
-        if (data.error) {
-          // If the error is about email_verified, we can proceed with login
-          if (data.message && data.message.includes('email_verified')) {
-            console.log('Proceeding with login despite email_verified error');
-            // Continue with the login flow below
-          } else {
-            throw new Error(data.message || 'Registration failed');
-          }
-        }
-        const authData = data.data || data;
-        const token = authData.token || authData.api_token;
-        
-        if (token) {
-          const userData = {
-            ...authData,
-            token,
-            api_token: token,
-            user_type: user_type || authData.user_type
-          };
-          
-          localStorage.setItem('veyu-auth-user', jsonifyObject(userData));
-          
-          // For mechanics/dealers, redirect to business profile after signup
-          if (['mechanic', 'dealer'].includes(userData.user_type)) {
-            // Store the token in localStorage for the business profile setup
-            localStorage.setItem('auth_token', token);
-            localStorage.setItem('user_type', userData.user_type);
-            
-            // Store the user data in localStorage for the business profile setup
-            localStorage.setItem('user_data', JSON.stringify({
-              email: newPayload.email,
-              first_name: newPayload.first_name,
-              last_name: newPayload.last_name,
-              phone_number: newPayload.phone_number
-            }));
-            
-            // Navigate to business profile with user type
-            navigate(`/business-profile?user_type=${userData.user_type}`, { 
-              state: { 
-                fromSignup: true,
-                userData: {
-                  ...userData,
-                  email: newPayload.email,
-                  first_name: newPayload.first_name,
-                  last_name: newPayload.last_name,
-                  phone_number: newPayload.phone_number
-                }
-              },
-              replace: true 
-            });
-          } else {
-            // For regular users, go to dashboard
-            navigate('/dashboard', { 
-              replace: true,
-              state: { 
-                userData: {
-                  ...userData,
-                  email: newPayload.email,
-                  first_name: newPayload.first_name,
-                  last_name: newPayload.last_name,
-                  phone_number: newPayload.phone_number
-                }
-              }
-            });
-          }
-          return;
-        }
-
-        // For regular users, proceed with email verification
         try {
-          // Only attempt email verification if the user has an email
-          if (newPayload.email) {
-            const verifyResponse = await axios.post('https://dev.veyu.cc/api/v1/accounts/verify-email/', 
-              {
-                action: 'request-code',
-                email: newPayload.email
+          // Try registration with the exact structure the API expects
+          const registrationPayload = {
+            action: 'create-account',
+            first_name: newPayload.first_name,
+            last_name: newPayload.last_name,
+            email: newPayload.email,
+            password: newPayload.password,
+            confirm_password: newPayload.confirm_password,
+            provider: 'veyu',
+            user_type: newPayload.user_type,
+            phone_number: newPayload.phone_number,
+            accept_terms: true,
+            marketing_consent: false
+          };
+
+          console.log('Attempting registration with payload:', registrationPayload);
+
+          const response = await axios.post('https://dev.veyu.cc/api/v1/accounts/register/',
+            registrationPayload,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
               },
-              {
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Token ${token}`
-                },
-                validateStatus: (status) => status < 500 // Don't throw for 4xx errors
-              }
-            );
-            
-            console.log('Email verification request response:', verifyResponse.data);
-            
-            if (verifyResponse.data.error) {
-              console.warn('Email verification request had an error:', verifyResponse.data.message);
-              // Continue with the flow even if email verification fails
+              validateStatus: (status) => status < 600 // Accept all responses under 600
+            }
+          );
+
+          if (response.status === 201 || response.status === 200) {
+            registrationData = response.data;
+            accountCreated = true;
+            console.log('Registration successful:', registrationData);
+          } else if (response.status === 500 && response.data?.detail?.includes('email_verified')) {
+            // Server error but account might be created
+            console.log('Server error with email_verified, attempting login to check if account exists...');
+            accountCreated = await attemptLoginAfterError(newPayload);
+          } else {
+            throw new Error(response.data?.detail || response.data?.message || 'Registration failed');
+          }
+        } catch (registrationError) {
+          console.log('Registration failed, checking if account was created:', registrationError.message);
+
+          // If it's the email_verified error, try to login to see if account was created
+          if (registrationError.message?.includes('email_verified') ||
+            registrationError.response?.status === 500) {
+            accountCreated = await attemptLoginAfterError(newPayload);
+          } else {
+            throw registrationError;
+          }
+        }
+
+        // Helper function to attempt login after registration error
+        async function attemptLoginAfterError(payload) {
+          try {
+            const loginData = await authService.login(payload.email, payload.password);
+            console.log('Login successful after registration error - account was created');
+            registrationData = loginData;
+            return true;
+          } catch (loginError) {
+            console.log('Login failed after registration error - account was not created');
+            return false;
+          }
+          return false;
+        }
+
+        if (!accountCreated) {
+          throw new Error('Failed to create account. Please try again.');
+        }
+
+        // Account created successfully - make the experience seamless
+        const userData = {
+          email: newPayload.email,
+          first_name: newPayload.first_name,
+          last_name: newPayload.last_name,
+          phone_number: newPayload.phone_number,
+          user_type: newPayload.user_type,
+          ...registrationData
+        };
+
+        // Check if we have a token (user is already logged in)
+        const token = registrationData?.token || registrationData?.access_token || registrationData?.api_token;
+
+        if (token) {
+          // User is already authenticated, skip email verification and go directly to dashboard
+          console.log('User authenticated during registration, redirecting to dashboard...');
+
+          // Store authentication data using consistent keys
+          localStorage.setItem('veyu_access_token', token);
+          localStorage.setItem('veyu_user_data', JSON.stringify(userData));
+
+          // Update global auth state if available
+          if (onAuthenticated) {
+            onAuthenticated(userData);
+          }
+
+          notify({
+            title: 'Welcome to Veyu!',
+            description: newPayload.user_type === 'customer'
+              ? 'Your account has been created successfully. Taking you to your dashboard...'
+              : 'Your business account has been created successfully. Let\'s set up your business profile...',
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+
+          // Redirect based on user type
+          setTimeout(() => {
+            let redirectPath;
+            if (newPayload.user_type === 'customer') {
+              redirectPath = '/dashboard';
+            } else if (newPayload.user_type === 'mechanic' || newPayload.user_type === 'dealer') {
+              // Business accounts should go to business profile setup first
+              redirectPath = '/business-profile';
+            } else {
+              redirectPath = '/dashboard';
             }
 
-            notify({
-              title: 'Verification Code Sent!',
-              body: `We've sent a 6-digit code to ${newPayload.email}. Please check your inbox.`,
-              color: 'green',
-              duration: 5000,
-              isClosable: true
-            });
+            console.log('Token received during registration, redirecting to:', redirectPath, 'for user type:', newPayload.user_type);
 
-            // Update the payload with the complete user data
-            addToPayload({
-              ...newPayload,
-              ...authData
+            navigate(redirectPath, {
+              replace: true,
+              state: {
+                fromRegistration: true,
+                userType: newPayload.user_type,
+                userData: userData
+              }
             });
+          }, 1500);
 
-            // Force navigation to the email verification step
-            setSkipStep(prev => ({
-              ...prev,
-              profile: true,
-              email: false
-            }));
-            
-            // Move to the next step (email verification)
-            nextStep();
-          }
-        } catch (emailError) {
-          console.error('Error sending verification email:', emailError);
-          notify({
-            title: 'Verification Email Error',
-            body: 'Your account was created, but we encountered an error sending the verification email. Please try logging in and request a new verification code.',
-            color: 'orange',
-            duration: 7000
-          });
-          
-          // Still navigate to the email verification step
-          setSkipStep(prev => ({
-            ...prev,
-            profile: true,
-            email: false
-          }));
-          nextStep();
+          return;
         }
-      } else {
+
+        // If no token, proceed with email verification
         notify({
-          title: 'Sign up Error!',
-          color: 'red',
-          body: data.message,
+          title: 'Account Created Successfully!',
+          description: 'Please verify your email to complete the registration process.',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
         });
+
+        // Update payload with registration response
+        addToPayload(userData);
+
+        // Proceed to email verification step
+        console.log('Current step:', step, 'Moving to next step (email verification)...');
+
+        // Just move to the next step without changing skip settings
+        // The email verification step should not be skipped (it's false by default)
+        nextStep();
+      } catch (error) {
+        console.error('Registration error:', error);
+
+        // Handle specific error cases
+        if (error.message && error.message.includes('already exists')) {
+          notify({
+            title: 'Account Already Exists',
+            description: 'An account with this email already exists. Please sign in instead.',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+          });
+
+          // Redirect to login page
+          setTimeout(() => {
+            navigate('/login', {
+              state: {
+                email: newPayload.email,
+                message: 'Account already exists. Please sign in.'
+              }
+            });
+          }, 2000);
+          return;
+        }
+
+        // Handle specific error cases with user-friendly messages
+        if (error.message && error.message.includes('email_verified')) {
+          // This is a server-side bug, but let's make it seamless for the user
+          notify({
+            title: 'Almost There!',
+            description: 'Your account is being set up. Please try signing in with your credentials.',
+            status: 'info',
+            duration: 3000,
+            isClosable: true,
+          });
+
+          setTimeout(() => {
+            navigate('/login', {
+              state: {
+                email: newPayload.email,
+                message: 'Please sign in with your new account credentials.'
+              }
+            });
+          }, 1500);
+          return;
+        }
+
+        throw error; // Re-throw other errors
       }
+
+      // This code block is no longer needed as we're handling everything above
     } catch (error) {
       console.error('Signup error:', error);
       let errorMessage = 'An error occurred during signup. Please try again.';
       let errorDetails = null;
-      
+
       if (error.response) {
         // Handle HTTP errors (4xx, 5xx)
         const { data, status, headers } = error.response;
-        console.error('Error response:', { 
-          status, 
+        console.error('Error response:', {
+          status,
           headers: JSON.stringify(headers),
           data,
           request: {
@@ -1161,9 +1134,9 @@ const SignupStep = ({ type }) => {
             data: error.config?.data
           }
         });
-        
+
         errorDetails = data;
-        
+
         if (status === 400) {
           // Handle validation errors
           if (data && typeof data === 'object') {
@@ -1174,7 +1147,12 @@ const SignupStep = ({ type }) => {
             errorMessage = data?.message || 'Invalid request. Please check your input.';
           }
         } else if (status === 500) {
-          errorMessage = 'Server Error: ' + (data?.detail || 'Internal server error occurred');
+          // Handle the specific email_verified server error
+          if (error.message && error.message.includes('email_verified')) {
+            errorMessage = 'Account creation encountered a server issue, but your account may have been created. Please try logging in or contact support.';
+          } else {
+            errorMessage = 'Server Error: ' + (data?.detail || 'Internal server error occurred');
+          }
           console.error('Server error details:', data);
         } else if (data?.detail) {
           errorMessage = data.detail;
@@ -1192,7 +1170,7 @@ const SignupStep = ({ type }) => {
         console.error('Request setup error:', error.message);
         errorMessage = `Request error: ${error.message}`;
       }
-      
+
       // Log the full error for debugging
       console.error('Full error details:', {
         message: error.message,
@@ -1362,7 +1340,7 @@ const SignupStep = ({ type }) => {
           'Authorization': `Token ${token}`
         }
       });
-      
+
       if (res.data?.email_verified) {
         setIsEmailVerified(true);
         // Redirect based on user type
@@ -1380,7 +1358,7 @@ const SignupStep = ({ type }) => {
   useEffect(() => {
     const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'));
     const token = auth?.token || auth?.api_token;
-    
+
     // Set email from auth or payload
     if (auth?.email) {
       setEmail(auth.email);
@@ -1403,7 +1381,7 @@ const SignupStep = ({ type }) => {
     };
 
     checkStatus();
-    
+
     // Clean up interval on unmount
     return () => {
       if (timer.current) {
@@ -1414,13 +1392,13 @@ const SignupStep = ({ type }) => {
 
   async function requestCode() {
     if (isResending) return; // Prevent multiple clicks
-    
+
     setIsResending(true);
     try {
       const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'));
       const token = auth?.token || auth?.api_token;
       const emailToVerify = email || payload?.email;
-      
+
       if (!emailToVerify) {
         throw new Error('Email address not found. Please try signing up again.');
       }
@@ -1428,11 +1406,11 @@ const SignupStep = ({ type }) => {
       // Start the countdown timer
       let time = 60;
       setCodeTimer(time);
-      
+
       if (timer.current) {
         clearInterval(timer.current);
       }
-      
+
       timer.current = setInterval(() => {
         setCodeTimer(prevTime => {
           const newTime = prevTime - 1;
@@ -1444,8 +1422,8 @@ const SignupStep = ({ type }) => {
         });
       }, 1000);
 
-      // Request verification code
-      const res = await axios.post('/accounts/verify-email/', 
+      // Request verification code directly
+      await axios.post('https://dev.veyu.cc/api/v1/accounts/verify-email/',
         {
           action: 'request-code',
           email: emailToVerify,
@@ -1453,20 +1431,18 @@ const SignupStep = ({ type }) => {
         {
           headers: {
             'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Token ${token}` } : {})
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           }
         }
       );
 
-      if (res.status === 200) {
-        notify({
-          title: 'Verification Code Sent!',
-          description: `We've sent a 6-digit code to ${emailToVerify}. Please check your inbox.`,
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
-      }
+      notify({
+        title: 'Verification Code Sent!',
+        description: `We've sent a 6-digit code to ${emailToVerify}. Please check your inbox.`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
     } catch (error) {
       notify({
         title: 'Error',
@@ -1511,54 +1487,77 @@ const SignupStep = ({ type }) => {
         throw new Error('Email address not found. Please try signing up again.');
       }
 
-      // Verify the code
-      const res = await axios.post(
-        '/accounts/verify-email/',
+      // Verify the code directly
+      const verificationResponse = await axios.post('https://dev.veyu.cc/api/v1/accounts/verify-email/',
         {
-          action: 'confirm-code',
-          email: emailToVerify,
+          action: 'verify-code',
           code: otp
         },
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Token ${token}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );
 
-      if (res.status === 200) {
-        // Update local storage with verified status
-        const updatedAuth = {
-          ...auth,
-          email_verified: true,
-          ...(res.data?.user || {}) // Update with any user data from the response
-        };
-        
-        localStorage.setItem('veyu-auth-user', JSON.stringify(updatedAuth));
-        
-        // Get user type to determine redirect
-        const userType = res.data?.user?.user_type || auth?.user_type;
-        
-        notify({
-          title: 'Email Verified Successfully!',
-          description: userType === 'customer' 
-            ? 'Your account is now verified. Taking you to your dashboard...'
-            : 'Your business account is now verified. Setting up your profile...',
-          status: 'success',
-          duration: 5000,
-          isClosable: true,
-        });
+      const verificationResult = verificationResponse.data;
 
-        // Redirect based on user type
-        const redirectPath = userType === 'customer' 
-          ? '/dashboard' 
-          : '/dashboard/business-profile';
-          
-        setTimeout(() => {
-          navigate(redirectPath);
-        }, 2000);
+      // Email verification successful
+      console.log('Email verification successful:', verificationResult);
+
+      // Update local storage with verified status
+      const updatedAuth = {
+        ...auth,
+        email_verified: true,
+        ...verificationResult
+      };
+
+      localStorage.setItem('veyu-auth-user', JSON.stringify(updatedAuth));
+
+      // Get user type to determine redirect
+      const userType = verificationResult?.user_type || auth?.user_type || payload?.user_type;
+
+      notify({
+        title: 'Email Verified Successfully!',
+        description: userType === 'customer'
+          ? 'Your account is now verified. Taking you to your dashboard...'
+          : 'Your business account is now verified. Let\'s set up your business profile...',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+
+      // Redirect based on user type
+      let redirectPath;
+      if (userType === 'customer') {
+        redirectPath = '/dashboard';
+      } else if (userType === 'mechanic' || userType === 'dealer') {
+        // Business accounts should go to business profile setup first
+        redirectPath = '/business-profile';
+      } else {
+        // Fallback for any other user types
+        redirectPath = '/dashboard';
       }
+
+      console.log('Email verified, redirecting to:', redirectPath, 'for user type:', userType);
+
+      setTimeout(() => {
+        navigate(redirectPath, {
+          replace: true,
+          state: {
+            fromEmailVerification: true,
+            userType: userType,
+            userData: {
+              email: payload?.email,
+              first_name: payload?.first_name,
+              last_name: payload?.last_name,
+              phone_number: payload?.phone_number,
+              user_type: userType
+            }
+          }
+        });
+      }, 2000);
     } catch (error) {
       notify({
         title: 'Verification Failed',

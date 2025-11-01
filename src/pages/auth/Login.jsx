@@ -55,6 +55,7 @@ import { CenteredLayout } from "../../components";
 import { useNavigate, Link } from "react-router-dom";
 import { auth } from "../../firebase";
 import firebase from 'firebase/compat/app';
+import authService from '../../services/authService';
 
 const MotionBox = motion(Box);
 const MotionCard = motion(Card);
@@ -106,38 +107,23 @@ export const LoginView = ({ ...props }) => {
     setIsLoading(true);
     
     try {
-      const res = await axios.post('/accounts/login/', {
-        email,
-        password,
-        provider,
-      }, { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' } });
+      const data = await authService.login(email, password);
       
-      let data = res.data;
-      if (typeof data === 'string') {
-        try { data = JSON.parse(data) } catch { data = { message: data } }
-      }
+      onAuthenticated(data);
+      notify({
+        'title': 'Welcome Back!',
+        'body': `Successfully logged in! Welcome back ${data?.user?.user_type || data?.user_type}`,
+        'color': 'green'
+      });
 
-      if (res.status === 200 && !data?.error) {
-        onAuthenticated(data);
-        notify({
-          'title': 'Welcome Back!',
-          'body': `Successfully logged in! Welcome back ${data?.user_type}`,
-          'color': 'green'
-        });
-
-        switch (data?.user_type) {
-          case 'dealer': redirect('/dashboard'); break;
-          case 'mechanic': redirect('/dashboard'); break;
-          default: redirect(`/home?user=${data.email}`); break;
-        }
-      } else {
-        return onError(data?.message, true);
+      const userType = data?.user?.user_type || data?.user_type;
+      switch (userType) {
+        case 'dealer': redirect('/dashboard'); break;
+        case 'mechanic': redirect('/dashboard'); break;
+        default: redirect(`/home?user=${data?.user?.email || data?.email}`); break;
       }
     } catch (error) {
-      const serverMsg = error?.response?.data?.message
-        || (typeof error?.response?.data === 'string' ? error?.response?.data : null)
-        || error.message;
-      return onError(serverMsg);
+      return onError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -151,31 +137,21 @@ export const LoginView = ({ ...props }) => {
       
       const user = result.user;
       if (user) {
-        const res = await axios.post('/accounts/login/', {
-          email: user.email,
-          provider: 'google',
-        }, { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' } });
+        const accessToken = await user.getIdToken();
+        const data = await authService.socialLogin('google', accessToken);
         
-        let data = res.data;
-        if (typeof data === 'string') {
-          try { data = JSON.parse(data) } catch { data = { message: data } }
-        }
+        onAuthenticated(data);
+        notify({
+          'title': 'Welcome Back!',
+          'body': `Successfully logged in with Google! Welcome back ${data?.user?.user_type || data?.user_type}`,
+          'color': 'green'
+        });
 
-        if (res.status === 200 && !data?.error) {
-          onAuthenticated(data);
-          notify({
-            'title': 'Welcome Back!',
-            'body': `Successfully logged in with Google! Welcome back ${data?.user_type}`,
-            'color': 'green'
-          });
-
-          switch (data?.user_type) {
-            case 'dealer': redirect('/dashboard'); break;
-            case 'mechanic': redirect('/dashboard'); break;
-            default: redirect(`/home?user=${data.email}`); break;
-          }
-        } else {
-          return onError(data?.message, true);
+        const userType = data?.user?.user_type || data?.user_type;
+        switch (userType) {
+          case 'dealer': redirect('/dashboard'); break;
+          case 'mechanic': redirect('/dashboard'); break;
+          default: redirect(`/home?user=${data?.user?.email || data?.email}`); break;
         }
       }
     } catch (error) {

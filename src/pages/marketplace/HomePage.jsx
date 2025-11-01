@@ -68,6 +68,7 @@ import {
 import { ListingItemCard, ImageCarousel, LocationBreadcrumb } from "../../components";
 import { GlobalStore } from "../../App";
 import { objectifyJSON } from "../../utils";
+import { apiClient } from "../../services/api";
 import ScrollAnimation from 'react-animate-on-scroll';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -241,13 +242,21 @@ export default function MainPage() {
 
   async function getData() {
     try {
-      const res = await axios.get(`/listings/my-listings/?scope=recents;top-deals`);
+      const res = await apiClient.get(`/listings/my-listings/?scope=recents;top-deals`);
       const data = objectifyJSON(res.data);
 
       setRecentlyViewed(data.recents || []);
       setTopDeals(data.top_deals || { rentals: [], sales: [], services: [] });
     } catch (error) {
       console.error('Error fetching data:', error);
+      
+      // If it's a 401 error, the user might not be authenticated
+      if (error.response?.status === 401) {
+        console.log('User not authenticated, skipping personalized data');
+        // Set empty data instead of showing error
+        setRecentlyViewed([]);
+        setTopDeals({ rentals: [], sales: [], services: [] });
+      }
     }
   }
 
