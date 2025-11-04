@@ -266,8 +266,6 @@ const Bookings = () => {
       </Container>
     )
   }
-    init();
-  }, [])
 
   return (
     <Container maxW="7xl" py={8}>

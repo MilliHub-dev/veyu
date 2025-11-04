@@ -347,9 +347,9 @@ export const BuyDetail = ({ }) => {
   };
 
   function init() {
-    setLoadingState(true)
+    setLoadingState(true);
     getData();
-    setTimeout(() => setLoadingState(false), 2500)
+    setTimeout(() => setLoadingState(false), 2500);
   }
 
   useEffect(() => {

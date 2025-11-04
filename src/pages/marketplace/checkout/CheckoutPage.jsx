@@ -940,7 +940,7 @@ function CheckoutPage({ props }) {
               </CardBody>
             </MotionCard>
           </Box>
-        </Flex>
+        </SimpleGrid>
 
         {
           (listing && (

@@ -320,8 +320,9 @@ export const MechanicOverview = () => {
               Share Profile
             </Button>
             <Button colorScheme="blue" size="lg" leftIcon={<Calendar size={20} />}>
-            View Calendar
-          </Button>
+              View Calendar
+            </Button>
+          </HStack>
         </Flex>
       </Box>
 
