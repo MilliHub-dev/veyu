@@ -15,7 +15,30 @@ const apiClient = axios.create({
 
 // Token management utilities
 const TokenManager = {
-  getAccessToken: () => localStorage.getItem('veyu_access_token'),
+  getAccessToken: () => {
+    // First try the new token format
+    let token = localStorage.getItem('veyu_access_token');
+    
+    // If not found, try to get from old auth user format
+    if (!token) {
+      try {
+        const oldAuthUser = localStorage.getItem('veyu-auth-user');
+        if (oldAuthUser) {
+          const authData = JSON.parse(oldAuthUser);
+          if (authData.token) {
+            console.log('🔄 TokenManager: Using token from old auth format');
+            token = authData.token;
+            // Migrate to new format
+            localStorage.setItem('veyu_access_token', token);
+          }
+        }
+      } catch (e) {
+        console.log('🔄 TokenManager: Could not parse old auth data');
+      }
+    }
+    
+    return token;
+  },
   getRefreshToken: () => localStorage.getItem('veyu_refresh_token'),
   setTokens: (accessToken, refreshToken) => {
     localStorage.setItem('veyu_access_token', accessToken);
@@ -27,6 +50,7 @@ const TokenManager = {
     localStorage.removeItem('veyu_access_token');
     localStorage.removeItem('veyu_refresh_token');
     localStorage.removeItem('veyu_user_data');
+    localStorage.removeItem('veyu-auth-user'); // Also clear old format
   },
   isAuthenticated: () => !!TokenManager.getAccessToken(),
 };

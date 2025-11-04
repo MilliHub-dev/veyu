@@ -243,8 +243,33 @@ function Dashboard({ }) {
   return (
     <Box w={'100%'}>
       <Box py={6} borderBottom={`2px solid ${borderCol}`}>
-        <Text size="md" className="text" fontWeight="600">Dashboard</Text>
-        <Text size="xs" className="small">Welcome back, {authUser?.first_name}👋</Text>
+        <Flex justify="space-between" align="center">
+          <Box>
+            <Text size="md" className="text" fontWeight="600">Dashboard</Text>
+            <Text size="xs" className="small">Welcome back, {authUser?.first_name}👋</Text>
+          </Box>
+          <Button
+            leftIcon={<Share2 size={16} />}
+            size="sm"
+            variant="outline"
+            colorScheme="blue"
+            onClick={() => {
+              const profileUrl = `${window.location.origin}/dealership/${authUser?.slug || authUser?.id}`;
+              if (navigator.share) {
+                navigator.share({
+                  title: 'My Dealership Profile',
+                  text: `Check out my dealership on Veyu`,
+                  url: profileUrl,
+                });
+              } else {
+                navigator.clipboard.writeText(profileUrl);
+                alert('Profile link copied to clipboard!');
+              }
+            }}
+          >
+            Share Profile
+          </Button>
+        </Flex>
       </Box>
 
       <SimpleGrid gap={4} direction={'row'} flexWrap={'wrap'} my={5} minChildWidth={'250px'}>

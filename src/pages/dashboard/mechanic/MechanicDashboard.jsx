@@ -47,7 +47,7 @@ import {useState, useEffect, useContext, Fragment} from 'react';
 import {GlobalStore} from '../../../App';
 import { Link } from 'react-router-dom';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
-import {MapPin, Search, MoreVertical, TrendingUp, Users, Calendar, DollarSign, Clock, CheckCircle} from 'lucide-react';
+import {MapPin, Search, MoreVertical, TrendingUp, Users, Calendar, DollarSign, Clock, CheckCircle, Share2} from 'lucide-react';
 import { mechanicService } from '../../../services';
 import { useToast } from '@chakra-ui/react';
 
@@ -297,7 +297,29 @@ export const MechanicOverview = () => {
               Track, manage and forecast your customers and orders.
             </Text>
           </Box>
-          <Button colorScheme="blue" size="lg" leftIcon={<Calendar size={20} />}>
+          <HStack spacing={3}>
+            <Button
+              leftIcon={<Share2 size={16} />}
+              size="md"
+              variant="outline"
+              colorScheme="blue"
+              onClick={() => {
+                const profileUrl = `${window.location.origin}/mechanic/${authUser?.slug || authUser?.id}`;
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'My Mechanic Profile',
+                    text: `Check out my mechanic services on Veyu`,
+                    url: profileUrl,
+                  });
+                } else {
+                  navigator.clipboard.writeText(profileUrl);
+                  alert('Profile link copied to clipboard!');
+                }
+              }}
+            >
+              Share Profile
+            </Button>
+            <Button colorScheme="blue" size="lg" leftIcon={<Calendar size={20} />}>
             View Calendar
           </Button>
         </Flex>

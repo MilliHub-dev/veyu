@@ -127,7 +127,8 @@ class AuthService {
   // Get user profile
   async getProfile() {
     try {
-      const response = await apiClient.get('/accounts/profile/');
+      // Use the available endpoint from the error message
+      const response = await apiClient.get('/accounts/accounts/');
       const data = handleApiResponse(response);
       localStorage.setItem('veyu_user_data', JSON.stringify(data));
       return data;
@@ -139,7 +140,19 @@ class AuthService {
   // Update user profile
   async updateProfile(profileData) {
     try {
-      const response = await apiClient.put('/accounts/profile/', profileData);
+      // Try PUT method first, then POST if that fails
+      let response;
+      try {
+        response = await apiClient.put('/accounts/update-profile/', profileData);
+      } catch (putError) {
+        if (putError.response?.status === 405) {
+          // If PUT is not allowed, try PATCH
+          response = await apiClient.patch('/accounts/update-profile/', profileData);
+        } else {
+          throw putError;
+        }
+      }
+      
       const data = handleApiResponse(response);
       localStorage.setItem('veyu_user_data', JSON.stringify(data));
       return data;

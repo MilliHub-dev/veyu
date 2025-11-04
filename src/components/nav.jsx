@@ -442,11 +442,11 @@ export const CustomerNavbar = ({ props }) => {
                     <MenuList px={2}>
                       <Box my={3} placeItems="center">
                         <Avatar name={`${authUser?.first_name} ${authUser?.last_name}`} />
-                        <Text>{authUser?.first_name} {authUser?.last_name}</Text>
+                        <Text color="black">{authUser?.first_name} {authUser?.last_name}</Text>
                       </Box>
 
-                      <Button my={1} as={MenuItem} display={'flex'} justifyContent={'space-between'} onClick={logout} variant={'ghost'} w={'100%'}> Sign Out  <RiLogoutBoxRLine className='icon' /> </Button>
-                      <Button my={1} as={MenuItem} display={'flex'} justifyContent={'space-between'} variant={'ghost'} w={'100%'}> Contact Support <RiHeadphoneLine className='icon' />  </Button>
+                      <Button my={1} as={MenuItem} display={'flex'} justifyContent={'space-between'} onClick={logout} variant={'ghost'} w={'100%'} color="black"> Sign Out  <RiLogoutBoxRLine className='icon' /> </Button>
+                      <Button my={1} as={MenuItem} display={'flex'} justifyContent={'space-between'} variant={'ghost'} w={'100%'} color="black"> Contact Support <RiHeadphoneLine className='icon' />  </Button>
                     </MenuList>
                   </Fragment>
                 }
@@ -595,12 +595,12 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
                   size="lg"
                   name={`${authUser?.first_name} ${authUser?.last_name}`}
                 />
-                <Heading my={1} size="sm"> {`${authUser?.first_name} ${authUser?.last_name}`} </Heading>
-                <Text> {authUser?.email} </Text>
+                <Heading my={1} size="sm" color="black"> {`${authUser?.first_name} ${authUser?.last_name}`} </Heading>
+                <Text color="black"> {authUser?.email} </Text>
               </Box>
               <Divider my={2} />
-              <MenuItem as={Link} gap={2} to={'/profile'}> <User size="20" /> Profile </MenuItem>
-              <MenuItem as={Link} gap={2} onClick={logout}> <RiLogoutBoxRLine /> Logout </MenuItem>
+              <MenuItem as={Link} gap={2} to={'/profile'} color="black"> <User size="20" /> Profile </MenuItem>
+              <MenuItem as={Link} gap={2} onClick={logout} color="black"> <RiLogoutBoxRLine /> Logout </MenuItem>
             </MenuList>
           </Menu>
 
@@ -696,12 +696,39 @@ export const DealerDashboardSideBar = ({ dealership: propDealership, sidebarOpen
               />
               {sidebarOpen && (
                 <Box flex={1}>
-                  <Text fontWeight="medium" color="black">
-                    {dealership?.business_name || `${authUser?.first_name || ''} ${authUser?.last_name || ''}`.trim() || 'User'}
-                  </Text>
-                  {dealership?.slug && (
-                    <Text fontSize="sm" color="gray.500">@{dealership.slug}</Text>
-                  )}
+                  <Flex justify="space-between" align="center">
+                    <Box>
+                      <Text fontWeight="medium" color="black">
+                        {dealership?.business_name || `${authUser?.first_name || ''} ${authUser?.last_name || ''}`.trim() || 'User'}
+                      </Text>
+                      {dealership?.slug && (
+                        <Text fontSize="sm" color="gray.500">@{dealership.slug}</Text>
+                      )}
+                    </Box>
+                    <Tooltip label="Share Profile" placement="top">
+                      <IconButton
+                        icon={<Share2 size={16} />}
+                        size="sm"
+                        variant="ghost"
+                        colorScheme="blue"
+                        onClick={() => {
+                          const profileUrl = `${window.location.origin}/dealership/${dealership?.slug || authUser?.id}`;
+                          if (navigator.share) {
+                            navigator.share({
+                              title: dealership?.business_name || 'My Dealership Profile',
+                              text: `Check out ${dealership?.business_name || 'my dealership'} on Veyu`,
+                              url: profileUrl,
+                            });
+                          } else {
+                            navigator.clipboard.writeText(profileUrl);
+                            // You might want to add a toast notification here
+                            alert('Profile link copied to clipboard!');
+                          }
+                        }}
+                        aria-label="Share Profile"
+                      />
+                    </Tooltip>
+                  </Flex>
                 </Box>
               )}
             </>
@@ -927,14 +954,14 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
             >Wallet</Button>
           )
           }
-          <RLink to={'/chat'}><Icon viewBox='45' className='icon' color="primary"><MessageCircleIcon size={18} /></Icon></RLink>
-          <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color="primary"><BellIcon size={18} /></Icon></RLink>
+          <RLink to={'/chat'}><Icon viewBox='45' className='icon' color="black"><MessageCircleIcon size={18} /></Icon></RLink>
+          <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color="black"><BellIcon size={18} /></Icon></RLink>
           <Menu zIndex={2} display="block">
             <MenuButton
               as={IconButton}
               icon={<UserIcon size={18} />}
               colorScheme="blue"
-              color="primary"
+              color="black"
               variant="ghost"
               size="sm"
               aria-label="Profile"
@@ -946,12 +973,12 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
                   size="lg"
                   name={`${authUser?.first_name} ${authUser?.last_name}`}
                 />
-                <Heading my={1} size="sm"> {`${authUser?.first_name} ${authUser?.last_name}`} </Heading>
-                <Text> {authUser?.email} </Text>
+                <Heading my={1} size="sm" color="black"> {`${authUser?.first_name} ${authUser?.last_name}`} </Heading>
+                <Text color="black"> {authUser?.email} </Text>
               </Box>
               <Divider my={2} />
-              <MenuItem as={Link} gap={2} to={'/profile'}> <User size="20" /> Profile </MenuItem>
-              <MenuItem as={Link} gap={2} onClick={logout}> <RiLogoutBoxRLine /> Logout </MenuItem>
+              <MenuItem as={Link} gap={2} to={'/profile'} color="black"> <User size="20" /> Profile </MenuItem>
+              <MenuItem as={Link} gap={2} onClick={logout} color="black"> <RiLogoutBoxRLine /> Logout </MenuItem>
             </MenuList>
           </Menu>
           {(isMobile || props.hideSidebar) &&
@@ -989,10 +1016,38 @@ export const MechanicDashboardSideBar = ({ mechanic, sidebarOpen, setSidebarStat
         <HStack spacing={3}>
           <Avatar size="md" src={mechanic?.logo} mx={sidebarOpen ? '0px' : 'auto'} name={`${mechanic?.business_name}`} />
 
-          <Box flex={1}>
-            <Text fontWeight="medium">{`${mechanic?.business_name}`}</Text>
-            <Text fontSize="sm" color="gray.500">@{mechanic?.slug}</Text>
-          </Box>
+          {sidebarOpen && (
+            <Box flex={1}>
+              <Flex justify="space-between" align="center">
+                <Box>
+                  <Text fontWeight="medium">{`${mechanic?.business_name}`}</Text>
+                  <Text fontSize="sm" color="gray.500">@{mechanic?.slug}</Text>
+                </Box>
+                <Tooltip label="Share Profile" placement="top">
+                  <IconButton
+                    icon={<Share2 size={16} />}
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="blue"
+                    onClick={() => {
+                      const profileUrl = `${window.location.origin}/mechanic/${mechanic?.slug || mechanic?.id}`;
+                      if (navigator.share) {
+                        navigator.share({
+                          title: mechanic?.business_name || 'My Mechanic Profile',
+                          text: `Check out ${mechanic?.business_name || 'my mechanic services'} on Veyu`,
+                          url: profileUrl,
+                        });
+                      } else {
+                        navigator.clipboard.writeText(profileUrl);
+                        alert('Profile link copied to clipboard!');
+                      }
+                    }}
+                    aria-label="Share Profile"
+                  />
+                </Tooltip>
+              </Flex>
+            </Box>
+          )}
         </HStack>
 
         <VStack align="stretch" spacing={2}>

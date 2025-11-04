@@ -1,4 +1,4 @@
-import { 
+import {
   Box, Button, Checkbox, FormControl, FormLabel,
   Input, Stack, Switch, Textarea, VStack, Heading,
   Image, Tabs, TabList, TabPanels, Tab, TabPanel,
@@ -7,16 +7,16 @@ import {
 } from "@chakra-ui/react";
 import { useState, useEffect, useContext, useRef } from "react";
 import { FaUpload } from "react-icons/fa";
-import {GlobalStore} from '../../../../App'
-import {objectifyJSON, jsonifyObject} from '../../../../utils'
+import { GlobalStore } from '../../../../App'
+import { objectifyJSON, jsonifyObject } from '../../../../utils'
 import { Search, Bell, CloudUpload, ChevronDown, ArrowRight } from "lucide-react";
 import { apiClient } from '../../../../services/api';
 import authService from '../../../../services/authService';
 
 
 
-export const BusinessProfile = ({  }) => {
-  const {axios, notify, authUser} = useContext(GlobalStore);
+export const BusinessProfile = ({ }) => {
+  const { axios, notify, authUser } = useContext(GlobalStore);
   const imageRef = useRef();
   const [dealership, setDealership] = useState({
     logo: "", // Placeholder for logo
@@ -44,9 +44,9 @@ export const BusinessProfile = ({  }) => {
   };
 
   const slugify = (text) => {
-    if (text){
+    if (text) {
       return text.toLocaleLowerCase().replace(/['#@*()!"$%&]*/g, '').replaceAll(' ', '-')
-    }else{
+    } else {
       return ''
     }
   }
@@ -54,12 +54,14 @@ export const BusinessProfile = ({  }) => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     const preview = URL.createObjectURL(file)
-    setDealership({ ...dealership, logo: {file, preview}});
+    setDealership({ ...dealership, logo: { file, preview } });
   }
 
   async function getDealership() {
     try {
-      const data = await authService.getProfile();
+      // Try the dealership-specific endpoint first
+      const response = await apiClient.get('/admin/dealership/');
+      const data = response.data;
       console.log('Fetched dealership data:', data);
       setDealership(prev => ({
         ...prev,
@@ -69,20 +71,34 @@ export const BusinessProfile = ({  }) => {
       }));
     } catch (error) {
       console.error('Error fetching dealership data:', error);
-      notify({
-        title: 'Error',
-        description: 'Failed to load dealership data. Please refresh the page.',
-        status: 'error',
-        duration: 3000,
-        isClosable: true
-      });
+
+      if (error.response?.status === 500 && error.response?.data?.includes('DoesNotExist')) {
+        // Dealership profile doesn't exist yet - this is normal for new users
+        console.log('Dealership profile not found - will be created on first save');
+        notify({
+          title: 'New Profile',
+          description: 'This appears to be your first time setting up your dealership profile.',
+          status: 'info',
+          duration: 3000,
+          isClosable: true
+        });
+      } else {
+        // Other errors
+        notify({
+          title: 'Info',
+          description: 'Could not load existing profile data. You can still update your settings.',
+          status: 'info',
+          duration: 3000,
+          isClosable: true
+        });
+      }
     }
   }
 
   async function handleSubmit() {
     try {
       const payload = new FormData();
-      
+
       // Add all form fields to FormData
       Object.entries(dealership).forEach(([key, value]) => {
         // Skip logo for now (handle it separately)
@@ -90,7 +106,7 @@ export const BusinessProfile = ({  }) => {
           // Skip, we'll handle the file upload separately
           return;
         }
-        
+
         // Handle nested objects (like services array)
         if (value && typeof value === 'object' && !(value instanceof File)) {
           payload.append(key, JSON.stringify(value));
@@ -105,8 +121,7 @@ export const BusinessProfile = ({  }) => {
       }
 
       console.log(`🔄 NEW CODE [${new Date().toISOString()}]: Saving dealership settings with authService.updateProfile...`);
-      console.log('🔄 NEW CODE: Profile data:', profileData);
-      
+
       // Convert FormData to regular object for authService
       const profileData = {};
       for (let [key, value] of payload.entries()) {
@@ -120,19 +135,30 @@ export const BusinessProfile = ({  }) => {
           profileData[key] = value;
         }
       }
-      
+
+      console.log('🔄 NEW CODE: Profile data:', profileData);
+
       // Handle file upload separately if there's a logo
       if (dealership.logo && typeof dealership.logo === 'object' && dealership.logo.file) {
-        try {
-          await authService.uploadProfilePhoto(dealership.logo.file);
-        } catch (logoError) {
-          console.error('Logo upload failed:', logoError);
-          // Continue with profile update even if logo fails
-        }
+        console.log('Logo upload temporarily disabled due to API issues');
+        notify({
+          title: 'Logo Upload Skipped',
+          description: 'Logo upload is temporarily unavailable. Other settings will be saved.',
+          status: 'warning',
+          duration: 3000,
+          isClosable: true
+        });
+        // Skip logo upload for now due to API issues
+        // try {
+        //   await authService.uploadProfilePhoto(dealership.logo.file);
+        // } catch (logoError) {
+        //   console.error('Logo upload failed:', logoError);
+        //   // Continue with profile update even if logo fails
+        // }
       }
-      
+
       const data = await authService.updateProfile(profileData);
-      
+
       if (data) {
         notify({
           title: 'Success!',
@@ -141,7 +167,7 @@ export const BusinessProfile = ({  }) => {
           duration: 3000,
           isClosable: true
         });
-        
+
         // Update local state with the saved data
         setDealership(prev => ({
           ...prev,
@@ -149,12 +175,12 @@ export const BusinessProfile = ({  }) => {
           // Preserve the local file preview if it exists
           logo: prev.logo?.preview ? prev.logo : data.logo
         }));
-        
+
         return true;
       }
     } catch (error) {
       console.error('Error saving dealership settings:', error);
-      
+
       let errorMessage = 'Failed to save settings. Please try again.';
       if (error.response?.data) {
         // Handle field-specific errors
@@ -168,7 +194,7 @@ export const BusinessProfile = ({  }) => {
         });
         errorMessage = errors.join('\n');
       }
-      
+
       notify({
         title: 'Error',
         description: errorMessage,
@@ -199,9 +225,9 @@ export const BusinessProfile = ({  }) => {
             <VStack>
               {
                 dealership?.logo?.file ? (
-                  <Image src={dealership?.logo?.preview} w="80px"  />
-                ): (
-                  <Image src={dealership?.logo} w="80px"  />
+                  <Image src={dealership?.logo?.preview} w="80px" />
+                ) : (
+                  <Image src={dealership?.logo} w="80px" />
                 )
               }
               <Button onClick={e => imageRef.current.click()} variant="link" color="#0460cc" fontSize="sm" fontWeight="medium" leftIcon={<CloudUpload size={16} />}>
@@ -248,40 +274,40 @@ export const BusinessProfile = ({  }) => {
             <Box p={4} borderBottom="1px solid" borderColor="#d0d5dd">
               <FormLabel fontWeight="medium" mb={2}> Choose services </FormLabel>
               <Flex flexWrap="wrap" gap={2}>
-              {
-                dealerServices?.map((service) => {
-                  const selected = dealership?.services?.includes(service);
-                  if (selected) return null;
-                  return (
-                    <Tag
-                      variant={selected ? "solid" : "outline"}
-                      size="lg"
-                      cursor="pointer"
-                      borderRadius="full"
-                      fontSize="sm"
-                      bg={selected ? "#f2f4f7" : "white"}
-                      color={selected ? "#101828" : "#667085"}
-                      borderColor="#d0d5dd"
-                      _hover={{ bg: selected ? "#e4e7ec" : "gray.50" }}
-                      onClick={() => 
-                        setDealership({
-                          ...dealership,
-                          services: [...dealership?.services, service]
-                        })
-                      }
-                    >
-                      {service}
-                    </Tag>
-                  )
-                }
-              )}
+                {
+                  dealerServices?.map((service) => {
+                    const selected = dealership?.services?.includes(service);
+                    if (selected) return null;
+                    return (
+                      <Tag
+                        variant={selected ? "solid" : "outline"}
+                        size="lg"
+                        cursor="pointer"
+                        borderRadius="full"
+                        fontSize="sm"
+                        bg={selected ? "#f2f4f7" : "white"}
+                        color={selected ? "#101828" : "#667085"}
+                        borderColor="#d0d5dd"
+                        _hover={{ bg: selected ? "#e4e7ec" : "gray.50" }}
+                        onClick={() =>
+                          setDealership({
+                            ...dealership,
+                            services: [...dealership?.services, service]
+                          })
+                        }
+                      >
+                        {service}
+                      </Tag>
+                    )
+                  }
+                  )}
               </Flex>
             </Box>
 
             <Box p={4}>
               <Flex flexWrap="wrap" gap={2}>
                 {
-                  dealership?.services?.map((service) => 
+                  dealership?.services?.map((service) =>
                     <Tag
                       variant={"solid"}
                       cursor="pointer"
@@ -291,12 +317,12 @@ export const BusinessProfile = ({  }) => {
                       bg={"#0460cc"}
                       color={"white"}
                       borderColor={"#0460cc"}
-                      _hover={{ bg: "#0354b4"}}
+                      _hover={{ bg: "#0354b4" }}
                       // onClick={() => removeService(service)}
                       onClick={() => {
                         const deals = dealership.services;
                         deals.splice(deals.indexOf(service), 1);
-                        setDealership({ ...dealership, services:[...deals] })
+                        setDealership({ ...dealership, services: [...deals] })
                       }}
                     >
                       {service}
@@ -332,9 +358,9 @@ export const BusinessProfile = ({  }) => {
             <HStack>
               {
                 dealership?.logo?.file ? (
-                  <Image src={dealership?.logo?.preview} w="60px"  />
-                ): (
-                  <Image src={dealership?.logo} w="60px"  />
+                  <Image src={dealership?.logo?.preview} w="60px" />
+                ) : (
+                  <Image src={dealership?.logo} w="60px" />
                 )
               }
               <Box>
@@ -346,7 +372,7 @@ export const BusinessProfile = ({  }) => {
             </HStack>
             <Divider />
             <Text fontSize="sm" color="#667085">{dealership?.about || 'Tell customers about your business...'}</Text>
-            <HStack flexWrap={{base: 'wrap', md: 'nowrap'}} mt={2} fontSize="sm" color="#667085">
+            <HStack flexWrap={{ base: 'wrap', md: 'nowrap' }} mt={2} fontSize="sm" color="#667085">
               <Text>{dealership?.contact_email || 'email@example.com'}</Text>
               <Text>•</Text>
               <Text>{dealership?.contact_phone || '+234 000 000 0000'}</Text>

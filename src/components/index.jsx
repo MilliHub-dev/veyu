@@ -197,12 +197,19 @@ export const VerificationNotice = ({ businessType, user, onRefresh, ...props }) 
 
   const fetchVerificationStatus = async () => {
     try {
+      // Try the available verification endpoint from the API list
       const res = await axios.get('/accounts/verify-business/');
       setStatus(res.data.status || 'not_submitted');
       setRejectionReason(res.data.rejection_reason);
     } catch (error) {
       console.error('Error fetching verification status:', error);
-      setStatus('not_submitted');
+      if (error.response?.status === 404) {
+        // Endpoint doesn't exist - assume not submitted
+        console.log('Verification endpoint not available - defaulting to not_submitted');
+        setStatus('not_submitted');
+      } else {
+        setStatus('not_submitted');
+      }
     } finally {
       setLoading(false);
     }

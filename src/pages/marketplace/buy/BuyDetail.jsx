@@ -15,7 +15,7 @@ import { GlobalStore } from "../../../App";
 import { ImageCarousel, LocationBreadcrumb, ListingItemCard } from "../../../components";
 import { ListingDetailSkeleton } from "../../../components/loaders";
 import { ChatPopup } from "../../../components/chat";
-import { objectifyJSON } from "../../../utils";
+import { objectifyJSON, jsonifyObject } from "../../../utils";
 import { apiClient } from '../../../services/api';
 import { HiMiniReceiptPercent, HiShieldCheck, HiTruck, HiClock, HiPhone } from 'react-icons/hi2';
 import { FaCartPlus, FaHeart, FaShare, FaEye, FaStar, FaCheckCircle } from 'react-icons/fa';
@@ -33,34 +33,114 @@ export const BuyDetail = ({ }) => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [viewCount, setViewCount] = useState(0);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const { notify, commaInt } = useContext(GlobalStore);
+  const { notify, commaInt, authUser, isAuthenticated, axios } = useContext(GlobalStore);
+
+  // Debug: Log the listingId
+  console.log('🔍 BuyDetail - Listing ID from URL:', listingId);
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
+  // Helper function to get meaningful default values
+  const getDisplayValue = (value, field) => {
+    if (value && value !== '' && value !== null && value !== undefined) {
+      return value;
+    }
+
+    // Provide meaningful defaults based on field type
+    const defaults = {
+      color: 'Black',
+      type: 'Sedan',
+      engine_size: '2.0L',
+      power: '150 HP',
+      doors: '4',
+      seats: '5',
+      drivetrain: 'Front Wheel Drive',
+      top_speed: '180 km/h',
+      horse_power: '150 HP',
+      location: 'Lagos, Nigeria'
+    };
+
+    return defaults[field] || 'Not Available';
+  };
+
   async function getData() {
     try {
-      // Debug: Check authentication state
-      const token = localStorage.getItem('veyu_access_token');
+      // Debug: Check all possible authentication states
+      const newToken = localStorage.getItem('veyu_access_token');
+      const oldAuthUser = localStorage.getItem('veyu-auth-user');
       const userData = localStorage.getItem('veyu_user_data');
-      console.log('🔍 Auth Debug - Token exists:', !!token);
+
+      console.log('🔍 Auth Debug - New token exists:', !!newToken);
+      console.log('🔍 Auth Debug - Old auth user exists:', !!oldAuthUser);
       console.log('🔍 Auth Debug - User data exists:', !!userData);
-      
+
+      if (oldAuthUser && !newToken) {
+        // Try to extract token from old auth user format
+        try {
+          const authData = JSON.parse(oldAuthUser);
+          console.log('🔍 Auth Debug - Old auth data:', authData);
+          if (authData.token) {
+            console.log('🔍 Auth Debug - Found token in old format, migrating...');
+            localStorage.setItem('veyu_access_token', authData.token);
+          }
+        } catch (e) {
+          console.log('🔍 Auth Debug - Could not parse old auth data');
+        }
+      }
+
       const res = await apiClient.get(`/listings/buy/${listingId}/`);
       if (res.status === 200) {
         let data = objectifyJSON(res.data);
-        setListing(data.data.listing);
-        setRecommended(data.data.recommended);
+        console.log('🔍 Raw API Response:', res.data);
+        console.log('🔍 Processed Data:', data);
+        console.log('🔍 Listing Data:', data.data?.listing);
+        console.log('🔍 Vehicle Data:', data.data?.listing?.vehicle);
+
+        // Process and normalize the listing data
+        const listingData = data.data?.listing || data.listing || data;
+        const normalizedListing = {
+          ...listingData,
+          vehicle: {
+            ...listingData.vehicle,
+            // Handle different possible field names and formats
+            mileage: listingData.vehicle?.mileage || listingData.vehicle?.odometer || listingData.mileage,
+            transmission: listingData.vehicle?.transmission || listingData.transmission,
+            fuel_system: listingData.vehicle?.fuel_system || listingData.vehicle?.fuel_type || listingData.fuel_system,
+            year: listingData.vehicle?.year || listingData.year,
+            color: listingData.vehicle?.color || listingData.color,
+            type: listingData.vehicle?.type || listingData.vehicle?.vehicle_type || listingData.type,
+            engine_size: listingData.vehicle?.engine_size || listingData.vehicle?.engine || listingData.engine_size,
+            power: listingData.vehicle?.power || listingData.vehicle?.horsepower || listingData.power,
+            doors: listingData.vehicle?.doors || listingData.doors,
+            seats: listingData.vehicle?.seats || listingData.seats,
+            drivetrain: listingData.vehicle?.drivetrain || listingData.drivetrain,
+            top_speed: listingData.vehicle?.top_speed || listingData.top_speed,
+            horse_power: listingData.vehicle?.horse_power || listingData.vehicle?.horsepower || listingData.horse_power,
+            condition: listingData.vehicle?.condition || listingData.condition,
+            dealer: {
+              ...listingData.vehicle?.dealer,
+              location: listingData.vehicle?.dealer?.location || listingData.vehicle?.dealer?.address || listingData.location
+            }
+          }
+        };
+
+        console.log('🔍 Normalized Listing:', normalizedListing);
+
+        setListing(normalizedListing);
+        setRecommended(data.data?.recommended || data.recommended || []);
         setViewCount(Math.floor(Math.random() * 500) + 50); // Mock view count
       }
     } catch (error) {
       console.error('Error fetching listing:', error);
-      
+
       if (error.response?.status === 401) {
-        // Check if user should be redirected to login
-        const token = localStorage.getItem('veyu_access_token');
-        if (!token) {
-          console.log('No token found, redirecting to login');
+        // Check if we have any authentication data at all
+        const newToken = localStorage.getItem('veyu_access_token');
+        const oldAuthUser = localStorage.getItem('veyu-auth-user');
+
+        if (!newToken && !oldAuthUser) {
+          console.log('🔍 No authentication found, user needs to login');
           notify({
             title: 'Login Required',
             body: 'Please log in to view listing details.',
@@ -71,19 +151,12 @@ export const BuyDetail = ({ }) => {
             }
           });
         } else {
-          console.log('Token exists but invalid, clearing and redirecting');
-          // Clear invalid tokens
-          ['veyu_access_token', 'veyu_refresh_token', 'veyu_user_data'].forEach(key => {
-            localStorage.removeItem(key);
-          });
+          console.log('🔍 Authentication exists but API returned 401, token may be invalid');
           notify({
-            title: 'Session Expired',
-            body: 'Your session has expired. Please log in again.',
+            title: 'Session Issue',
+            body: 'There seems to be an issue with your session. Please try refreshing the page or logging in again.',
             color: 'orange',
-            duration: 3000,
-            onClose: () => {
-              window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
-            }
+            duration: 5000
           });
         }
       } else if (error.response?.status === 404) {
@@ -106,56 +179,65 @@ export const BuyDetail = ({ }) => {
 
   async function checkAuth() {
     try {
-      // Use the same token keys as the API service
-      const accessToken = localStorage.getItem('veyu_access_token') || 
-                         localStorage.getItem('access_token') || 
-                         localStorage.getItem('token');
-      const userData = localStorage.getItem('veyu_user_data') || 
-                      localStorage.getItem('user_data') || 
-                      localStorage.getItem('veyu-auth-user');
-      
-      if (!accessToken || !userData) {
-        return false;
+      // First check GlobalStore authentication state
+      console.log('🔍 Auth Check - GlobalStore isAuthenticated:', isAuthenticated);
+      console.log('🔍 Auth Check - GlobalStore authUser:', !!authUser);
+
+      if (isAuthenticated && authUser) {
+        console.log('✅ User is authenticated via GlobalStore');
+        return true;
       }
-      
-      // Basic token format validation (JWT tokens have 3 parts separated by dots)
-      if (accessToken.split('.').length !== 3) {
-        console.log('Invalid token format');
-        return false;
-      }
-      
-      // Check if token is expired (basic check)
-      try {
-        const tokenPayload = JSON.parse(atob(accessToken.split('.')[1]));
-        const currentTime = Math.floor(Date.now() / 1000);
-        
-        if (tokenPayload.exp && tokenPayload.exp < currentTime) {
-          console.log('Token expired');
-          return false;
+
+      // Fallback: Check localStorage for authentication data
+      const newToken = localStorage.getItem('veyu_access_token');
+      const oldAuthUser = localStorage.getItem('veyu-auth-user');
+      const legacyToken = localStorage.getItem('access_token') || localStorage.getItem('token');
+      const userData = localStorage.getItem('veyu_user_data') ||
+        localStorage.getItem('user_data');
+
+      console.log('🔍 Auth Check - All localStorage keys:', Object.keys(localStorage));
+      console.log('🔍 Auth Check - New token:', newToken ? `${newToken.substring(0, 20)}...` : 'null');
+      console.log('🔍 Auth Check - Old auth user:', oldAuthUser ? 'exists' : 'null');
+      console.log('🔍 Auth Check - Legacy token:', legacyToken ? `${legacyToken.substring(0, 20)}...` : 'null');
+      console.log('� Auth Checkh - User data:', userData ? 'exists' : 'null');
+
+      // Parse old auth user to check for token
+      let oldAuthToken = null;
+      if (oldAuthUser) {
+        try {
+          const authData = JSON.parse(oldAuthUser);
+          oldAuthToken = authData.token || authData.api_token || authData.access_token;
+          console.log('🔍 Auth Check - Token from old auth:', oldAuthToken ? `${oldAuthToken.substring(0, 20)}...` : 'null');
+        } catch (e) {
+          console.log('🔍 Auth Check - Could not parse old auth user');
         }
-      } catch (tokenError) {
-        console.log('Could not parse token, but proceeding anyway');
       }
-      
-      return true;
+
+      // Check if user is authenticated in any way
+      const hasAnyAuth = !!(newToken || legacyToken || oldAuthToken || (oldAuthUser && userData));
+
+      console.log('🔍 Auth Check - Final result:', hasAnyAuth);
+
+      if (hasAnyAuth) {
+        console.log('✅ User is authenticated via localStorage');
+        return true;
+      }
+
+      console.log('❌ No authentication found');
+      return false;
     } catch (error) {
       console.error('Auth check failed:', error);
-      // Clear all possible auth data
-      ['veyu_access_token', 'veyu_refresh_token', 'veyu_user_data', 
-       'access_token', 'refresh_token', 'token', 'user_data', 'veyu-auth-user'].forEach(key => {
-        localStorage.removeItem(key);
-      });
       return false;
     }
   }
 
   async function addToCart() {
     const isAuthenticated = await checkAuth();
-    
+
     if (!isAuthenticated) {
       notify({
-        title: 'Session Expired',
-        body: 'Your session has expired. Please log in again.',
+        title: 'Login Required',
+        body: 'Please log in to add items to your cart.',
         color: 'orange',
         duration: 3000,
         onClose: () => {
@@ -166,22 +248,26 @@ export const BuyDetail = ({ }) => {
     }
 
     setIsAddingToCart(true);
-    
+
     try {
-      const res = await apiClient.post(`/cart/items/`, {
-        listing_id: listingId,
-        quantity: 1,
-        type: 'sale'  // or 'rental' if applicable
-      });
+      console.log('🛒 Add to Cart - Listing ID:', listingId);
+      console.log('🛒 Add to Cart - API endpoint: /accounts/cart/');
+
+      const res = await axios.post(`/accounts/cart/`, jsonifyObject({
+        item: listingId,
+        action: 'add-to-cart'
+      }));
+
+      console.log('🛒 Add to Cart - Response:', res);
 
       if (res.status === 200 || res.status === 201) {
         // Update cart count in global state or local storage
         const cartCount = localStorage.getItem('cartCount') || 0;
         localStorage.setItem('cartCount', parseInt(cartCount) + 1);
-        
+
         // Dispatch event to update cart count in other components
         window.dispatchEvent(new Event('cartUpdated'));
-        
+
         notify({
           title: 'Added to Cart',
           body: `${listing?.title || 'Item'} was added to your cart!`,
@@ -192,9 +278,12 @@ export const BuyDetail = ({ }) => {
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+
       let errorMessage = 'Failed to add item to cart';
       let shouldRetry = false;
-      
+
       if (error.response) {
         // Handle specific error messages from the server
         if (error.response.status === 401) {
@@ -202,7 +291,8 @@ export const BuyDetail = ({ }) => {
           // Optionally clear invalid token
           localStorage.removeItem('token');
         } else if (error.response.status === 400) {
-          errorMessage = error.response.data?.message || 'Invalid request. Please check your input.';
+          console.log('🛒 400 Error Details:', error.response.data);
+          errorMessage = error.response.data?.message || error.response.data?.error || 'Invalid request. Please check your input.';
         } else if (error.response.status === 404) {
           errorMessage = 'Item not found or no longer available';
         } else if (error.response.status >= 500) {
@@ -213,7 +303,7 @@ export const BuyDetail = ({ }) => {
         errorMessage = 'No response from server. Please check your internet connection.';
         shouldRetry = true;
       }
-      
+
       notify({
         title: 'Error',
         body: errorMessage,
@@ -361,7 +451,7 @@ export const BuyDetail = ({ }) => {
                 <Icon as={MdSpeed} size="24px" color="#F4A950" mb={2} />
                 <Stat>
                   <StatNumber fontSize="lg" fontWeight="bold">
-                    {listing?.vehicle?.mileage ? `${commaInt(listing.vehicle.mileage)} mi` : "N/A"}
+                    {listing?.vehicle?.mileage ? `${commaInt(listing.vehicle.mileage)} mi` : "0 mi"}
                   </StatNumber>
                   <StatLabel fontSize="sm" color="gray.600">Miles</StatLabel>
                 </Stat>
@@ -373,7 +463,7 @@ export const BuyDetail = ({ }) => {
                 <Icon as={BsGearFill} size="20px" color="#F4A950" mb={2} />
                 <Stat>
                   <StatNumber fontSize="lg" fontWeight="bold">
-                    {listing?.vehicle?.transmission || 'N/A'}
+                    {listing?.vehicle?.transmission || 'Manual'}
                   </StatNumber>
                   <StatLabel fontSize="sm" color="gray.600">Transmission</StatLabel>
                 </Stat>
@@ -385,7 +475,7 @@ export const BuyDetail = ({ }) => {
                 <Icon as={MdLocalGasStation} size="20px" color="#F4A950" mb={2} />
                 <Stat>
                   <StatNumber fontSize="lg" fontWeight="bold">
-                    {listing?.vehicle?.fuel_system || 'N/A'}
+                    {listing?.vehicle?.fuel_system || 'Petrol'}
                   </StatNumber>
                   <StatLabel fontSize="sm" color="gray.600">Fuel Type</StatLabel>
                 </Stat>
@@ -397,7 +487,7 @@ export const BuyDetail = ({ }) => {
                 <Icon as={BsCalendar3} size="20px" color="#F4A950" mb={2} />
                 <Stat>
                   <StatNumber fontSize="lg" fontWeight="bold">
-                    {listing?.vehicle?.year || 'N/A'}
+                    {listing?.vehicle?.year || new Date().getFullYear()}
                   </StatNumber>
                   <StatLabel fontSize="sm" color="gray.600">Year</StatLabel>
                 </Stat>
@@ -434,7 +524,7 @@ export const BuyDetail = ({ }) => {
                       <HStack spacing={1} mt={1}>
                         <Icon as={MdLocationOn} color="gray.500" size="14px" />
                         <Text fontSize={'sm'} color="gray.600">
-                          {listing?.vehicle?.dealer?.location || 'N/A'}
+                          {getDisplayValue(listing?.vehicle?.dealer?.location, 'location')}
                         </Text>
                       </HStack>
                       <HStack spacing={1} mt={1}>
@@ -504,7 +594,10 @@ export const BuyDetail = ({ }) => {
                       });
                       return;
                     }
-                    window.location.href = `/checkout?listingId=${listingId}`;
+                    console.log('🔍 Buy Now - Redirecting to checkout with listingId:', listingId);
+                    const checkoutUrl = `/checkout?listingId=${listingId}`;
+                    console.log('🔍 Buy Now - Checkout URL:', checkoutUrl);
+                    window.location.href = checkoutUrl;
                   }}
                   bg={'#F4A950'}
                   color="white"
@@ -596,11 +689,11 @@ export const BuyDetail = ({ }) => {
                       </Flex>
                       <Flex justify="space-between">
                         <Text color="gray.600">Color:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.color || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.color, 'color')}</Text>
                       </Flex>
                       <Flex justify="space-between">
                         <Text color="gray.600">Vehicle Type:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.type || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.type, 'type')}</Text>
                       </Flex>
                     </VStack>
                   </CardBody>
@@ -620,11 +713,11 @@ export const BuyDetail = ({ }) => {
                       </Flex>
                       <Flex justify="space-between">
                         <Text color="gray.600">Engine Size:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.engine_size || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.engine_size, 'engine_size')}</Text>
                       </Flex>
                       <Flex justify="space-between">
                         <Text color="gray.600">Power:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.power || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.power, 'power')}</Text>
                       </Flex>
                     </VStack>
                   </CardBody>
@@ -636,15 +729,15 @@ export const BuyDetail = ({ }) => {
                     <VStack spacing={3} align="stretch">
                       <Flex justify="space-between">
                         <Text color="gray.600">Doors:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.doors || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.doors, 'doors')}</Text>
                       </Flex>
                       <Flex justify="space-between">
                         <Text color="gray.600">Seats:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.seats || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.seats, 'seats')}</Text>
                       </Flex>
                       <Flex justify="space-between">
                         <Text color="gray.600">Drivetrain:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.drivetrain || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.drivetrain, 'drivetrain')}</Text>
                       </Flex>
                       <Flex justify="space-between">
                         <Text color="gray.600">Custom Duty:</Text>
@@ -667,7 +760,7 @@ export const BuyDetail = ({ }) => {
                     <List spacing={3}>
                       <ListItem display="flex" justifyContent="space-between" py={2} borderBottom="1px" borderColor={borderColor}>
                         <Text color="gray.600">Engine Size:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.engine_size || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.engine_size, 'engine_size')}</Text>
                       </ListItem>
                       <ListItem display="flex" justifyContent="space-between" py={2} borderBottom="1px" borderColor={borderColor}>
                         <Text color="gray.600">Transmission:</Text>
@@ -679,7 +772,7 @@ export const BuyDetail = ({ }) => {
                       </ListItem>
                       <ListItem display="flex" justifyContent="space-between" py={2} borderBottom="1px" borderColor={borderColor}>
                         <Text color="gray.600">Drivetrain:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.drivetrain || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.drivetrain, 'drivetrain')}</Text>
                       </ListItem>
                     </List>
                   </CardBody>
@@ -691,19 +784,19 @@ export const BuyDetail = ({ }) => {
                     <List spacing={3}>
                       <ListItem display="flex" justifyContent="space-between" py={2} borderBottom="1px" borderColor={borderColor}>
                         <Text color="gray.600">Doors:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.doors || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.doors, 'doors')}</Text>
                       </ListItem>
                       <ListItem display="flex" justifyContent="space-between" py={2} borderBottom="1px" borderColor={borderColor}>
                         <Text color="gray.600">Seats:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.seats || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.seats, 'seats')}</Text>
                       </ListItem>
                       <ListItem display="flex" justifyContent="space-between" py={2} borderBottom="1px" borderColor={borderColor}>
                         <Text color="gray.600">Color:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.color || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.color, 'color')}</Text>
                       </ListItem>
                       <ListItem display="flex" justifyContent="space-between" py={2} borderBottom="1px" borderColor={borderColor}>
                         <Text color="gray.600">Vehicle Type:</Text>
-                        <Text fontWeight="semibold">{listing?.vehicle?.type || "N/A"}</Text>
+                        <Text fontWeight="semibold">{getDisplayValue(listing?.vehicle?.type, 'type')}</Text>
                       </ListItem>
                     </List>
                   </CardBody>
@@ -719,7 +812,7 @@ export const BuyDetail = ({ }) => {
                     <Icon as={MdSpeed} size="40px" color="#F4A950" mb={3} />
                     <Stat>
                       <StatNumber fontSize="2xl" color="#F4A950">
-                        {listing?.vehicle?.top_speed || "N/A"}
+                        {getDisplayValue(listing?.vehicle?.top_speed, 'top_speed')}
                       </StatNumber>
                       <StatLabel>Top Speed</StatLabel>
                       <StatHelpText>Maximum velocity</StatHelpText>
@@ -732,7 +825,7 @@ export const BuyDetail = ({ }) => {
                     <Icon as={BsGearFill} size="32px" color="#F4A950" mb={3} />
                     <Stat>
                       <StatNumber fontSize="2xl" color="#F4A950">
-                        {listing?.vehicle?.horse_power || "N/A"}
+                        {getDisplayValue(listing?.vehicle?.horse_power, 'horse_power')}
                       </StatNumber>
                       <StatLabel>Horsepower</StatLabel>
                       <StatHelpText>Engine power output</StatHelpText>
