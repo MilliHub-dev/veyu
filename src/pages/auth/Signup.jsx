@@ -189,23 +189,24 @@ export const SignupView = ({ ...props }) => {
 
   async function checkEmail(email) {
     try {
-      const res = await axios.get(`/accounts/register/?email=${email}`);
-      const data = objectifyJSON(res.data);
-      if (res.status === 200) {
-        return true;
-      } else {
+      // Instead of checking if email exists, we'll just validate the email format
+      // and let the registration endpoint handle duplicate email errors
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
         notify({
-          title: 'Error!',
-          body: data.message,
+          title: 'Invalid Email',
+          body: 'Please enter a valid email address',
           color: 'red',
         });
         return false;
       }
+      return true;
     } catch (err) {
       notify({
         title: 'An error occurred!',
         body: err.message
       });
+      return false;
     }
   }
 
@@ -854,16 +855,38 @@ const SignupStep = ({ type }) => {
       confirm_password: payload?.confirm_password,
       user_type: user_type || 'customer',
       provider: 'veyu',
-      phone_number: phone_number.trim() || null,
       action: 'create-account'  // Added action field as required by the API
     };
 
-    // Remove any undefined values
+    // Add phone_number if provided
+    if (phone_number && phone_number.trim()) {
+      const cleanPhone = phone_number.trim();
+      // Ensure phone number starts with + for international format
+      if (cleanPhone && !cleanPhone.startsWith('+')) {
+        // If it starts with 0, assume it's Nigerian and convert to +234
+        if (cleanPhone.startsWith('0')) {
+          newPayload.phone_number = '+234' + cleanPhone.substring(1);
+        } else if (cleanPhone.length >= 10) {
+          // If it's 10+ digits without +, assume it needs +234 prefix
+          newPayload.phone_number = '+234' + cleanPhone;
+        } else {
+          // Keep as is if it's shorter (might be incomplete)
+          newPayload.phone_number = cleanPhone;
+        }
+      } else {
+        newPayload.phone_number = cleanPhone;
+      }
+    }
+
+    // Remove any undefined or null values (keep empty strings for optional fields)
     Object.keys(newPayload).forEach(key => {
-      if (newPayload[key] === undefined) {
+      if (newPayload[key] === undefined || newPayload[key] === null) {
         delete newPayload[key];
       }
     });
+
+    // Log the final payload for debugging
+    console.log('Final signup payload (after cleanup):', JSON.stringify(newPayload, null, 2));
 
     // Basic validation
     if (!first_name || !last_name) {
@@ -915,69 +938,22 @@ const SignupStep = ({ type }) => {
         let accountCreated = false;
 
         try {
-          // Try registration with the exact structure the API expects
-          const registrationPayload = {
-            action: 'create-account',
-            first_name: newPayload.first_name,
-            last_name: newPayload.last_name,
-            email: newPayload.email,
-            password: newPayload.password,
-            confirm_password: newPayload.confirm_password,
-            provider: 'veyu',
-            user_type: newPayload.user_type,
-            phone_number: newPayload.phone_number,
-            accept_terms: true,
-            marketing_consent: false
-          };
+          // Use the authService for registration
+          console.log('Attempting registration with payload:', newPayload);
 
-          console.log('Attempting registration with payload:', registrationPayload);
-
-          const response = await axios.post('https://dev.veyu.cc/api/v1/accounts/register/',
-            registrationPayload,
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-              },
-              validateStatus: (status) => status < 600 // Accept all responses under 600
-            }
-          );
-
-          if (response.status === 201 || response.status === 200) {
-            registrationData = response.data;
-            accountCreated = true;
-            console.log('Registration successful:', registrationData);
-          } else if (response.status === 500 && response.data?.detail?.includes('email_verified')) {
-            // Server error but account might be created
-            console.log('Server error with email_verified, attempting login to check if account exists...');
-            accountCreated = await attemptLoginAfterError(newPayload);
-          } else {
-            throw new Error(response.data?.detail || response.data?.message || 'Registration failed');
-          }
+          registrationData = await authService.register(newPayload);
+          accountCreated = true;
+          console.log('Registration successful:', registrationData);
         } catch (registrationError) {
-          console.log('Registration failed, checking if account was created:', registrationError.message);
+          console.log('Registration failed:', registrationError.message);
 
-          // If it's the email_verified error, try to login to see if account was created
-          if (registrationError.message?.includes('email_verified') ||
-            registrationError.response?.status === 500) {
-            accountCreated = await attemptLoginAfterError(newPayload);
-          } else {
-            throw registrationError;
+          // Handle specific error cases
+          if (registrationError.message?.includes('already exists') ||
+            registrationError.message?.includes('duplicate')) {
+            throw new Error('An account with this email already exists. Please sign in instead.');
           }
-        }
 
-        // Helper function to attempt login after registration error
-        async function attemptLoginAfterError(payload) {
-          try {
-            const loginData = await authService.login(payload.email, payload.password);
-            console.log('Login successful after registration error - account was created');
-            registrationData = loginData;
-            return true;
-          } catch (loginError) {
-            console.log('Login failed after registration error - account was not created');
-            return false;
-          }
-          return false;
+          throw registrationError;
         }
 
         if (!accountCreated) {
@@ -994,12 +970,13 @@ const SignupStep = ({ type }) => {
           ...registrationData
         };
 
-        // Check if we have a token (user is already logged in)
+        // Check if we have a token and if email is already verified
         const token = registrationData?.token || registrationData?.access_token || registrationData?.api_token;
+        const emailVerified = registrationData?.email_verified || registrationData?.data?.email_verified;
 
-        if (token) {
-          // User is already authenticated, skip email verification and go directly to dashboard
-          console.log('User authenticated during registration, redirecting to dashboard...');
+        if (token && emailVerified) {
+          // User is already authenticated and verified, skip email verification and go directly to dashboard
+          console.log('User authenticated and verified during registration, redirecting to dashboard...');
 
           // Store authentication data using consistent keys
           localStorage.setItem('veyu_access_token', token);
@@ -1044,6 +1021,40 @@ const SignupStep = ({ type }) => {
             });
           }, 1500);
 
+          return;
+        }
+
+        // If we have a token but email is not verified, store the token and proceed to email verification
+        if (token && !emailVerified) {
+          console.log('User registered with token but email not verified, proceeding to email verification...');
+          
+          // Store the token for authenticated API calls during verification
+          localStorage.setItem('veyu_access_token', token);
+          localStorage.setItem('veyu_user_data', JSON.stringify(userData));
+          
+          // Store auth data in the old format too for compatibility
+          localStorage.setItem('veyu-auth-user', JSON.stringify({
+            token: token,
+            email: userData.email,
+            user_type: userData.user_type,
+            email_verified: false,
+            ...userData
+          }));
+
+          notify({
+            title: 'Account Created Successfully!',
+            description: 'Please verify your email to complete the registration process.',
+            status: 'success',
+            duration: 5000,
+            isClosable: true,
+          });
+
+          // Update payload with registration response
+          addToPayload(userData);
+
+          // Proceed to email verification step
+          console.log('Moving to email verification step...');
+          nextStep();
           return;
         }
 
@@ -1335,16 +1346,12 @@ const SignupStep = ({ type }) => {
   // Check if user is already verified
   const checkVerificationStatus = async (token) => {
     try {
-      const res = await axios.get('/accounts/me/', {
-        headers: {
-          'Authorization': `Token ${token}`
-        }
-      });
+      const userData = await authService.getProfile();
 
-      if (res.data?.email_verified) {
+      if (userData?.email_verified) {
         setIsEmailVerified(true);
         // Redirect based on user type
-        const redirectPath = res.data.user_type === 'customer' ? '/dashboard' : '/business-profile';
+        const redirectPath = userData.user_type === 'customer' ? '/dashboard' : '/business-profile';
         setTimeout(() => navigate(redirectPath), 2000);
         return true;
       }
@@ -1422,19 +1429,8 @@ const SignupStep = ({ type }) => {
         });
       }, 1000);
 
-      // Request verification code directly
-      await axios.post('https://dev.veyu.cc/api/v1/accounts/verify-email/',
-        {
-          action: 'request-code',
-          email: emailToVerify,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          }
-        }
-      );
+      // Request verification code using authService
+      await authService.requestEmailVerification();
 
       notify({
         title: 'Verification Code Sent!',
@@ -1487,21 +1483,10 @@ const SignupStep = ({ type }) => {
         throw new Error('Email address not found. Please try signing up again.');
       }
 
-      // Verify the code directly
-      const verificationResponse = await axios.post('https://dev.veyu.cc/api/v1/accounts/verify-email/',
-        {
-          action: 'verify-code',
-          code: otp
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      // Verify the code using authService
+      const verificationResponse = await authService.verifyEmail(otp);
 
-      const verificationResult = verificationResponse.data;
+      const verificationResult = verificationResponse;
 
       // Email verification successful
       console.log('Email verification successful:', verificationResult);

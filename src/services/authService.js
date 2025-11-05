@@ -18,11 +18,11 @@ class AuthService {
 
       const data = handleApiResponse(response);
       console.log('🔐 Login Response:', data);
-      
+
       // Store tokens using TokenManager - handle different formats
       let accessToken = null;
       let refreshToken = null;
-      
+
       if (data.token) {
         if (typeof data.token === 'string') {
           console.log('🔐 Storing token as string');
@@ -40,7 +40,7 @@ class AuthService {
         console.log('🔐 Storing token from data.api_token');
         accessToken = data.api_token;
       }
-      
+
       if (accessToken) {
         TokenManager.setTokens(accessToken, refreshToken);
         localStorage.setItem('veyu_user_data', JSON.stringify(data.user || data));
@@ -57,22 +57,30 @@ class AuthService {
   // Register new user
   async register(userData) {
     try {
-      // Ensure required fields are present
+      // Ensure required fields are present according to API documentation
       const payload = {
         action: 'create-account',
         provider: 'veyu',
         ...userData,
       };
 
-      const response = await apiClient.post('/accounts/register/', payload);
+      // Log the payload for debugging
+      console.log('AuthService register payload:', JSON.stringify(payload, null, 2));
+
+      // Use the correct endpoint from documentation
+      const response = await apiClient.post('/accounts/signup/', payload);
       const data = handleApiResponse(response);
-      
-      // Store tokens if provided
+
+      // Store tokens if provided - handle different response formats
       if (data.token) {
-        TokenManager.setTokens(data.token.access, data.token.refresh);
-        localStorage.setItem('veyu_user_data', JSON.stringify(data.user));
+        if (typeof data.token === 'string') {
+          TokenManager.setTokens(data.token);
+        } else if (data.token.access) {
+          TokenManager.setTokens(data.token.access, data.token.refresh);
+        }
+        localStorage.setItem('veyu_user_data', JSON.stringify(data.user || data));
       }
-      
+
       return data;
     } catch (error) {
       handleApiError(error);
@@ -89,13 +97,13 @@ class AuthService {
 
       const response = await apiClient.post('/accounts/register/', payload);
       const data = handleApiResponse(response);
-      
+
       // Store tokens if provided
       if (data.token) {
         TokenManager.setTokens(data.token.access, data.token.refresh);
         localStorage.setItem('veyu_user_data', JSON.stringify(data.user));
       }
-      
+
       return data;
     } catch (error) {
       handleApiError(error);
@@ -112,7 +120,7 @@ class AuthService {
       });
 
       const data = handleApiResponse(response);
-      
+
       if (data.token) {
         TokenManager.setTokens(data.token.access, data.token.refresh);
         localStorage.setItem('veyu_user_data', JSON.stringify(data.user));
@@ -127,8 +135,8 @@ class AuthService {
   // Get user profile
   async getProfile() {
     try {
-      // Use the available endpoint from the error message
-      const response = await apiClient.get('/accounts/accounts/');
+      // Use the correct endpoint from API documentation
+      const response = await apiClient.get('/accounts/profile/');
       const data = handleApiResponse(response);
       localStorage.setItem('veyu_user_data', JSON.stringify(data));
       return data;
@@ -152,7 +160,7 @@ class AuthService {
           throw putError;
         }
       }
-      
+
       const data = handleApiResponse(response);
       localStorage.setItem('veyu_user_data', JSON.stringify(data));
       return data;
@@ -208,7 +216,7 @@ class AuthService {
   async verifyEmail(code) {
     try {
       const response = await apiClient.post('/accounts/verify-email/', {
-        action: 'verify-code',
+        action: 'confirm-code',
         code,
       });
       return handleApiResponse(response);
