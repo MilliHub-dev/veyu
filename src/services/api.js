@@ -200,9 +200,16 @@ const handleApiError = (error) => {
     throw new ApiError(message, status, data);
   } else if (error.request) {
     // Request made but no response received
-    throw new ApiError('Network error - please check your connection', 0, null);
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      throw new ApiError('Request timeout - the server is taking too long to respond. This might be due to server issues. Please try again.', 0, null);
+    } else {
+      throw new ApiError('Network error - please check your connection', 0, null);
+    }
   } else {
     // Something else happened
+    if (error.message.includes('timeout')) {
+      throw new ApiError('Request timeout - please try again', 0, null);
+    }
     throw new ApiError(error.message || 'Unknown error occurred', 0, null);
   }
 };

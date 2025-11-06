@@ -67,8 +67,10 @@ class AuthService {
       // Log the payload for debugging
       console.log('AuthService register payload:', JSON.stringify(payload, null, 2));
 
-      // Use the correct endpoint from documentation
-      const response = await apiClient.post('/accounts/signup/', payload);
+      // Use the correct endpoint from documentation with extended timeout for signup
+      const response = await apiClient.post('/accounts/signup/', payload, {
+        timeout: 60000, // 60 seconds for signup (backend might be slow due to email processing)
+      });
       const data = handleApiResponse(response);
 
       // Store tokens if provided - handle different response formats
@@ -216,8 +218,19 @@ class AuthService {
   async verifyEmail(code) {
     try {
       const response = await apiClient.post('/accounts/verify-email/', {
-        action: 'confirm-code',
+        action: 'verify-code',
         code,
+      });
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  async resendEmailVerification(email) {
+    try {
+      const response = await apiClient.post('/accounts/resend-verification/', {
+        email,
       });
       return handleApiResponse(response);
     } catch (error) {

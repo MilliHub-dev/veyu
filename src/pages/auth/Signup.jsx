@@ -937,23 +937,50 @@ const SignupStep = ({ type }) => {
         let registrationData = null;
         let accountCreated = false;
 
-        try {
-          // Use the authService for registration
-          console.log('Attempting registration with payload:', newPayload);
+        // Retry logic for timeout errors
+        let retryCount = 0;
+        const maxRetries = 2;
 
-          registrationData = await authService.register(newPayload);
-          accountCreated = true;
-          console.log('Registration successful:', registrationData);
-        } catch (registrationError) {
-          console.log('Registration failed:', registrationError.message);
+        while (retryCount <= maxRetries) {
+          try {
+            // Use the authService for registration
+            console.log(`Attempting registration (attempt ${retryCount + 1}/${maxRetries + 1}) with payload:`, newPayload);
 
-          // Handle specific error cases
-          if (registrationError.message?.includes('already exists') ||
-            registrationError.message?.includes('duplicate')) {
-            throw new Error('An account with this email already exists. Please sign in instead.');
+            registrationData = await authService.register(newPayload);
+            accountCreated = true;
+            console.log('Registration successful:', registrationData);
+            break; // Success, exit retry loop
+          } catch (registrationError) {
+            console.log(`Registration attempt ${retryCount + 1} failed:`, registrationError.message);
+
+            // Handle specific error cases that shouldn't be retried
+            if (registrationError.message?.includes('already exists') ||
+              registrationError.message?.includes('duplicate')) {
+              throw new Error('An account with this email already exists. Please sign in instead.');
+            }
+
+            // Check if this is a timeout error and we can retry
+            if (registrationError.message?.includes('timeout') && retryCount < maxRetries) {
+              retryCount++;
+              console.log(`Retrying registration due to timeout (attempt ${retryCount + 1}/${maxRetries + 1})...`);
+
+              // Show user that we're retrying
+              notify({
+                title: 'Retrying...',
+                description: `Server is slow to respond. Retrying registration (attempt ${retryCount + 1})...`,
+                status: 'info',
+                duration: 3000,
+                isClosable: true,
+              });
+
+              // Wait a bit before retrying
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              continue;
+            }
+
+            // If not a timeout error or max retries reached, throw the error
+            throw registrationError;
           }
-
-          throw registrationError;
         }
 
         if (!accountCreated) {
@@ -1027,11 +1054,11 @@ const SignupStep = ({ type }) => {
         // If we have a token but email is not verified, store the token and proceed to email verification
         if (token && !emailVerified) {
           console.log('User registered with token but email not verified, proceeding to email verification...');
-          
+
           // Store the token for authenticated API calls during verification
           localStorage.setItem('veyu_access_token', token);
           localStorage.setItem('veyu_user_data', JSON.stringify(userData));
-          
+
           // Store auth data in the old format too for compatibility
           localStorage.setItem('veyu-auth-user', JSON.stringify({
             token: token,
@@ -1397,7 +1424,7 @@ const SignupStep = ({ type }) => {
     };
   }, []);
 
-  async function requestCode() {
+  async function requestCode(isResend = false) {
     if (isResending) return; // Prevent multiple clicks
 
     setIsResending(true);
@@ -1429,8 +1456,12 @@ const SignupStep = ({ type }) => {
         });
       }, 1000);
 
-      // Request verification code using authService
-      await authService.requestEmailVerification();
+      // Use appropriate endpoint based on whether this is a resend or initial request
+      if (isResend) {
+        await authService.resendEmailVerification(emailToVerify);
+      } else {
+        await authService.requestEmailVerification();
+      }
 
       notify({
         title: 'Verification Code Sent!',
@@ -1654,7 +1685,7 @@ const SignupStep = ({ type }) => {
           fontWeight="semibold"
           isDisabled={timeout > 0}
           isLoading={isResending}
-          onClick={requestCode}
+          onClick={() => requestCode(true)}
           fontSize="sm"
           _disabled={{
             color: 'gray.400',
