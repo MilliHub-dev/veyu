@@ -1,36 +1,34 @@
 import { apiClient, handleApiResponse, handleApiError } from './api';
 
 class ChatService {
-  // Get all conversations
+  // Get all conversations (updated per newdoc.md)
   async getConversations(params = {}) {
     try {
-      const response = await apiClient.get('/chat/conversations/', { params });
+      const response = await apiClient.get('/chat/chats/', { params });
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
     }
   }
 
-  // Get messages for a conversation
-  async getMessages(conversationId, params = {}) {
+  // Get messages for a chat room (updated per newdoc.md)
+  async getMessages(roomId, params = {}) {
     try {
-      const response = await apiClient.get(`/chat/conversations/${conversationId}/messages/`, { params });
+      const response = await apiClient.get(`/chat/chats/${roomId}/`, { params });
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
     }
   }
 
-  // Send a text message
-  async sendMessage(conversationId, message, metadata = {}, replyTo = null, temporaryId = null) {
+  // Send a message (updated per newdoc.md)
+  async sendMessage(roomId, content, messageType = 'text', attachmentUrl = null) {
     try {
-      const response = await apiClient.post('/chat/messages/', {
-        conversation_id: conversationId,
-        message,
-        type: 'text',
-        metadata,
-        reply_to: replyTo,
-        temporary_id: temporaryId,
+      const response = await apiClient.post('/chat/message/', {
+        room_id: roomId,
+        content,
+        message_type: messageType,
+        attachment_url: attachmentUrl,
       });
       return handleApiResponse(response);
     } catch (error) {
@@ -38,19 +36,12 @@ class ChatService {
     }
   }
 
-  // Send media message
-  async sendMediaMessage(conversationId, file, type = 'image', caption = '') {
+  // Create new chat (added per newdoc.md)
+  async createNewChat(recipientId, initialMessage = '') {
     try {
-      const formData = new FormData();
-      formData.append('conversation_id', conversationId);
-      formData.append('type', type);
-      formData.append('file', file);
-      formData.append('caption', caption);
-
-      const response = await apiClient.post('/chat/messages/media/', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const response = await apiClient.post('/chat/new/', {
+        recipient_id: recipientId,
+        initial_message: initialMessage,
       });
       return handleApiResponse(response);
     } catch (error) {
@@ -58,11 +49,11 @@ class ChatService {
     }
   }
 
-  // Mark messages as read
-  async markMessagesAsRead(conversationId, messageIds) {
+  // Mark messages as read (added per newdoc.md)
+  async markMessagesAsRead(roomId, messageIds = []) {
     try {
       const response = await apiClient.post('/chat/messages/mark-read/', {
-        conversation_id: conversationId,
+        room_id: roomId,
         message_ids: messageIds,
       });
       return handleApiResponse(response);
@@ -72,10 +63,10 @@ class ChatService {
   }
 
   // Send typing indicator
-  async sendTypingIndicator(conversationId, isTyping) {
+  async sendTypingIndicator(roomId, isTyping) {
     try {
       const response = await apiClient.post('/chat/typing/', {
-        conversation_id: conversationId,
+        room_id: roomId,
         is_typing: isTyping,
       });
       return handleApiResponse(response);

@@ -1,28 +1,57 @@
 import { apiClient, handleApiResponse, handleApiError } from './api';
 
 class MechanicService {
-  // Get all mechanics (for public listing)
-  async getAllMechanics(params = {}) {
+  // ==================== 4.1 Mechanic Profile (Public) ====================
+
+  /**
+   * Get mechanic overview (public listing)
+   * @param {Object} params - Query parameters
+   */
+  async getMechanicOverview(params = {}) {
     try {
-      const response = await apiClient.get('/mechanics/', { params });
+      const response = await apiClient.get('/admin/mechanics/', { params });
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
     }
   }
 
-  // Get specific mechanic details
-  async getMechanicDetails(mechanicId) {
+  /**
+   * Get specific mechanic profile (public)
+   * @param {string} mechId - Mechanic ID
+   */
+  async getMechanicProfile(mechId) {
     try {
-      const response = await apiClient.get(`/mechanics/${mechanicId}/`);
+      const response = await apiClient.get(`/admin/mechanics/${mechId}/`);
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
     }
   }
 
-  // Get mechanic dashboard data
-  async getDashboardData() {
+  /**
+   * Search mechanics
+   * @param {Object} params - Search parameters
+   * @param {string} params.location - Location
+   * @param {string} params.service_type - Service type
+   * @param {number} params.rating_min - Minimum rating
+   * @param {boolean} params.available - Availability filter
+   */
+  async searchMechanics(params = {}) {
+    try {
+      const response = await apiClient.get('/admin/mechanics/find/', { params });
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  // ==================== 4.2 Dashboard ====================
+
+  /**
+   * Get mechanic dashboard (authenticated)
+   */
+  async getMechanicDashboard() {
     try {
       const response = await apiClient.get('/admin/mechanics/dashboard/');
       return handleApiResponse(response);
@@ -31,7 +60,13 @@ class MechanicService {
     }
   }
 
-  // Get mechanic analytics
+  /**
+   * Get analytics
+   * @param {Object} params - Query parameters
+   * @param {string} params.period - day|week|month|year
+   * @param {string} params.start_date - Start date
+   * @param {string} params.end_date - End date
+   */
   async getAnalytics(params = {}) {
     try {
       const response = await apiClient.get('/admin/mechanics/analytics/', { params });
@@ -41,17 +76,36 @@ class MechanicService {
     }
   }
 
-  // Get mechanic profile/settings
-  async getProfile() {
+  // ==================== 4.3 Bookings ====================
+
+  // ==================== 4.5 Settings ====================
+
+  /**
+   * Get mechanic settings
+   */
+  async getSettings() {
     try {
-      const response = await apiClient.get('/admin/mechanics/');
+      const response = await apiClient.get('/admin/mechanics/settings/');
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
     }
   }
 
-  // Update mechanic profile/settings
+  /**
+   * Update mechanic settings
+   * @param {Object} settings - Settings data
+   */
+  async updateSettings(settings) {
+    try {
+      const response = await apiClient.put('/admin/mechanics/settings/', settings);
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  // Legacy method for backward compatibility
   async updateProfile(profileData) {
     try {
       const formData = new FormData();
@@ -67,7 +121,7 @@ class MechanicService {
         }
       });
 
-      const response = await apiClient.post('/admin/mechanics/settings/', formData, {
+      const response = await apiClient.put('/admin/mechanics/settings/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -78,18 +132,14 @@ class MechanicService {
     }
   }
 
-  // Get mechanic settings
-  async getSettings() {
-    try {
-      const response = await apiClient.get('/admin/mechanics/settings/');
-      return handleApiResponse(response);
-    } catch (error) {
-      handleApiError(error);
-    }
-  }
+  // ==================== Additional Features ====================
 
-  // Service offerings management
-  async getServiceOfferings() {
+  // ==================== 4.4 Services ====================
+
+  /**
+   * Get services
+   */
+  async getServices() {
     try {
       const response = await apiClient.get('/admin/mechanics/services/');
       return handleApiResponse(response);
@@ -98,15 +148,15 @@ class MechanicService {
     }
   }
 
-  async getAvailableServices() {
-    try {
-      const response = await apiClient.get('/admin/mechanics/services/add/');
-      return handleApiResponse(response);
-    } catch (error) {
-      handleApiError(error);
-    }
-  }
-
+  /**
+   * Create service offering (newdoc.md format)
+   * @param {Object} serviceData - Service data
+   * @param {string} serviceData.service_name - Service name
+   * @param {string} serviceData.description - Description
+   * @param {number} serviceData.price - Price
+   * @param {number} serviceData.duration_minutes - Duration in minutes
+   * @param {string} serviceData.category - maintenance|repair|inspection
+   */
   async createServiceOffering(serviceData) {
     try {
       const response = await apiClient.post('/admin/mechanics/services/add/', serviceData);
@@ -116,6 +166,11 @@ class MechanicService {
     }
   }
 
+  /**
+   * Update service offering
+   * @param {string} serviceId - Service ID
+   * @param {Object} serviceData - Updated service data
+   */
   async updateServiceOffering(serviceId, serviceData) {
     try {
       const response = await apiClient.put(`/admin/mechanics/services/${serviceId}/`, serviceData);
@@ -125,10 +180,24 @@ class MechanicService {
     }
   }
 
+  /**
+   * Delete service offering
+   * @param {string} serviceId - Service ID
+   */
   async deleteServiceOffering(serviceId) {
     try {
       await apiClient.delete(`/admin/mechanics/services/${serviceId}/`);
-      return true;
+      return { success: true };
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  // Legacy method for backward compatibility
+  async getAvailableServices() {
+    try {
+      const response = await apiClient.get('/admin/mechanics/services/add/');
+      return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
     }
@@ -145,7 +214,13 @@ class MechanicService {
     }
   }
 
-  // Bookings management
+  /**
+   * Get bookings
+   * @param {Object} params - Query parameters
+   * @param {string} params.status - pending|confirmed|in_progress|completed|cancelled
+   * @param {string} params.date_from - Start date
+   * @param {string} params.date_to - End date
+   */
   async getBookings(params = {}) {
     try {
       const response = await apiClient.get('/admin/mechanics/bookings/', { params });
@@ -155,15 +230,37 @@ class MechanicService {
     }
   }
 
+  /**
+   * Get booking details
+   * @param {string} bookingId - Booking ID
+   */
   async getBookingDetails(bookingId) {
     try {
-      const response = await apiClient.get(`/bookings/${bookingId}/`);
+      const response = await apiClient.get(`/admin/mechanics/bookings/${bookingId}/`);
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
     }
   }
 
+  /**
+   * Update booking (newdoc.md format)
+   * @param {string} bookingId - Booking ID
+   * @param {Object} data - Update data
+   * @param {string} data.status - confirmed|in_progress|completed|cancelled
+   * @param {string} data.notes - Additional notes
+   * @param {string} data.estimated_completion - Estimated completion time
+   */
+  async updateBooking(bookingId, data) {
+    try {
+      const response = await apiClient.put(`/admin/mechanics/bookings/${bookingId}/`, data);
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  // Legacy method for backward compatibility
   async updateBookingStatus(bookingId, action, metadata = {}) {
     try {
       const response = await apiClient.post(`/admin/mechanics/bookings/${bookingId}/`, {

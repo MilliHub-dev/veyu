@@ -105,6 +105,7 @@ import {
 } from '../../../components/icons';
 import {CalendarPicker} from '../../../components';
 import {CustomPlacesAutocomplete} from '../../../components/maps';
+import InspectionBooking from '../../../components/InspectionBooking';
 
 const MotionBox = motion(Box);
 const MotionCard = motion(Card);
@@ -228,8 +229,8 @@ const RadioCard = ({ option, onInput, ...props }) => {
 
 
 function CheckoutPage({ props }) {
-  const params = new URLSearchParams(document.location.search);
-  const listingId = params.get('listingId');
+  const [searchParams] = useSearchParams();
+  const listingId = searchParams.get('listingId');
   const redirect = useNavigate();
   const {axios, authUser, commaInt} = useContext(GlobalStore);
   const [isMobile] = useMediaQuery('(max-width: 768px)');
@@ -276,6 +277,12 @@ function CheckoutPage({ props }) {
   
   const groupy = getRootProps();
   const {onClose, onOpen, isOpen} = useDisclosure();
+  const {
+    isOpen: isInspectionOpen,
+    onOpen: onInspectionOpen,
+    onClose: onInspectionClose
+  } = useDisclosure();
+  const [showInspectionBooking, setShowInspectionBooking] = useState(false);
 
   function redeemCoupon(e){
     e.preventDefault();
@@ -325,6 +332,17 @@ function CheckoutPage({ props }) {
     // onOpen();
   }
   
+  const handleInspectionBookingComplete = (inspectionSlip) => {
+    onInspectionClose();
+    notify({
+      title: 'Inspection Booked',
+      body: 'Your inspection has been scheduled successfully',
+      color: 'green',
+    });
+    // Navigate to inspection slip page
+    redirect(`/inspection/slip?reference=${inspectionSlip.reference}&listingId=${listingId}`);
+  };
+
   async function onSuccess(response){
     const res = await axios.post(`/listings/checkout/${listingId}/`, JSON.stringify({
       ...checkoutPayload
@@ -334,7 +352,10 @@ function CheckoutPage({ props }) {
       if (checkoutPayload.payment_option === 'pay-after-inspection'){
         onClose();
         console.log("Time for Inspection")
-        return redirect(`/checkout/inspection/?listingId=${listingId}`);
+        // Show inspection booking modal instead of redirecting
+        setShowInspectionBooking(true);
+        onInspectionOpen();
+        return;
       }
       return redirect('/');
     }
@@ -968,6 +989,25 @@ function CheckoutPage({ props }) {
             />
           ):(null)
         }
+
+        {/* Inspection Booking Modal */}
+        {showInspectionBooking && (
+          <Modal isOpen={isInspectionOpen} onClose={onInspectionClose} size="xl">
+            <ModalOverlay />
+            <ModalContent>
+              <ModalHeader>Schedule Vehicle Inspection</ModalHeader>
+              <ModalCloseButton />
+              <ModalBody pb={6}>
+                <InspectionBooking
+                  listingId={listingId}
+                  listingType={listing?.listing_type === 'sale' ? 'buy' : 'rent'}
+                  onBookingComplete={handleInspectionBookingComplete}
+                  onCancel={onInspectionClose}
+                />
+              </ModalBody>
+            </ModalContent>
+          </Modal>
+        )}
 
       </Container>
     </Box>

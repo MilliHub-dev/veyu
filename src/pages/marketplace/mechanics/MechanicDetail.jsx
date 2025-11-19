@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { GlobalStore } from "../../../App";
 import { objectifyJSON } from "../../../utils";
 import { useParams, useNavigate } from "react-router-dom";
+import { BusinessLogo } from "../../../components/BusinessLogo";
 import {
   Box, Container, Flex, Text, Avatar, Badge, Button, SimpleGrid, VStack, HStack, Heading,
   useColorModeValue, Card, CardBody, CardHeader, Icon, Stat, StatLabel, StatNumber,
@@ -244,12 +245,11 @@ export const MechanicDetailPage = ({ }) => {
           <Flex justify="space-between" align="flex-start" mb={6}>
             <Box flex={1}>
               <Flex gap={6} align="flex-start">
-                <Avatar 
-                  size="2xl" 
-                  name={mechanic?.business_name || mechanic?.user?.name} 
-                  src={mechanic?.logo}
-                  border="4px solid"
-                  borderColor="#F4A950"
+                <BusinessLogo
+                  logoUrl={mechanic?.logo}
+                  businessName={mechanic?.business_name || mechanic?.user?.name}
+                  size="2xl"
+                  borderRadius="50%"
                 />
                 
                 <Box flex={1}>

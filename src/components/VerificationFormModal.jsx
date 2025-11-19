@@ -25,9 +25,10 @@ import {
 } from '@chakra-ui/react';
 import { CloudUpload, FileText, X } from 'lucide-react';
 import { GlobalStore } from '../App';
+import authService from '../services/authService';
 
 const VerificationFormModal = ({ isOpen, onClose, businessType, onSuccess }) => {
-  const { axios, notify } = useContext(GlobalStore);
+  const { notify } = useContext(GlobalStore);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     business_type: businessType === 'dealer' ? 'dealership' : 'mechanic',
@@ -122,27 +123,17 @@ const VerificationFormModal = ({ isOpen, onClose, businessType, onSuccess }) => 
       });
 
       console.log('Sending verification request...');
-      const res = await axios.post('/accounts/verify-business/', payload, {
-        headers: { 
-          'Content-Type': 'multipart/form-data',
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        withCredentials: true
+      const result = await authService.submitBusinessVerification(payload);
+
+      console.log('API Response:', result);
+
+      notify({
+        title: 'Success!',
+        body: result.message || 'Business verification submitted successfully',
+        color: 'green'
       });
-
-      console.log('API Response:', res.data);
-
-      if (res.status >= 200 && res.status < 300) {
-        notify({
-          title: 'Success!',
-          body: res.data.message || 'Business verification submitted successfully',
-          color: 'green'
-        });
-        onSuccess();
-        onClose();
-      } else {
-        throw new Error(res.data.detail || 'Unexpected response from server');
-      }
+      onSuccess();
+      onClose();
     } catch (error) {
       console.error('Verification error:', error);
       console.error('Error response:', error.response?.data);

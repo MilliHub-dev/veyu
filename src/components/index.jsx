@@ -51,6 +51,7 @@ import {
   AlertIcon,
   useOutsideClick,
 } from '@chakra-ui/react';
+import { BusinessLogo } from './BusinessLogo';
 import {Fragment, useContext, useEffect, useState, useRef} from 'react';
 import { RiGasStationLine, RiHeart2Fill, RiHeart2Line, RiSearch2Line } from 'react-icons/ri'
 import { FaCaretLeft, FaCaretRight } from 'react-icons/fa6'
@@ -62,6 +63,7 @@ import { BsFillPatchCheckFill } from 'react-icons/bs';
 import { GlobalStore } from '../App';
 import { FcCheckmark } from 'react-icons/fc';
 import VerificationFormModal from './VerificationFormModal';
+import authService from '../services/authService';
 import { Leaf, Star } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ChevronLeftIcon, StarIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons';
@@ -189,7 +191,7 @@ export const ComboBox = ({ defaultOptions, onSelect }) => {
 
 
 export const VerificationNotice = ({ businessType, user, onRefresh, ...props }) => {
-  const { axios } = useContext(GlobalStore);
+  const { } = useContext(GlobalStore);
   const [showForm, setShowForm] = useState(false);
   const [status, setStatus] = useState('not_submitted');
   const [rejectionReason, setRejectionReason] = useState(null);
@@ -197,10 +199,10 @@ export const VerificationNotice = ({ businessType, user, onRefresh, ...props }) 
 
   const fetchVerificationStatus = async () => {
     try {
-      // Try the available verification endpoint from the API list
-      const res = await axios.get('/accounts/verify-business/');
-      setStatus(res.data.status || 'not_submitted');
-      setRejectionReason(res.data.rejection_reason);
+      // Use authService to get verification status
+      const result = await authService.getVerificationStatus();
+      setStatus(result.status || 'not_submitted');
+      setRejectionReason(result.rejection_reason);
     } catch (error) {
       console.error('Error fetching verification status:', error);
       if (error.response?.status === 404) {
@@ -2200,3 +2202,25 @@ export const LocationBreadcrumb = ({ label }) => {
 
 // Export MechanicCard
 export { MechanicCard } from './MechanicCard';
+// Export new inspection components
+export { default as InspectionBooking } from './InspectionBooking';
+export { default as InspectionSlip } from './InspectionSlip';
+
+// Export new inspection document components
+export { default as DocumentPreview } from './DocumentPreview';
+export { default as DocumentSigning } from './DocumentSigning';
+
+
+// Export WalletOverview component
+export { default as WalletOverview } from './WalletOverview';
+
+// Export wallet transaction modals
+export { default as DepositModal } from './DepositModal';
+export { default as WithdrawModal } from './WithdrawModal';
+export { default as TransferModal } from './TransferModal';
+
+// Export error handling components
+export { InlineError, EmptyStateError, FullPageError, ErrorToast } from './ErrorDisplay';
+
+// Export BusinessLogo component
+export { BusinessLogo } from './BusinessLogo';

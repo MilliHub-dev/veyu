@@ -5,6 +5,7 @@ import {
   Textarea, Card, CardBody, CardHeader, Icon, Divider, SimpleGrid, Stat, StatLabel, StatNumber,
   useColorModeValue, Badge, Progress, useToast, Tooltip
 } from "@chakra-ui/react"
+import { BusinessLogo } from "../../../components/BusinessLogo";
 import {
   DollarSign, MapPin, Wrench, CreditCard, Info, Star, ChevronDown, Send, Award,
   Shield, Clock, CheckCircle, Phone, MessageCircle, Calendar, User
@@ -219,12 +220,11 @@ const ConfirmBooking = () => {
               <Card bg="gray.50" border="2px" borderColor="#F4A950" borderRadius="xl">
                 <CardBody p={6}>
                   <Flex align="center" gap={4}>
-                    <Avatar 
-                      size="xl" 
-                      src={mechanic?.logo} 
-                      name={mechanic?.business_name || mechanic?.user?.name}
-                      border="3px solid"
-                      borderColor="#F4A950"
+                    <BusinessLogo
+                      logoUrl={mechanic?.logo}
+                      businessName={mechanic?.business_name || mechanic?.user?.name}
+                      size="xl"
+                      borderRadius="50%"
                     />
                     <Box flex={1}>
                       <Heading size="lg" mb={2} color="gray.800">

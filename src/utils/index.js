@@ -1,3 +1,5 @@
+// Export business utilities
+export * from './businessUtils';
 
 /** Turn a JavaScript object into JSON formatted string
  * - Checks if data is already

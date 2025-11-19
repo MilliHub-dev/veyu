@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom"
 import { GlobalStore } from "../../../App";
 import { LocationBreadcrumb, DatePicker, ReviewCard, RatingCard, ListingItemCard } from "../../../components";
 import { ListingDetailSkeleton } from "../../../components/loaders";
+import { BusinessLogo } from "../../../components/BusinessLogo";
 import { 
   ChevronLeft, ChevronRight, Star, Users, MapPin, Calendar,
   DoorOpen, Zap, Gauge, Key, Camera, Music, Phone, Heart, Share2,
@@ -446,7 +447,12 @@ export default function RentalDetails() {
                             <Card bg="gray.50" border="1px" borderColor={borderColor}>
                               <CardBody p={6}>
                                 <HStack spacing={4} mb={4}>
-                                  <Avatar size="xl" src={listing?.vehicle?.dealer?.logo} name={listing?.vehicle?.dealer?.business_name} />
+                                  <BusinessLogo
+                                    logoUrl={listing?.vehicle?.dealer?.logo}
+                                    businessName={listing?.vehicle?.dealer?.business_name}
+                                    size="xl"
+                                    borderRadius="50%"
+                                  />
                                   <Box flex={1}>
                                     <HStack mb={2}>
                                       <Heading size="lg">{listing?.vehicle?.dealer?.business_name}</Heading>

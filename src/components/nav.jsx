@@ -71,6 +71,9 @@ import {
 } from "iconsax-react";
 import { AiOutlineTransaction } from "react-icons/ai";
 import '../assets/css/nav.css';
+import { BusinessLogo } from './BusinessLogo';
+import { mapBusinessProfileResponse, handleApiError, monitorBusinessProfile } from '../utils/businessUtils';
+import { getUserDisplayName, getBusinessDisplayName, getUserEmail } from '../utils/userDataUtils';
 
 
 export const BackButton = ({ to, onClick, ...props }) => {
@@ -441,8 +444,8 @@ export const CustomerNavbar = ({ props }) => {
                     </MenuButton>
                     <MenuList px={2}>
                       <Box my={3} placeItems="center">
-                        <Avatar name={`${authUser?.first_name} ${authUser?.last_name}`} />
-                        <Text color="black">{authUser?.first_name} {authUser?.last_name}</Text>
+                        <Avatar name={getUserDisplayName(authUser)} />
+                        <Text color="black">{getUserDisplayName(authUser)}</Text>
                       </Box>
 
                       <Button my={1} as={MenuItem} display={'flex'} justifyContent={'space-between'} onClick={logout} variant={'ghost'} w={'100%'} color="black"> Sign Out  <RiLogoutBoxRLine className='icon' /> </Button>
@@ -593,10 +596,10 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
               <Box alignItems="center" justifyContent="center" display="flex" flexDirection="column" p={3}>
                 <Avatar
                   size="lg"
-                  name={`${authUser?.first_name} ${authUser?.last_name}`}
+                  name={getUserDisplayName(authUser)}
                 />
-                <Heading my={1} size="sm" color="black"> {`${authUser?.first_name} ${authUser?.last_name}`} </Heading>
-                <Text color="black"> {authUser?.email} </Text>
+                <Heading my={1} size="sm" color="black"> {getUserDisplayName(authUser)} </Heading>
+                <Text color="black"> {getUserEmail(authUser)} </Text>
               </Box>
               <Divider my={2} />
               <MenuItem as={Link} gap={2} to={'/profile'} color="black"> <User size="20" /> Profile </MenuItem>
@@ -626,6 +629,7 @@ export const DealerDashboardSideBar = ({ dealership: propDealership, sidebarOpen
   const { authUser: dealerAuthUser, axios } = useContext(GlobalStore);
   const [dealership, setDealership] = useState(propDealership || {});
   const [loading, setLoading] = useState(!propDealership);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // If dealership prop is not provided, fetch it
@@ -633,24 +637,36 @@ export const DealerDashboardSideBar = ({ dealership: propDealership, sidebarOpen
       const fetchDealership = async () => {
         try {
           setLoading(true);
+          setError(null);
           console.log('Fetching dealer profile...');
           const response = await axios.get('/accounts/dealer/profile/');
           console.log('Dealer profile response:', response.data);
 
           if (response.data) {
-            setDealership({
-              ...response.data,
-              // Map fields to match our expected structure
-              business_name: response.data.name || response.data.business_name,
-              logo: response.data.logo || response.data.avatar,
-              slug: response.data.slug || response.data.username
+            // Use utility function for consistent data mapping
+            const mappedProfile = mapBusinessProfileResponse(response.data);
+            
+            // Monitor successful profile fetch
+            monitorBusinessProfile('DealerDashboardSideBar_ProfileFetch', {
+              apiResponse: response.data,
+              mappedProfile,
+              dealerAuthUser: dealerAuthUser?.id
             });
+            
+            setDealership(mappedProfile);
           }
         } catch (error) {
           console.error('Error fetching dealership data:', error);
-          if (error.response) {
-            console.error('Response data:', error.response.data);
-            console.error('Status:', error.response.status);
+          const errorInfo = handleApiError(error);
+          setError(errorInfo);
+          
+          // Fallback to auth user data for basic display
+          if (dealerAuthUser) {
+            setDealership({
+              business_name: getUserDisplayName(dealerAuthUser),
+              logo: null,
+              slug: dealerAuthUser.username || dealerAuthUser.id
+            });
           }
         } finally {
           setLoading(false);
@@ -686,23 +702,28 @@ export const DealerDashboardSideBar = ({ dealership: propDealership, sidebarOpen
             </Box>
           ) : (
             <>
-              <Avatar
+              <BusinessLogo
+                logoUrl={dealership?.logo}
+                businessName={dealership?.business_name || getBusinessDisplayName(authUser)}
                 size="md"
-                src={dealership?.logo}
+                fallbackBg="primary.500"
+                fallbackColor="white"
                 mx={sidebarOpen ? '0px' : 'auto'}
-                name={dealership?.business_name || authUser?.first_name || 'User'}
-                bg="primary.500"
-                color="white"
               />
               {sidebarOpen && (
                 <Box flex={1}>
                   <Flex justify="space-between" align="center">
                     <Box>
                       <Text fontWeight="medium" color="black">
-                        {dealership?.business_name || `${authUser?.first_name || ''} ${authUser?.last_name || ''}`.trim() || 'User'}
+                        {dealership?.business_name || getBusinessDisplayName(authUser)}
                       </Text>
                       {dealership?.slug && (
                         <Text fontSize="sm" color="gray.500">@{dealership.slug}</Text>
+                      )}
+                      {error && (
+                        <Text fontSize="xs" color="red.500" mt={1}>
+                          {error.message}
+                        </Text>
                       )}
                     </Box>
                     <Tooltip label="Share Profile" placement="top">
@@ -971,10 +992,10 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
               <Box placeItems="center" placeContent="center" p={3}>
                 <Avatar
                   size="lg"
-                  name={`${authUser?.first_name} ${authUser?.last_name}`}
+                  name={getUserDisplayName(authUser)}
                 />
-                <Heading my={1} size="sm" color="black"> {`${authUser?.first_name} ${authUser?.last_name}`} </Heading>
-                <Text color="black"> {authUser?.email} </Text>
+                <Heading my={1} size="sm" color="black"> {getUserDisplayName(authUser)} </Heading>
+                <Text color="black"> {getUserEmail(authUser)} </Text>
               </Box>
               <Divider my={2} />
               <MenuItem as={Link} gap={2} to={'/profile'} color="black"> <User size="20" /> Profile </MenuItem>
@@ -993,8 +1014,8 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
 }
 
 
-export const MechanicDashboardSideBar = ({ mechanic, sidebarOpen, setSidebarState, onClose, ...props }) => {
-  const NavLinks = ({ mechanic, sidebarOpen, setSidebarState }) => {
+export const MechanicDashboardSideBar = ({ mechanic, sidebarOpen, setSidebarState, onClose, loading, ...props }) => {
+  const NavLinks = ({ mechanic, sidebarOpen, setSidebarState, loading }) => {
     const { logout, authUser } = useContext(GlobalStore);
     const pathname = document.location.pathname;
 
@@ -1011,10 +1032,44 @@ export const MechanicDashboardSideBar = ({ mechanic, sidebarOpen, setSidebarStat
       { icon: Settings, label: 'Settings', path: '/settings', active: pathname.includes('settings') },
     ]
 
+    // Show loading skeleton while profile is being fetched
+    if (loading) {
+      return (
+        <VStack align="stretch" spacing={6}>
+          <HStack spacing={3}>
+            <Skeleton 
+              height="48px" 
+              width="48px" 
+              borderRadius="full"
+              mx={sidebarOpen ? '0px' : 'auto'}
+            />
+            {sidebarOpen && (
+              <Box flex={1}>
+                <Skeleton height="20px" width="120px" mb={2} />
+                <Skeleton height="16px" width="80px" />
+              </Box>
+            )}
+          </HStack>
+          <VStack align="stretch" spacing={2}>
+            {links.map((_, index) => (
+              <Skeleton key={index} height="40px" borderRadius="5px" />
+            ))}
+          </VStack>
+        </VStack>
+      );
+    }
+
     return (
       <VStack align="stretch" spacing={6}>
         <HStack spacing={3}>
-          <Avatar size="md" src={mechanic?.logo} mx={sidebarOpen ? '0px' : 'auto'} name={`${mechanic?.business_name}`} />
+          <BusinessLogo 
+            logoUrl={mechanic?.logo} 
+            businessName={mechanic?.business_name || getBusinessDisplayName(authUser)}
+            size="md"
+            mx={sidebarOpen ? '0px' : 'auto'}
+            fallbackBg="orange.500"
+            fallbackColor="white"
+          />
 
           {sidebarOpen && (
             <Box flex={1}>
@@ -1153,7 +1208,7 @@ export const MechanicDashboardSideBar = ({ mechanic, sidebarOpen, setSidebarStat
           </DrawerHeader>
 
           <DrawerBody>
-            <NavLinks sidebarOpen={sidebarOpen} mechanic={mechanic} setSidebarState={setSidebarState} />
+            <NavLinks sidebarOpen={sidebarOpen} mechanic={mechanic} setSidebarState={setSidebarState} loading={loading} />
           </DrawerBody>
         </DrawerContent>
       </Drawer>
@@ -1173,7 +1228,7 @@ export const MechanicDashboardSideBar = ({ mechanic, sidebarOpen, setSidebarStat
       p={sidebarOpen ? 6 : 2}
       {...props}
     >
-      <NavLinks sidebarOpen={sidebarOpen} mechanic={mechanic} setSidebarState={setSidebarState} />
+      <NavLinks sidebarOpen={sidebarOpen} mechanic={mechanic} setSidebarState={setSidebarState} loading={loading} />
     </Box>
   )
 }

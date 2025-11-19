@@ -44,6 +44,7 @@ import {
   WrapItem,
   Tag,
 } from '@chakra-ui/react';
+import { BusinessLogo } from '../../components/BusinessLogo';
 import {useState, useEffect, useContext} from 'react';
 import {useParams, } from 'react-router-dom';
 import {GlobalStore} from '../../App';
@@ -103,12 +104,11 @@ function RatingCard({ dealer }) {
       <CardBody p={0}>
         <VStack spacing={4} align="stretch">
           <HStack spacing={3}>
-            <Avatar
+            <BusinessLogo
+              logoUrl={dealer?.logo}
+              businessName={dealer?.business_name}
               size="lg"
-              name={dealer?.business_name}
-              src={dealer?.logo}
-              border="3px solid"
-              borderColor="#F4A950"
+              borderRadius="50%"
             />
             <Box flex={1}>
               <HStack spacing={2} mb={1}>
@@ -400,7 +400,12 @@ function WriteReviewModal({ isOpen, onClose, dealer }) {
           <VStack spacing={2} align="start">
             <Text>Write a Review</Text>
             <HStack spacing={2}>
-              <Avatar size="sm" name={dealer?.business_name} src={dealer?.logo} />
+              <BusinessLogo 
+                logoUrl={dealer?.logo}
+                businessName={dealer?.business_name}
+                size="sm"
+                borderRadius="50%"
+              />
               <Text fontSize="sm" color="gray.600">{dealer?.business_name}</Text>
             </HStack>
           </VStack>
@@ -610,10 +615,11 @@ export default function DealerProfile() {
                 zIndex={'1'}
                 p={2}
               >
-                <Avatar
+                <BusinessLogo
+                  logoUrl={dealer?.logo}
+                  businessName={dealer?.business_name}
                   size="xl"
-                  name={dealer?.business_name}
-                  src={dealer?.logo}
+                  borderRadius="50%"
                 />
               </Box>
 

@@ -247,7 +247,7 @@ const OrderListAdmin = () => {
         <Table variant="simple" color="black">
           <Thead bg="gray.50">
             <Tr columns={9}>
-              <Th columns={3}>Car Listings</Th>
+              <Th columns={3}> Listings</Th>
               <Th>Amount</Th>
               <Th>Date</Th>
               <Th>Status</Th>

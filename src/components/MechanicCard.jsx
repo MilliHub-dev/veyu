@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { Star, MapPin, Clock, Award, MessageCircle, Calendar, Wrench, Shield } from "lucide-react";
 import { TopRatedBadgeIcon } from "./icons";
 import { motion } from "framer-motion";
+import { BusinessLogo } from "./BusinessLogo";
 
 const MotionCard = motion(Card);
 
@@ -48,12 +49,11 @@ export const MechanicCard = ({ mechanic, ...props }) => {
                         {/* Header Section */}
                         <Flex gap={4} align="flex-start">
                             <Link to={`/mechanics/${mechanic?.uuid}`}>
-                                <Avatar 
-                                    size="xl" 
-                                    name={mechanic?.business_name || mechanic?.user?.name} 
-                                    src={mechanic?.logo}
-                                    border="3px solid"
-                                    borderColor="#F4A950"
+                                <BusinessLogo
+                                    logoUrl={mechanic?.logo}
+                                    businessName={mechanic?.business_name || mechanic?.user?.name}
+                                    size="xl"
+                                    borderRadius="50%"
                                 />
                             </Link>
                             

@@ -136,7 +136,9 @@ export const SignupView = ({ ...props }) => {
       if (newUser) {
         await setPayload({ ...data, user_type: type === 'business' ? 'dealer' : 'customer' });
         await setUser(_user);
+        // For Google signup, email is pre-verified, so we can skip email verification
         setSkipStep({ ...skipConfirmation, email: true });
+        setUserProvider('google'); // Set provider to indicate this is Google signup
         nextStep();
       }
     } catch (error) {
@@ -221,14 +223,39 @@ export const SignupView = ({ ...props }) => {
       console.log('StepComponent useEffect:', {
         currentStepKey: currentStep.key,
         skipConfirmation,
-        shouldSkip: skipConfirmation[`${currentStep.key}`]
+        shouldSkip: skipConfirmation[`${currentStep.key}`],
+        userProvider
       });
 
+      // Special handling for email verification step
+      if (currentStep.key === 'email') {
+        const auth = JSON.parse(localStorage.getItem('veyu-auth-user') || '{}');
+        const isEmailVerified = auth?.email_verified || false;
+        
+        console.log('Email verification step - checking if should skip:', {
+          isEmailVerified,
+          skipConfirmationEmail: skipConfirmation.email,
+          userProvider,
+          authData: auth
+        });
+
+        // Only skip email verification if:
+        // 1. Email is actually verified, OR
+        // 2. User signed up with Google (email is pre-verified by Google)
+        if ((isEmailVerified || userProvider === 'google') && skipConfirmation[currentStep.key]) {
+          console.log('Auto-skipping email verification step - email already verified or Google signup');
+          nextStep();
+        }
+        // If skipConfirmation.email is true but conditions aren't met, don't skip
+        return;
+      }
+
+      // For other steps, use the original logic
       if (skipConfirmation[`${currentStep.key}`]) {
         console.log('Auto-skipping step:', currentStep.key);
         nextStep();
       }
-    }, [currentStep.key, skipConfirmation]);
+    }, [currentStep.key, skipConfirmation, userProvider]);
 
     return currentStep.component;
   };
@@ -278,25 +305,102 @@ export const SignupView = ({ ...props }) => {
 
             {/* Progress Stepper */}
             <MotionBox variants={itemVariants} mb={8}>
-              <Box maxW="2xl" mx="auto">
-                <Stepper index={activeStep} colorScheme="orange" size="lg">
+              <Box maxW="2xl" mx="auto" px={{ base: 4, md: 0 }}>
+                <Stepper 
+                  index={activeStep} 
+                  colorScheme="orange" 
+                  size={{ base: 'md', md: 'lg' }}
+                  orientation={{ base: 'horizontal', md: 'horizontal' }}
+                  gap={{ base: 2, md: 4 }}
+                >
                   {steps.map((stepItem, index) => (
                     <Step key={index}>
-                      <StepIndicator>
+                      <StepIndicator 
+                        sx={{
+                          '&[data-status=complete]': {
+                            bg: 'orange.500',
+                            borderColor: 'orange.500',
+                            color: 'white'
+                          },
+                          '&[data-status=active]': {
+                            bg: 'orange.500',
+                            borderColor: 'orange.500',
+                            color: 'white'
+                          },
+                          '&[data-status=incomplete]': {
+                            bg: 'gray.100',
+                            borderColor: 'gray.300',
+                            color: 'gray.500'
+                          }
+                        }}
+                      >
                         <StepStatus
                           complete={<StepIcon />}
                           incomplete={<StepNumber />}
                           active={<StepNumber />}
                         />
                       </StepIndicator>
-                      <Box flexShrink="0" display={{ base: 'none', md: 'block' }}>
-                        <StepTitle>{stepItem.title}</StepTitle>
-                        <StepDescription>{stepItem.description}</StepDescription>
+                      
+                      {/* Desktop: Show full titles and descriptions */}
+                      <Box 
+                        flexShrink="0" 
+                        display={{ base: 'none', lg: 'block' }}
+                        ml={3}
+                      >
+                        <StepTitle fontSize="sm" fontWeight="semibold">
+                          {stepItem.title}
+                        </StepTitle>
+                        <StepDescription fontSize="xs" color="gray.500">
+                          {stepItem.description}
+                        </StepDescription>
                       </Box>
-                      <StepSeparator />
+                      
+                      {/* Tablet: Show abbreviated titles only */}
+                      <Box 
+                        flexShrink="0" 
+                        display={{ base: 'none', md: 'block', lg: 'none' }}
+                        ml={2}
+                      >
+                        <StepTitle fontSize="xs" fontWeight="semibold" noOfLines={1}>
+                          {stepItem.title.length > 20 ? `${stepItem.title.substring(0, 20)}...` : stepItem.title}
+                        </StepTitle>
+                      </Box>
+                      
+                      <StepSeparator 
+                        sx={{
+                          '&[data-status=complete]': {
+                            bg: 'orange.500'
+                          },
+                          '&[data-status=active]': {
+                            bg: 'orange.200'
+                          }
+                        }}
+                      />
                     </Step>
                   ))}
                 </Stepper>
+                
+                {/* Mobile: Show current step info below stepper */}
+                <Box 
+                  display={{ base: 'block', md: 'none' }} 
+                  textAlign="center" 
+                  mt={4}
+                  p={3}
+                  bg="orange.50"
+                  borderRadius="lg"
+                  border="1px solid"
+                  borderColor="orange.200"
+                >
+                  <Text fontSize="sm" fontWeight="semibold" color="orange.800">
+                    {steps[activeStep]?.title}
+                  </Text>
+                  <Text fontSize="xs" color="orange.600" mt={1}>
+                    {steps[activeStep]?.description}
+                  </Text>
+                  <Text fontSize="xs" color="gray.500" mt={2}>
+                    Step {activeStep + 1} of {steps.length}
+                  </Text>
+                </Box>
               </Box>
             </MotionBox>
 
@@ -515,11 +619,14 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { axios, notify } = useContext(GlobalStore);
-  const { checkEmail, user_type, addToPayload, setUserType, payload, nextStep } = useContext(SignupContext);
+  const { checkEmail, user_type, addToPayload, setUserType, payload, nextStep, setSkipStep } = useContext(SignupContext);
 
   async function handleSubmit(e) {
     e.preventDefault();
     try {
+      // For regular email/password signup, ensure email verification is not skipped
+      setSkipStep(prev => ({ ...prev, email: false }));
+      
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
@@ -572,9 +679,9 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
         addToPayload({
           email,
           password,
-          confirm_password: confirmPassword,
+          confirm_password: confirmPassword, // Use API-compliant field name
           provider: 'veyu',
-          action: 'create-account',
+
           user_type: finalUserType,
           first_name: payload.first_name || '',
           last_name: payload.last_name || ''
@@ -827,6 +934,7 @@ const SignupStep = ({ type }) => {
     first_name: payload?.first_name || '',
     last_name: payload?.last_name || '',
     phone_number: payload?.phone_number || '',
+    business_name: payload?.business_name || '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -843,8 +951,12 @@ const SignupStep = ({ type }) => {
   async function handleSubmit(e) {
     e.preventDefault();
     setIsLoading(true);
+    
+    console.log('🚀 SIGNUP FORM SUBMITTED');
+    console.log('📋 Form Data:', formData);
 
-    const { first_name, last_name, phone_number } = formData;
+    const { first_name, last_name, phone_number, business_name } = formData;
+    console.log('📝 Extracted values:', { first_name, last_name, phone_number, business_name, user_type });
     // Prepare the complete payload with all required fields
     // Prepare payload according to API documentation
     const newPayload = {
@@ -852,11 +964,18 @@ const SignupStep = ({ type }) => {
       first_name: first_name.trim(),
       last_name: last_name.trim(),
       password: payload?.password,
-      confirm_password: payload?.confirm_password,
+      confirm_password: payload?.confirm_password, // Use API-compliant field name
       user_type: user_type || 'customer',
       provider: 'veyu',
-      action: 'create-account'  // Added action field as required by the API
     };
+
+    // TEMPORARY DEBUG: Always add business_name
+    newPayload.business_name = business_name ? business_name.trim() : 'Test Business Name';
+    
+    console.log('FORCE ADDED business_name to payload:', newPayload.business_name);
+    console.log('Final user_type:', newPayload.user_type);
+    console.log('Original user_type:', user_type);
+    console.log('Original business_name from form:', business_name);
 
     // Add phone_number if provided
     if (phone_number && phone_number.trim()) {
@@ -878,9 +997,41 @@ const SignupStep = ({ type }) => {
       }
     }
 
-    // Remove any undefined or null values (keep empty strings for optional fields)
+    // Debug: Log payload before cleanup
+    console.log('Payload before cleanup:', JSON.stringify(newPayload, null, 2));
+    console.log('Individual payload values:', {
+      email: payload?.email,
+      password: payload?.password,
+      confirm_password: payload?.confirm_password,
+      first_name: first_name,
+      last_name: last_name,
+      business_name: business_name,
+      user_type: user_type
+    });
+    
+    // Additional debug for business accounts
+    console.log('USER TYPE DEBUG:', {
+      user_type: user_type,
+      is_business: user_type === 'dealer' || user_type === 'mechanic',
+      formData_business_name: formData.business_name,
+      extracted_business_name: business_name
+    });
+    
+    if (user_type === 'dealer' || user_type === 'mechanic') {
+      console.log('BUSINESS ACCOUNT FORM DEBUG:', {
+        user_type: user_type,
+        business_name_from_form: business_name,
+        business_name_type: typeof business_name,
+        business_name_length: business_name ? business_name.length : 'N/A',
+        business_name_in_payload: 'business_name' in newPayload,
+        business_name_payload_value: newPayload.business_name
+      });
+    }
+
+    // Remove undefined/null values only for optional fields, keep required fields for validation
+    const requiredFields = ['email', 'password', 'password_confirm', 'first_name', 'last_name', 'business_name'];
     Object.keys(newPayload).forEach(key => {
-      if (newPayload[key] === undefined || newPayload[key] === null) {
+      if ((newPayload[key] === undefined || newPayload[key] === null) && !requiredFields.includes(key)) {
         delete newPayload[key];
       }
     });
@@ -894,6 +1045,18 @@ const SignupStep = ({ type }) => {
       return notify({
         title: 'Error',
         description: 'Please fill in all required fields',
+        status: 'error',
+        duration: 5000,
+        isClosable: true
+      });
+    }
+
+    // Validate business name for business accounts
+    if ((user_type === 'dealer' || user_type === 'mechanic') && (!business_name || !business_name.trim())) {
+      setIsLoading(false);
+      return notify({
+        title: 'Business Name Required',
+        description: 'Please enter your business name',
         status: 'error',
         duration: 5000,
         isClosable: true
@@ -945,6 +1108,11 @@ const SignupStep = ({ type }) => {
           try {
             // Use the authService for registration
             console.log(`Attempting registration (attempt ${retryCount + 1}/${maxRetries + 1}) with payload:`, newPayload);
+            console.log('Password field check:', {
+              hasPassword: !!newPayload.password,
+              passwordLength: newPayload.password ? newPayload.password.length : 0,
+              passwordValue: newPayload.password ? '[REDACTED]' : 'MISSING'
+            });
 
             registrationData = await authService.register(newPayload);
             accountCreated = true;
@@ -1098,7 +1266,7 @@ const SignupStep = ({ type }) => {
         addToPayload(userData);
 
         // Proceed to email verification step
-        console.log('Current step:', step, 'Moving to next step (email verification)...');
+        console.log('Moving to next step (email verification)...');
 
         // Just move to the next step without changing skip settings
         // The email verification step should not be skipped (it's false by default)
@@ -1107,7 +1275,7 @@ const SignupStep = ({ type }) => {
         console.error('Registration error:', error);
 
         // Handle specific error cases
-        if (error.message && error.message.includes('already exists')) {
+        if (error.message && (error.message.includes('already exists') || error.message.includes('Validation failed'))) {
           notify({
             title: 'Account Already Exists',
             description: 'An account with this email already exists. Please sign in instead.',
@@ -1176,8 +1344,14 @@ const SignupStep = ({ type }) => {
         errorDetails = data;
 
         if (status === 400) {
-          // Handle validation errors
-          if (data && typeof data === 'object') {
+          // Handle validation errors - check for new API format first
+          if (data?.code === 'VALIDATION_ERROR' && data?.details?.field_errors) {
+            const fieldErrors = data.details.field_errors;
+            errorMessage = 'Please fix the following errors:\n' + Object.entries(fieldErrors)
+              .map(([field, errors]) => `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+              .join('\n');
+          } else if (data && typeof data === 'object' && !data.error) {
+            // Handle old format
             errorMessage = 'Validation Error:\n' + Object.entries(data)
               .map(([field, errors]) => `• ${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
               .join('\n');
@@ -1296,6 +1470,41 @@ const SignupStep = ({ type }) => {
           </FormControl>
         </SimpleGrid>
 
+        {/* Business Name field - only for business accounts */}
+        {(user_type === 'dealer' || user_type === 'mechanic') && (
+          <FormControl isRequired>
+            <FormLabel color="gray.700" fontWeight="semibold">
+              Business Name
+            </FormLabel>
+            <InputGroup>
+              <InputLeftElement>
+                <Building size={20} color="gray" />
+              </InputLeftElement>
+              <Input
+                name="business_name"
+                value={formData.business_name}
+                onChange={handleInputChange}
+                placeholder={user_type === 'dealer' ? 'AutoMax Motors Ltd' : 'John\'s Auto Services'}
+                size="lg"
+                bg="gray.50"
+                border="2px solid"
+                borderColor="gray.200"
+                _hover={{ borderColor: 'orange.300' }}
+                _focus={{
+                  borderColor: 'primary',
+                  bg: 'white',
+                  shadow: '0 0 0 1px var(--chakra-colors-primary)'
+                }}
+                pl={12}
+                isDisabled={isLoading}
+              />
+            </InputGroup>
+            <Text fontSize="xs" color="gray.500" mt={1}>
+              Enter your official business name as registered
+            </Text>
+          </FormControl>
+        )}
+
         <FormControl isRequired>
           <FormLabel color="gray.700" fontWeight="semibold">
             Phone Number
@@ -1373,48 +1582,175 @@ const SignupStep = ({ type }) => {
   // Check if user is already verified
   const checkVerificationStatus = async (token) => {
     try {
+      console.log('Checking verification status with token:', token ? 'present' : 'missing');
+      
+      if (!token) {
+        console.log('No token available, skipping verification status check');
+        return false;
+      }
+
       const userData = await authService.getProfile();
+      console.log('Profile data received:', { email_verified: userData?.email_verified, user_type: userData?.user_type });
 
       if (userData?.email_verified) {
+        console.log('Email already verified, setting verified state');
         setIsEmailVerified(true);
-        // Redirect based on user type
-        const redirectPath = userData.user_type === 'customer' ? '/dashboard' : '/business-profile';
-        setTimeout(() => navigate(redirectPath), 2000);
+        
+        // Check business profile completion status for business users
+        let redirectPath;
+        if (userData.user_type === 'customer') {
+          redirectPath = '/dashboard';
+        } else if (userData.user_type === 'mechanic' || userData.user_type === 'dealer') {
+          // For business users, check if business profile is complete
+          const completionStatus = authService.getBusinessProfileCompletionStatus();
+          
+          if (completionStatus.needsCompletion) {
+            // Business profile is incomplete, redirect to business profile setup
+            redirectPath = '/business-profile';
+          } else {
+            // Business profile is complete, redirect to dashboard
+            redirectPath = '/dashboard';
+          }
+        } else {
+          redirectPath = '/dashboard';
+        }
+
+        notify({
+          title: 'Email Already Verified',
+          description: redirectPath === '/business-profile'
+            ? 'Your email is already verified. Let\'s complete your business profile...'
+            : 'Your email is already verified. Redirecting to your dashboard...',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+
+        setTimeout(() => navigate(redirectPath, { replace: true }), 2000);
         return true;
       }
+      
+      console.log('Email not yet verified, proceeding with verification flow');
       return false;
     } catch (error) {
       console.error('Error checking verification status:', error);
+      
+      // Handle specific errors
+      if (error.response?.status === 401) {
+        console.log('Token invalid/expired, proceeding with verification flow');
+        // Token is invalid, but that's okay - we'll proceed with email verification
+        return false;
+      } else if (error.response?.status === 404) {
+        console.log('Profile not found, proceeding with verification flow');
+        return false;
+      } else if (error.message?.includes('timeout') || error.message?.includes('Network')) {
+        console.log('Network error checking status, proceeding with verification flow');
+        // Network issues, but don't block the verification flow
+        return false;
+      }
+      
+      // For other errors, log but don't block the flow
+      console.log('Other error checking verification status, proceeding anyway:', error.message);
       return false;
     }
   };
 
   useEffect(() => {
-    const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'));
-    const token = auth?.token || auth?.api_token;
-
-    // Set email from auth or payload
-    if (auth?.email) {
-      setEmail(auth.email);
-    } else if (payload?.email) {
-      setEmail(payload.email);
-    }
-
-    // Check if already verified
-    const checkStatus = async () => {
-      if (token) {
-        const isVerified = await checkVerificationStatus(token);
-        if (!isVerified) {
-          // Only request code if not verified
-          await requestCode();
+    const initializeVerification = async () => {
+      try {
+        const authData = localStorage.getItem('veyu-auth-user');
+        let auth = {};
+        
+        // Safely parse auth data
+        if (authData) {
+          try {
+            auth = JSON.parse(authData);
+          } catch (error) {
+            console.error('Failed to parse auth data:', error);
+            auth = {};
+          }
         }
-      } else {
-        // If no token, just request code
-        await requestCode();
+        
+        const token = auth?.token || auth?.api_token;
+
+        // Set email from auth or payload with validation
+        let emailToUse = '';
+        if (auth?.email) {
+          emailToUse = auth.email;
+        } else if (payload?.email) {
+          emailToUse = payload.email;
+        }
+
+        if (!emailToUse) {
+          console.error('No email found in auth or payload');
+          notify({
+            title: 'Email Not Found',
+            description: 'No email address found. Please sign up again.',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
+          setTimeout(() => navigate('/signup'), 2000);
+          return;
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(emailToUse)) {
+          console.error('Invalid email format:', emailToUse);
+          notify({
+            title: 'Invalid Email',
+            description: 'Invalid email format found. Please sign up again.',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
+          setTimeout(() => navigate('/signup'), 2000);
+          return;
+        }
+
+        setEmail(emailToUse);
+        console.log('Email verification initialized for:', emailToUse);
+
+        // Check if already verified (only if we have a token)
+        if (token) {
+          console.log('Token found, checking verification status...');
+          const isVerified = await checkVerificationStatus(token);
+          if (!isVerified) {
+            // Don't automatically request code - it was already sent during signup
+            console.log('Not verified, but verification code was already sent during signup');
+            notify({
+              title: 'Check Your Email',
+              description: `A verification code was sent to ${emailToUse} during signup. Please check your inbox.`,
+              status: 'info',
+              duration: 5000,
+              isClosable: true,
+            });
+          }
+        } else {
+          // If no token, don't request code - it was already sent during signup
+          console.log('No token found, but verification code was already sent during signup');
+          notify({
+            title: 'Check Your Email',
+            description: `A verification code was sent to ${emailToUse} during signup. Please check your inbox and spam folder.`,
+            status: 'info',
+            duration: 5000,
+            isClosable: true,
+          });
+        }
+
+      } catch (error) {
+        console.error('Error initializing verification:', error);
+        notify({
+          title: 'Initialization Error',
+          description: 'Failed to initialize email verification. Please try again.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
       }
     };
 
-    checkStatus();
+    initializeVerification();
 
     // Clean up interval on unmount
     return () => {
@@ -1422,59 +1758,170 @@ const SignupStep = ({ type }) => {
         clearInterval(timer.current);
       }
     };
-  }, []);
+  }, []); // Empty dependency array to run only once
 
   async function requestCode(isResend = false) {
     if (isResending) return; // Prevent multiple clicks
 
     setIsResending(true);
     try {
-      const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'));
+      const authData = localStorage.getItem('veyu-auth-user');
+      let auth = {};
+      
+      // Safely parse auth data
+      if (authData) {
+        try {
+          auth = JSON.parse(authData);
+        } catch (error) {
+          console.error('Failed to parse auth data in requestCode:', error);
+          auth = {};
+        }
+      }
+      
       const token = auth?.token || auth?.api_token;
       const emailToVerify = email || payload?.email;
 
+      // Enhanced validation
       if (!emailToVerify) {
         throw new Error('Email address not found. Please try signing up again.');
       }
 
-      // Start the countdown timer
-      let time = 60;
-      setCodeTimer(time);
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailToVerify)) {
+        throw new Error('Invalid email format. Please check your email address.');
+      }
 
+      console.log('Requesting verification code for:', emailToVerify, 'isResend:', isResend);
+
+      // Start the countdown timer only after successful request
+      let time = 60;
+
+      // Handle initial vs resend requests differently
+      let response;
+      
+      if (!isResend) {
+        // For initial request, verification code was already sent during signup
+        console.log('Initial verification code was already sent during signup, no need to request again');
+        
+        notify({
+          title: 'Verification Code Ready',
+          description: `A verification code was sent to ${emailToVerify} during signup. Please check your inbox and spam folder.`,
+          status: 'info',
+          duration: 5000,
+          isClosable: true,
+        });
+        
+        // Start timer without making API call
+        setCodeTimer(time);
+
+        if (timer.current) {
+          clearInterval(timer.current);
+        }
+
+        timer.current = setInterval(() => {
+          setCodeTimer(prevTime => {
+            const newTime = prevTime - 1;
+            if (newTime <= 0) {
+              clearInterval(timer.current);
+              return 0;
+            }
+            return newTime;
+          });
+        }, 1000);
+        
+        return; // Exit early, no API call needed for initial load
+      }
+      
+      // For resend requests, we need authentication
+      try {
+        if (!token) {
+          throw new Error('Authentication required to resend verification codes. Please sign in to your account and try again.');
+        }
+        
+        response = await authService.resendEmailVerification(emailToVerify);
+
+        // Only start timer after successful API call
+        setCodeTimer(time);
+
+        if (timer.current) {
+          clearInterval(timer.current);
+        }
+
+        timer.current = setInterval(() => {
+          setCodeTimer(prevTime => {
+            const newTime = prevTime - 1;
+            if (newTime <= 0) {
+              clearInterval(timer.current);
+              return 0;
+            }
+            return newTime;
+          });
+        }, 1000);
+
+        notify({
+          title: 'Verification Code Sent!',
+          description: `We've sent a 6-digit code to ${emailToVerify}. Please check your inbox and spam folder.`,
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+
+        console.log('Verification code request successful:', response);
+
+      } catch (apiError) {
+        console.error('API error requesting verification code:', apiError);
+        
+        // Handle specific API errors
+        if (apiError.response?.status === 401) {
+          throw new Error('Your session has expired. Please sign in to your account to resend the verification code.');
+        } else if (apiError.response?.status === 429) {
+          throw new Error('Too many requests. Please wait a few minutes before requesting another code.');
+        } else if (apiError.response?.status === 400) {
+          const errorData = apiError.response?.data;
+          if (errorData?.message) {
+            throw new Error(errorData.message);
+          } else if (errorData?.detail) {
+            throw new Error(errorData.detail);
+          } else {
+            throw new Error('Invalid request. Please check your email address and try again.');
+          }
+        } else if (apiError.response?.status >= 500) {
+          throw new Error('Server error. Please try again in a few minutes.');
+        } else if (apiError.message?.includes('timeout')) {
+          throw new Error('Request timeout. Please check your internet connection and try again.');
+        } else if (apiError.message?.includes('Authentication required')) {
+          throw new Error('Please sign in to your account to resend verification codes.');
+        } else {
+          throw new Error(apiError.message || 'Failed to send verification code. Please try again.');
+        }
+      }
+
+    } catch (error) {
+      console.error('Error in requestCode:', error);
+      
+      // Clear any timer that might have started
       if (timer.current) {
         clearInterval(timer.current);
       }
+      setCodeTimer(0);
 
-      timer.current = setInterval(() => {
-        setCodeTimer(prevTime => {
-          const newTime = prevTime - 1;
-          if (newTime <= 0) {
-            clearInterval(timer.current);
-            return 0;
-          }
-          return newTime;
-        });
-      }, 1000);
-
-      // Use appropriate endpoint based on whether this is a resend or initial request
-      if (isResend) {
-        await authService.resendEmailVerification(emailToVerify);
-      } else {
-        await authService.requestEmailVerification();
+      // Show user-friendly error message with guidance
+      let errorTitle = 'Error Sending Code';
+      let errorDescription = error.message || 'Failed to send verification code. Please try again.';
+      
+      // Add helpful guidance for authentication errors
+      if (error.message?.includes('Authentication required') || error.message?.includes('sign in')) {
+        errorTitle = 'Sign In Required';
+        errorDescription = `${error.message} You can also try entering the code that was sent during signup.`;
       }
-
+      
       notify({
-        title: 'Verification Code Sent!',
-        description: `We've sent a 6-digit code to ${emailToVerify}. Please check your inbox.`,
-        status: 'success',
-        duration: 5000,
+        title: errorTitle,
+        description: errorDescription,
+        status: 'error',
+        duration: 10000,
         isClosable: true,
-      });
-    } catch (error) {
-      notify({
-        title: 'Error',
-        body: error.response?.data?.message || 'Failed to send verification code',
-        color: 'red'
       });
     } finally {
       setIsResending(false);
@@ -1482,10 +1929,34 @@ const SignupStep = ({ type }) => {
   }
 
   async function verifyCode() {
-    if (!otp || otp.length !== 6) {
+    // Enhanced validation
+    if (!otp) {
       notify({
-        title: 'Invalid Code',
-        description: 'Please enter a valid 6-digit verification code',
+        title: 'Code Required',
+        description: 'Please enter the verification code sent to your email',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    if (otp.length !== 6) {
+      notify({
+        title: 'Invalid Code Length',
+        description: 'Verification code must be exactly 6 digits',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    // Check if code contains only numbers
+    if (!/^\d{6}$/.test(otp)) {
+      notify({
+        title: 'Invalid Code Format',
+        description: 'Verification code must contain only numbers',
         status: 'warning',
         duration: 3000,
         isClosable: true,
@@ -1495,68 +1966,97 @@ const SignupStep = ({ type }) => {
 
     setIsVerifying(true);
     try {
-      const auth = objectifyJSON(localStorage.getItem('veyu-auth-user'));
+      const authData = localStorage.getItem('veyu-auth-user');
+      let auth = {};
+      
+      // Safely parse auth data
+      if (authData) {
+        try {
+          auth = JSON.parse(authData);
+        } catch (error) {
+          console.error('Failed to parse auth data in verifyCode:', error);
+          auth = {};
+        }
+      }
+      
       const token = auth?.token || auth?.api_token;
       const emailToVerify = email || payload?.email;
 
-      if (!token) {
-        notify({
-          title: 'Authentication Required',
-          description: 'Your session has expired. Please sign up again.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        return navigate('/signup');
-      }
-
+      // Enhanced email validation
       if (!emailToVerify) {
         throw new Error('Email address not found. Please try signing up again.');
       }
 
-      // Verify the code using authService
-      const verificationResponse = await authService.verifyEmail(otp);
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailToVerify)) {
+        throw new Error('Invalid email format. Please try signing up again.');
+      }
 
-      const verificationResult = verificationResponse;
+      console.log('Verifying email code:', { email: emailToVerify, codeLength: otp.length });
 
-      // Email verification successful
-      console.log('Email verification successful:', verificationResult);
+      // Verify the code using authService (uses unauthenticated endpoint)
+      const verificationResponse = await authService.verifyEmail(emailToVerify, otp);
+
+      console.log('Email verification successful:', verificationResponse);
 
       // Update local storage with verified status
       const updatedAuth = {
         ...auth,
         email_verified: true,
-        ...verificationResult
+        ...verificationResponse
       };
 
       localStorage.setItem('veyu-auth-user', JSON.stringify(updatedAuth));
 
+      // Also update the new format if we have user data
+      const existingUserData = localStorage.getItem('veyu_user_data');
+      if (existingUserData) {
+        try {
+          const userData = JSON.parse(existingUserData);
+          userData.email_verified = true;
+          localStorage.setItem('veyu_user_data', JSON.stringify(userData));
+        } catch (e) {
+          console.log('Could not update veyu_user_data:', e);
+        }
+      }
+
       // Get user type to determine redirect
-      const userType = verificationResult?.user_type || auth?.user_type || payload?.user_type;
+      const userType = verificationResponse?.user_type || auth?.user_type || payload?.user_type || 'customer';
 
-      notify({
-        title: 'Email Verified Successfully!',
-        description: userType === 'customer'
-          ? 'Your account is now verified. Taking you to your dashboard...'
-          : 'Your business account is now verified. Let\'s set up your business profile...',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-
-      // Redirect based on user type
+      // Check business profile completion status for business users
       let redirectPath;
       if (userType === 'customer') {
         redirectPath = '/dashboard';
       } else if (userType === 'mechanic' || userType === 'dealer') {
-        // Business accounts should go to business profile setup first
-        redirectPath = '/business-profile';
+        // For business users, check if business profile is complete
+        const completionStatus = authService.getBusinessProfileCompletionStatus();
+        
+        if (completionStatus.needsCompletion) {
+          // Business profile is incomplete, redirect to business profile setup
+          redirectPath = '/business-profile';
+        } else {
+          // Business profile is complete, redirect to dashboard
+          redirectPath = '/dashboard';
+        }
       } else {
         // Fallback for any other user types
         redirectPath = '/dashboard';
       }
 
-      console.log('Email verified, redirecting to:', redirectPath, 'for user type:', userType);
+      notify({
+        title: 'Email Verified Successfully!',
+        description: redirectPath === '/business-profile'
+          ? 'Your business account is now verified. Let\'s set up your business profile...'
+          : 'Your account is now verified. Taking you to your dashboard...',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+
+      // Set verified state to show success UI
+      setIsEmailVerified(true);
+
+      console.log('Email verified, redirecting to:', redirectPath, 'for user type:', userType, 'completion status:', authService.getBusinessProfileCompletionStatus());
 
       setTimeout(() => {
         navigate(redirectPath, {
@@ -1565,7 +2065,7 @@ const SignupStep = ({ type }) => {
             fromEmailVerification: true,
             userType: userType,
             userData: {
-              email: payload?.email,
+              email: emailToVerify,
               first_name: payload?.first_name,
               last_name: payload?.last_name,
               phone_number: payload?.phone_number,
@@ -1574,12 +2074,71 @@ const SignupStep = ({ type }) => {
           }
         });
       }, 2000);
+
     } catch (error) {
+      console.error('Email verification error:', error);
+      
+      let errorMessage = 'Verification failed. Please try again.';
+      let errorTitle = 'Verification Failed';
+
+      // Handle specific error cases
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        if (status === 400) {
+          if (data?.message?.includes('Invalid') || data?.detail?.includes('Invalid')) {
+            errorTitle = 'Invalid Code';
+            errorMessage = 'The verification code you entered is incorrect. Please check and try again.';
+          } else if (data?.message?.includes('expired') || data?.detail?.includes('expired')) {
+            errorTitle = 'Code Expired';
+            errorMessage = 'Your verification code has expired. Please request a new one.';
+          } else if (data?.message?.includes('already verified')) {
+            errorTitle = 'Already Verified';
+            errorMessage = 'Your email is already verified. Redirecting to dashboard...';
+            // Redirect to dashboard since email is already verified
+            setTimeout(() => {
+              const userType = payload?.user_type || 'customer';
+              const redirectPath = userType === 'customer' ? '/dashboard' : '/business-profile';
+              navigate(redirectPath, { replace: true });
+            }, 2000);
+            return;
+          } else {
+            errorMessage = data?.message || data?.detail || 'Invalid verification code. Please try again.';
+          }
+        } else if (status === 404) {
+          errorTitle = 'Code Not Found';
+          errorMessage = 'Verification code not found. Please request a new code.';
+        } else if (status === 429) {
+          errorTitle = 'Too Many Attempts';
+          errorMessage = 'Too many verification attempts. Please wait a few minutes before trying again.';
+        } else if (status >= 500) {
+          errorTitle = 'Server Error';
+          errorMessage = 'Server error occurred. Please try again in a few minutes.';
+        } else {
+          errorMessage = data?.message || data?.detail || 'Verification failed. Please try again.';
+        }
+      } else if (error.message?.includes('timeout')) {
+        errorTitle = 'Request Timeout';
+        errorMessage = 'Request timed out. Please check your internet connection and try again.';
+      } else if (error.message?.includes('Network')) {
+        errorTitle = 'Network Error';
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else {
+        errorMessage = error.message || 'An unexpected error occurred. Please try again.';
+      }
+
       notify({
-        title: 'Verification Failed',
-        body: error.response?.data?.message || 'Invalid verification code. Please try again.',
-        color: 'red'
+        title: errorTitle,
+        description: errorMessage,
+        status: 'error',
+        duration: 8000,
+        isClosable: true,
       });
+
+      // Clear the OTP field for certain errors
+      if (errorTitle === 'Invalid Code' || errorTitle === 'Code Expired') {
+        setOTP('');
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -1692,7 +2251,7 @@ const SignupStep = ({ type }) => {
             cursor: 'not-allowed'
           }}
         >
-          <span ref={timer}>Resend code</span>
+          {timeout > 0 ? `Resend in ${timeout}s` : 'Resend code'}
         </Button>
       </HStack>
 

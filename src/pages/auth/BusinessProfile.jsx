@@ -10,7 +10,8 @@ import {
   Shield,
   Zap,
   Plus,
-  X
+  X,
+  LogOut
 } from "lucide-react";
 import {
   Avatar,
@@ -39,7 +40,9 @@ import {
   Wrap,
   WrapItem,
   IconButton,
-  useToast
+  useToast,
+  PinInput,
+  PinInputField
 } from "@chakra-ui/react";
 import { useContext, useRef, useState, useEffect } from "react";
 import { GlobalStore } from "../../App";
@@ -48,8 +51,13 @@ import { motion } from 'framer-motion';
 import { CustomPlacesAutocomplete } from "../../components/maps";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { objectifyJSON } from "../../utils";
+import authService from "../../services/authService";
+import dealershipService from "../../services/dealershipService";
+import { formatErrorForUser, createErrorNotification, handleValidationErrors, logError } from '../../utils/errorHandling';
+import { getUserDisplayName, getBusinessDisplayName, getUserEmail, getUserPhone } from "../../utils/userDataUtils";
 
 const MotionBox = motion(Box);
+const MotionCard = motion(Box);
 
 function BusinessProfile({ onSubmit, ...props }) {
   const { payload } = useContext(SignupContext);
@@ -64,6 +72,17 @@ function BusinessProfile({ onSubmit, ...props }) {
   const [isVerifying, setIsVerifying] = useState(false);
   const toast = useToast();
   const navigate = useNavigate();
+
+  // Handle logout with confirmation
+  const handleLogout = () => {
+    const confirmLogout = window.confirm(
+      'Are you sure you want to logout? Any unsaved changes to your business profile will be lost.'
+    );
+    
+    if (confirmLogout) {
+      logout();
+    }
+  };
   
   const [businessProfile, setBusinessProfile] = useState({
     logo: null,
@@ -102,16 +121,25 @@ function BusinessProfile({ onSubmit, ...props }) {
   ];
 
   const dealerServices = [
-    'Car Rentals',
-    'Car Sales',
+    'Car Leasing',
+    'Car Sale',
+    'Car Rental',
     'Drivers',
     'Vehicle Financing',
-    'Trade-ins',
-    'Warranty Service',
-    'Insurance',
+    'Trade-In Services',
     'Vehicle Inspection',
-    'Delivery Service',
-    'Maintenance Plans'
+    'Extended Warranty',
+    'Vehicle Insurance',
+    'Vehicle Maintenance',
+    'Parts & Accessories',
+    'Vehicle Delivery',
+    'Test Drive Services',
+    'Vehicle Registration',
+    'Export Services',
+    'Aircraft Sales & Leasing',
+    'Boat Sales & Leasing',
+    'UAV/Drone Sales',
+    'Motorbike Sales & Leasing',
   ];
 
   const servicesOffered = user_type === 'mechanic' ? mechServices : dealerServices;
@@ -127,27 +155,258 @@ function BusinessProfile({ onSubmit, ...props }) {
   const textColor = useColorModeValue('gray.600', 'gray.300');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
+  // Helper function to get business name from user data with graceful handling
+  const getBusinessName = () => {
+    try {
+      const user = authService.getCurrentUser();
+      return getBusinessDisplayName(user);
+    } catch (error) {
+      console.error('❌ Error getting business name:', error);
+      return 'Your Business Name';
+    }
+  };
+
+  // Helper function to fetch business profile data from API
+  const fetchBusinessProfileData = async () => {
+    try {
+      console.log('🔄 Fetching business profile data from API...');
+      const profileData = await dealershipService.getSettings();
+      
+      if (profileData) {
+        console.log('✅ Business profile data fetched:', {
+          hasBusinessName: !!profileData.business_name,
+          businessName: profileData.business_name,
+          hasServices: !!profileData.services?.length,
+          hasLocation: !!profileData.location
+        });
+        
+        // Update the business profile state with fetched data
+        setBusinessProfile(prev => ({
+          ...prev,
+          business_name: profileData.business_name || prev.business_name,
+          headline: profileData.headline || prev.headline,
+          about: profileData.about || prev.about,
+          contact_phone: profileData.contact_phone || prev.contact_phone,
+          contact_email: profileData.contact_email || prev.contact_email,
+          services: profileData.services || prev.services,
+          location: profileData.location || prev.location,
+          business_type: profileData.business_type || prev.business_type
+        }));
+        
+        // Update user data in localStorage with the business name from API
+        if (profileData.business_name) {
+          const user = authService.getCurrentUser();
+          if (user && !user.business_name) {
+            const updatedUser = { ...user, business_name: profileData.business_name };
+            localStorage.setItem('veyu_user_data', JSON.stringify(updatedUser));
+            localStorage.setItem('veyu-auth-user', JSON.stringify(updatedUser));
+            console.log('✅ Updated localStorage with business name from API');
+          }
+        }
+        
+        return profileData;
+      }
+    } catch (error) {
+      console.error('❌ Error fetching business profile data:', error);
+      // Don't throw error - component can still work with user data from localStorage
+      return null;
+    }
+  };
+
+  // Helper function to check if business name is missing and prompt user
+  const checkAndPromptForBusinessName = () => {
+    try {
+      const user = authService.getCurrentUser();
+      const businessName = authService.getBusinessName();
+      
+      if (!businessName) {
+        const userType = user?.user_type || 'business';
+        const nameType = userType === 'mechanic' ? 'auto shop name' : 'business name';
+        
+        toast({
+          title: 'Business Name Required',
+          description: `Please enter your ${nameType} to complete your profile setup.`,
+          status: 'warning',
+          duration: 6000,
+          isClosable: true,
+          position: 'top',
+        });
+        
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Error checking business name:', error);
+      return false;
+    }
+  };
+
+  // Helper function to ensure authentication and handle token refresh
+  const ensureAuthentication = async () => {
+    try {
+      const token = authService.getAccessToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // For initial component load, just check if token exists
+      // Only make API call to verify token during actual form submission
+      console.log('✅ Authentication token found, proceeding...');
+      return true;
+    } catch (error) {
+      console.error('Authentication check failed:', error);
+      toast({
+        title: 'Authentication Error',
+        description: 'Session expired. Please log in again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      navigate('/login', { 
+        state: { 
+          message: 'Session expired during profile setup. Please log in again.',
+          returnTo: '/business-profile'
+        }
+      });
+      return false;
+    }
+  };
+
+  // Helper function to verify authentication with API call (used during form submission)
+  const verifyAuthenticationWithAPI = async () => {
+    try {
+      const token = authService.getAccessToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Verify token is still valid by making a test API call
+      try {
+        await authService.getProfile();
+        return true;
+      } catch (error) {
+        // If profile call fails with 401, try to refresh token
+        if (error.status === 401) {
+          console.log('Token expired, attempting refresh...');
+          try {
+            await authService.refreshToken();
+            console.log('Token refreshed successfully');
+            return true;
+          } catch (refreshError) {
+            console.error('Token refresh failed:', refreshError);
+            throw new Error('Authentication failed - please log in again');
+          }
+        }
+        throw error;
+      }
+    } catch (error) {
+      console.error('Authentication verification failed:', error);
+      toast({
+        title: 'Authentication Error',
+        description: 'Session expired. Please log in again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      navigate('/login', { 
+        state: { 
+          message: 'Session expired during profile setup. Please log in again.',
+          returnTo: '/business-profile'
+        }
+      });
+      return false;
+    }
+  };
+
+  // Initialize business profile with existing user data and verify authentication
+  useEffect(() => {
+    const initializeBusinessProfile = async () => {
+      try {
+        // Basic authentication check - just verify token exists
+        const isAuthenticated = await ensureAuthentication();
+        if (!isAuthenticated) {
+          return; // Authentication failed, user will be redirected
+        }
+
+        // Get current user data using authService for consistency with graceful handling
+        const user = authService.getCurrentUser();
+        
+        if (user) {
+          console.log('Initializing business profile with user data:', {
+            userId: user.id,
+            userType: user.user_type,
+            hasEmail: !!user.email,
+            hasPhone: !!user.phone_number,
+            hasBusinessName: !!user.business_name
+          });
+          
+          // Pre-populate with user data from localStorage
+          setBusinessProfile(prev => ({
+            ...prev,
+            // Remove business_name from form state since it's from signup
+            contact_email: getUserEmail(user) !== 'No email' ? getUserEmail(user) : prev.contact_email,
+            contact_phone: getUserPhone(user) || prev.contact_phone,
+          }));
+
+          // Fetch complete business profile data from API (includes business name from DB)
+          const profileData = await fetchBusinessProfileData();
+          
+          // Check for missing business name after fetching from API
+          setTimeout(() => {
+            checkAndPromptForBusinessName();
+          }, 1000); // Delay to allow component to render first
+        } else {
+          // Handle missing user data gracefully
+          console.warn('⚠️ No user data found during business profile initialization');
+          toast({
+            title: 'Authentication Required',
+            description: 'Please log in to set up your business profile.',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
+          navigate('/login', { 
+            state: { 
+              message: 'Please log in to set up your business profile.',
+              returnTo: '/business-profile'
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing business profile:', error);
+        toast({
+          title: 'Initialization Error',
+          description: 'Failed to initialize profile setup. Please try logging in again.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        navigate('/login', { 
+          state: { 
+            message: 'Failed to initialize profile setup. Please try logging in again.',
+            returnTo: '/business-profile'
+          }
+        });
+      }
+    };
+    
+    initializeBusinessProfile();
+  }, []); // Run only once on component mount
+
   // Update completion progress when businessProfile changes
   useEffect(() => {
     setCompletionProgress(calculateCompletion(businessProfile));
   }, [businessProfile]);
 
-  // Auto-submit if verification is successful
-  useEffect(() => {
-    const submitAfterVerification = async () => {
-      if (verificationCode && emailVerificationSent) {
-        await handleSubmit(new Event('submit'));
-      }
-    };
-    
-    submitAfterVerification();
-  }, [verificationCode, emailVerificationSent]);
+  // Note: Auto-submit removed since email verification is now optional
+  // Users can manually submit the form regardless of email verification status
 
   // Calculate form completion percentage
   const calculateCompletion = (profile) => {
     let completedFields = 0;
     const requiredFields = [
-      'business_name',
+      // Removed 'business_name' since it's collected during signup
       'business_type',
       'contact_phone',
       'contact_email',
@@ -173,10 +432,11 @@ function BusinessProfile({ onSubmit, ...props }) {
     return Math.min(100, Math.round((completedFields / requiredFields.length) * 100));
   };
 
-  // Send verification email
+  // Send verification email with enhanced authentication handling
   const sendVerificationEmail = async (email) => {
     try {
-      const response = await axios.post('/accounts/send-verification-email/', { email });
+      // Use authService for consistent authentication handling with automatic token refresh
+      const response = await authService.resendEmailVerification(email);
       toast({
         title: 'Verification Email Sent',
         description: `We've sent a verification code to ${email}. Please check your inbox.`,
@@ -186,23 +446,223 @@ function BusinessProfile({ onSubmit, ...props }) {
       });
       return true;
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Failed to send verification email';
+      // Handle authentication failures during profile setup
+      if (error.status === 401) {
+        console.error('Authentication failed during email verification');
+        toast({
+          title: 'Authentication Error',
+          description: 'Session expired. Please log in again.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        navigate('/login', { 
+          state: { 
+            message: 'Session expired during profile setup. Please log in again.',
+            returnTo: '/business-profile'
+          }
+        });
+        return false;
+      }
+
+      // Enhanced email verification error handling
+      console.error('🚨 Email Verification Error:', {
+        error: error,
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        email: email
+      });
+
+      let errorMessage = 'Failed to send verification email';
+      
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        if (status === 400) {
+          if (data?.email) {
+            errorMessage = Array.isArray(data.email) 
+              ? `Email error: ${data.email.join(', ')}`
+              : `Email error: ${data.email}`;
+          } else if (data?.message) {
+            errorMessage = data.message;
+          } else {
+            errorMessage = 'Invalid email address. Please check and try again.';
+          }
+        } else if (status === 429) {
+          errorMessage = 'Too many verification requests. Please wait a few minutes before trying again.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error while sending verification email. Please try again later.';
+        } else if (data?.message) {
+          errorMessage = data.message;
+        } else if (data?.detail) {
+          errorMessage = data.detail;
+        }
+      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorMessage = 'Request timeout while sending verification email. Please try again.';
+      } else if (error.message.includes('Network Error')) {
+        errorMessage = 'Network error while sending verification email. Please check your connection.';
+      }
+      
+      // Check if the error is because email is already verified
+      if (errorMessage.includes('already verified') || error.response?.data?.error_code === 'already_verified') {
+        console.log('Email already verified, no need to send verification email');
+        // Don't show error toast for already verified emails
+        throw new Error('already verified');
+      }
+      
+      // For other errors, show user-friendly error message with retry option
+      toast({
+        title: 'Email Verification Failed',
+        description: errorMessage,
+        status: 'error',
+        duration: 7000,
+        isClosable: true,
+        position: 'top',
+        action: (
+          <Button
+            size="sm"
+            colorScheme="orange"
+            onClick={() => sendVerificationEmail(email)}
+          >
+            Retry
+          </Button>
+        ),
+      });
       throw new Error(errorMessage);
     }
   };
 
-  // Verify email with code
+  // Verify email with code with enhanced authentication handling
   const verifyEmailCode = async (email, code) => {
     try {
-      const response = await axios.post('/accounts/verify-email/', {
-        email,
-        code
-      });
-      return response.data.verified === true;
+      // Use authService for consistent authentication handling with automatic token refresh
+      const response = await authService.verifyEmail(email, code);
+      return response.verified === true || response.success === true;
     } catch (error) {
-      console.error('Verification error:', error);
+      // Handle authentication failures during profile setup
+      if (error.status === 401) {
+        console.error('Authentication failed during email code verification');
+        toast({
+          title: 'Authentication Error',
+          description: 'Session expired. Please log in again.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        navigate('/login', { 
+          state: { 
+            message: 'Session expired during profile setup. Please log in again.',
+            returnTo: '/business-profile'
+          }
+        });
+        return false;
+      }
+
+      // Enhanced email code verification error handling
+      console.error('🚨 Email Code Verification Error:', {
+        error: error,
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        email: email,
+        code: code ? '***' + code.slice(-2) : 'not provided'
+      });
+
+      let errorMessage = 'Invalid verification code';
+      
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        if (status === 400) {
+          if (data?.code) {
+            errorMessage = Array.isArray(data.code) 
+              ? `Code error: ${data.code.join(', ')}`
+              : `Code error: ${data.code}`;
+          } else if (data?.email) {
+            errorMessage = 'Email address is invalid or not found.';
+          } else if (data?.message) {
+            errorMessage = data.message;
+          } else if (data?.detail) {
+            errorMessage = data.detail;
+          } else {
+            errorMessage = 'Invalid verification code. Please check and try again.';
+          }
+        } else if (status === 404) {
+          errorMessage = 'Verification code not found or expired. Please request a new code.';
+        } else if (status === 429) {
+          errorMessage = 'Too many verification attempts. Please wait before trying again.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error during verification. Please try again later.';
+        } else if (data?.message) {
+          errorMessage = data.message;
+        } else if (data?.detail) {
+          errorMessage = data.detail;
+        }
+      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorMessage = 'Request timeout during verification. Please try again.';
+      } else if (error.message.includes('Network Error')) {
+        errorMessage = 'Network error during verification. Please check your connection.';
+      }
+
+      // Show user-friendly error message
+      toast({
+        title: 'Verification Failed',
+        description: errorMessage,
+        status: 'error',
+        duration: 6000,
+        isClosable: true,
+        position: 'top',
+        action: (
+          <Button
+            size="sm"
+            colorScheme="orange"
+            onClick={() => {
+              // Clear the verification code and allow retry
+              setVerificationCode('');
+              const firstInput = document.querySelector('[data-index="0"]');
+              if (firstInput) firstInput.focus();
+            }}
+          >
+            Try Again
+          </Button>
+        ),
+      });
+
       return false;
     }
+  };
+
+  // Helper function to update business profile values
+  const changeValue = (field, value) => {
+    setBusinessProfile(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Helper function to add a service
+  const addService = (service) => {
+    if (!businessProfile.services.includes(service)) {
+      setBusinessProfile(prev => ({
+        ...prev,
+        services: [...prev.services, service]
+      }));
+    }
+  };
+
+  // Helper function to remove a service
+  const removeService = (service) => {
+    setBusinessProfile(prev => ({
+      ...prev,
+      services: prev.services.filter(s => s !== service)
+    }));
+  };
+
+  // Business profile setup function
+  const setupBusinessProfile = async (e) => {
+    e.preventDefault();
+    await handleSubmit(e);
   };
 
   // Handle form submission
@@ -211,70 +671,222 @@ function BusinessProfile({ onSubmit, ...props }) {
     try {
       setIsSubmitting(true);
       
-      // Check if email needs verification
-      if (!emailVerificationSent && businessProfile.contact_email) {
-        await sendVerificationEmail(businessProfile.contact_email);
-        setEmailVerificationSent(true);
-        return;
+      // Verify authentication with API call before form submission
+      const isAuthenticated = await verifyAuthenticationWithAPI();
+      if (!isAuthenticated) {
+        return; // Authentication failed, user will be redirected
       }
       
-      // If verification is required but not completed
-      if (emailVerificationSent && !verificationCode) {
-        toast({
-          title: 'Verification Required',
-          description: 'Please enter the verification code sent to your email',
-          status: 'warning',
-          duration: 5000,
-          isClosable: true,
-        });
-        return;
+      // Check if email needs verification - skip if already verified
+      const user = authService.getCurrentUser();
+      const isEmailAlreadyVerified = user?.email_verified || user?.is_verified;
+      
+      console.log('Email verification status check:', {
+        user_email: user?.email,
+        email_verified: user?.email_verified,
+        is_verified: user?.is_verified,
+        isEmailAlreadyVerified,
+        contact_email: businessProfile.contact_email,
+        emailVerificationSent
+      });
+      
+      // Optional email verification - only attempt if email is NOT already verified
+      // This is now non-blocking and will not prevent profile submission
+      if (!emailVerificationSent && businessProfile.contact_email && !isEmailAlreadyVerified) {
+        console.log('Email not verified, attempting optional verification process');
+        try {
+          await sendVerificationEmail(businessProfile.contact_email);
+          setEmailVerificationSent(true);
+          console.log('Email verification sent successfully, but continuing with profile submission');
+          // Continue with profile submission instead of returning
+        } catch (error) {
+          // If verification fails, log the error but continue with submission
+          console.log('Email verification failed, but continuing with profile submission:', error.message);
+          // Continue to profile submission below
+        }
       }
       
-      // Verify email if code is provided
+      // If email is already verified, skip verification step
+      if (isEmailAlreadyVerified) {
+        console.log('Email already verified, skipping verification step');
+      }
+      
+      // Optional email verification with code - if code is provided, attempt verification
+      // but don't block submission if verification fails
       if (verificationCode) {
         setIsVerifying(true);
         try {
           const verified = await verifyEmailCode(businessProfile.contact_email, verificationCode);
-          if (!verified) {
-            throw new Error('Invalid verification code. Please try again.');
+          if (verified) {
+            console.log('Email verification successful');
+          } else {
+            console.log('Email verification failed, but continuing with profile submission');
           }
+        } catch (error) {
+          console.log('Email verification error, but continuing with profile submission:', error.message);
         } finally {
           setIsVerifying(false);
         }
       }
       
+      // Get current user data - authentication already verified above
       const authUser = JSON.parse(localStorage.getItem('veyu-auth-user'));
       if (!authUser) {
-        throw new Error('Session expired. Please log in again.');
+        console.error('No user data found during profile setup');
+        // Re-check authentication if user data is missing
+        const isAuthenticated = await verifyAuthenticationWithAPI();
+        if (!isAuthenticated) {
+          return; // Authentication failed, user will be redirected
+        }
+        
+        // Try to get user data again after authentication check
+        const refreshedAuthUser = JSON.parse(localStorage.getItem('veyu-auth-user'));
+        if (!refreshedAuthUser) {
+          toast({
+            title: 'Authentication Error',
+            description: 'Unable to retrieve user data. Please log in again.',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
+          navigate('/login', { 
+            state: { 
+              message: 'Unable to retrieve user data. Please log in again.',
+              returnTo: '/business-profile'
+            }
+          });
+          return;
+        }
       }
       
-      // Create form data for submission
-      const formData = new FormData();
+      // Prepare business profile data
+      // Clean location data to avoid circular references
+      const cleanLocation = {
+        lat: businessProfile.location?.lat || '',
+        lng: businessProfile.location?.lng || '',
+        country: businessProfile.location?.country || '',
+        state: businessProfile.location?.state || '',
+        city: businessProfile.location?.city || '',
+        zip_code: businessProfile.location?.zip_code || '',
+        place_id: businessProfile.location?.place_id || '',
+        street_address: businessProfile.location?.street_address || '',
+      };
       
-      // Append files if they exist
+      // Use FormData if logo is included, otherwise use JSON
+      let profileData;
+      let headers = {};
+      
+      // Always use JSON format for now to avoid FormData issues with arrays
+      // Get business name from user data or fetched profile data
+      const currentUser = authService.getCurrentUser();
+      const businessName = currentUser?.business_name || businessProfile.business_name;
+      
+      profileData = {
+        business_name: businessName,
+        headline: businessProfile.headline,
+        about: businessProfile.about || '',
+        contact_phone: businessProfile.contact_phone,
+        contact_email: businessProfile.contact_email,
+        services: businessProfile.services,
+        location: cleanLocation,
+      };
+      
+      // TODO: Handle logo upload separately if needed
       if (businessProfile.logo) {
-        formData.append('logo', businessProfile.logo);
+        console.log('Logo upload will be handled separately - using JSON for now');
       }
       
-      // Append other form data
-      formData.append('action', 'setup-business-profile');
-      formData.append('user_type', user_type);
-      formData.append('business_type', businessProfile.business_type);
-      formData.append('about', businessProfile.about || '');
-      formData.append('headline', businessProfile.headline);
-      formData.append('business_name', businessProfile.business_name);
-      formData.append('contact_phone', businessProfile.contact_phone);
-      formData.append('contact_email', businessProfile.contact_email);
-      formData.append('services', JSON.stringify(businessProfile.services));
-      formData.append('location', JSON.stringify(businessProfile.location));
+      // Debug current form state
+      console.log('Current businessProfile state:', {
+        business_name: businessName, // Using business name from user data
+        contact_phone: businessProfile.contact_phone,
+        contact_email: businessProfile.contact_email,
+        services: businessProfile.services,
+        headline: businessProfile.headline,
+        servicesLength: businessProfile.services?.length
+      });
       
-      const token = authUser?.api_token || authUser?.token;
+      // Validate required fields before submission
+      const validationErrors = [];
       
-      // Submit the form
-      const res = await axios.post('/accounts/register/', formData, {
+      // Validate business name is present (should be from signup, but check anyway)
+      if (!businessName || !businessName.trim()) {
+        const userType = currentUser?.user_type || 'business';
+        const nameType = userType === 'mechanic' ? 'Auto shop name' : 'Business name';
+        validationErrors.push(`${nameType} is required. Please complete your signup process.`);
+      }
+      
+      if (!businessProfile.contact_phone?.trim()) {
+        validationErrors.push('Contact phone is required');
+      } else {
+        // Validate phone number format - must start with + and country code
+        const phoneRegex = /^\+\d{1,4}\d{7,15}$/;
+        if (!phoneRegex.test(businessProfile.contact_phone.replace(/[\s\-\(\)]/g, ''))) {
+          validationErrors.push('Phone number must include country code (e.g., +234 for Nigeria, +1 for US)');
+        }
+      }
+      
+      if (!businessProfile.contact_email?.trim()) {
+        validationErrors.push('Contact email is required');
+      }
+      
+      if (!businessProfile.services || businessProfile.services.length === 0) {
+        validationErrors.push('At least one service is required');
+      }
+      
+      if (!businessProfile.location?.street_address?.trim()) {
+        validationErrors.push('Business location is required');
+      }
+      
+      if (validationErrors.length > 0) {
+        // Use the enhanced validation error handling utility
+        const validationConfig = handleValidationErrors(validationErrors, {
+          'business name': 'input[placeholder*="business"]',
+          'headline': 'input[placeholder*="headline"]'
+        });
+
+        toast({
+          ...validationConfig,
+          action: (
+            <Button
+              size="sm"
+              colorScheme="orange"
+              onClick={validationConfig.action.onClick}
+            >
+              {validationConfig.action.label}
+            </Button>
+          ),
+        });
+        return;
+      }
+      
+      console.log('Creating business profile...');
+      console.log('Profile data being sent:', {
+        hasLogo: !!businessProfile.logo,
+        business_name: businessName, // Using business name from user data
+        contact_phone: businessProfile.contact_phone,
+        contact_email: businessProfile.contact_email,
+        services: businessProfile.services,
+        servicesCount: businessProfile.services?.length || 0,
+        cleanLocation: cleanLocation,
+        headers: headers
+      });
+      
+      // Debug FormData contents if using FormData
+      if (businessProfile.logo && profileData instanceof FormData) {
+        console.log('FormData contents:');
+        for (let [key, value] of profileData.entries()) {
+          console.log(`${key}:`, value);
+        }
+      }
+      
+      // Submit to the correct endpoint for creating dealership/mechanic profile
+      // Use authService for consistent authentication handling with automatic token refresh
+      // This ensures all API requests include valid authentication headers
+      const res = await axios.put('/admin/dealership/settings/', profileData, { 
         headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Token ${token}`
+          ...headers,
+          'Authorization': `Bearer ${authService.getAccessToken()}` // Ensure token is included
         }
       });
       
@@ -289,30 +901,228 @@ function BusinessProfile({ onSubmit, ...props }) {
           isClosable: true,
         });
         
-        if (data.data || data.user) {
-          localStorage.setItem('veyu-auth-user', JSON.stringify(data.data || data.user || data));
+        // Update stored user data with business profile info and email verification status
+        const updatedUserData = {
+          ...authUser,
+          business_name: businessName, // Using business name from user data
+          headline: businessProfile.headline,
+          business_profile_completed: true, // Mark business profile as completed
+          email_verified: true, // Mark email as verified since profile is complete
+          is_verified: true, // Alternative verification field
+        };
+        localStorage.setItem('veyu-auth-user', JSON.stringify(updatedUserData));
+        localStorage.setItem('veyu_user_data', JSON.stringify(updatedUserData));
+        
+        // Update business profile completion status using authService
+        authService.updateBusinessProfileCompletionStatus(true);
+        
+        // Also update the authService's current user data to reflect email verification
+        try {
+          const currentUser = authService.getCurrentUser();
+          if (currentUser) {
+            const verifiedUser = {
+              ...currentUser,
+              email_verified: true,
+              is_verified: true,
+              business_profile_completed: true
+            };
+            // Update both storage locations
+            localStorage.setItem('veyu_user_data', JSON.stringify(verifiedUser));
+            localStorage.setItem('veyu-auth-user', JSON.stringify(verifiedUser));
+            console.log('✅ Updated email verification status in authService data');
+          }
+        } catch (error) {
+          console.error('❌ Error updating email verification status:', error);
         }
         
-        // Redirect to dashboard after a short delay
+        // Use the correct redirect logic based on user type and email verification
+        const userType = updatedUserData.user_type;
+        let redirectUrl = '/dashboard'; // Default
+        
+        if (userType === 'dealer' || userType === 'mechanic') {
+          // Business users with verified email go to dashboard
+          redirectUrl = '/dashboard';
+        } else {
+          // Customer users go to home
+          redirectUrl = `/home?user=${updatedUserData.email}`;
+        }
+        
+        console.log('🔄 Redirecting after profile completion:', {
+          userType,
+          emailVerified: true,
+          redirectUrl
+        });
+        
+        // Redirect after a short delay
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate(redirectUrl, { replace: true });
         }, 1500);
       } else {
         throw new Error(data.message || 'Failed to set up business profile');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message 
-        || error.response?.data?.error
-        || (typeof error.response?.data === 'object' ? JSON.stringify(error.response?.data) : error.response?.data)
-        || error.message;
-      
-      toast({
-        title: 'Error',
+      // Handle authentication failures during profile setup with automatic retry
+      if (error.response?.status === 401 || error.status === 401) {
+        console.error('Authentication failed during profile setup');
+        
+        // Try to refresh token automatically before redirecting
+        try {
+          console.log('Attempting automatic token refresh...');
+          await authService.refreshToken();
+          
+          // Retry the profile submission with new token
+          console.log('Token refreshed, retrying profile submission...');
+          toast({
+            title: 'Session Refreshed',
+            description: 'Retrying profile submission...',
+            status: 'info',
+            duration: 3000,
+            isClosable: true,
+          });
+          
+          // Retry the submission
+          setTimeout(() => {
+            handleSubmit(new Event('submit'));
+          }, 1000);
+          return;
+          
+        } catch (refreshError) {
+          console.error('Token refresh failed during profile setup:', refreshError);
+          toast({
+            title: 'Authentication Error',
+            description: 'Session expired. Please log in again.',
+            status: 'error',
+            duration: 5000,
+            isClosable: true,
+          });
+          navigate('/login', { 
+            state: { 
+              message: 'Session expired during profile setup. Please log in again.',
+              returnTo: '/business-profile'
+            }
+          });
+          return;
+        }
+      }
+
+      // Enhanced error handling with detailed logging and user-friendly messages
+      console.error('🚨 Business Profile Setup Error:', {
+        error: error,
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack,
+        formData: {
+          business_name: businessName,
+          contact_phone: businessProfile.contact_phone,
+          contact_email: businessProfile.contact_email,
+          services_count: businessProfile.services?.length || 0,
+          location_provided: !!businessProfile.location?.street_address
+        },
+        timestamp: new Date().toISOString()
+      });
+
+      let errorTitle = 'Profile Setup Failed';
+      let errorMessage = 'Something went wrong while setting up your profile. Please try again.';
+      let isRetryable = true;
+
+      // Handle specific error types with user-friendly messages
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorTitle = 'Connection Timeout';
+        errorMessage = 'The request took too long to complete. Please check your internet connection and try again.';
+        isRetryable = true;
+      } else if (error.message.includes('Network Error')) {
+        errorTitle = 'Network Error';
+        errorMessage = 'Unable to connect to our servers. Please check your internet connection and try again.';
+        isRetryable = true;
+      } else if (error.response) {
+        const { status, data } = error.response;
+        
+        if (status === 400) {
+          errorTitle = 'Invalid Information';
+          
+          // Handle specific field validation errors
+          if (data?.contact_phone) {
+            errorMessage = Array.isArray(data.contact_phone) 
+              ? `Phone number error: ${data.contact_phone.join(', ')}`
+              : `Phone number error: ${data.contact_phone}`;
+          } else if (data?.contact_email) {
+            errorMessage = Array.isArray(data.contact_email)
+              ? `Email error: ${data.contact_email.join(', ')}`
+              : `Email error: ${data.contact_email}`;
+          } else if (data?.services) {
+            errorMessage = 'Please select at least one service that you offer.';
+          } else if (data?.location) {
+            errorMessage = 'Please provide a valid business location.';
+          } else if (data?.business_name) {
+            errorMessage = Array.isArray(data.business_name)
+              ? `Business name error: ${data.business_name.join(', ')}`
+              : `Business name error: ${data.business_name}`;
+          } else if (data?.non_field_errors) {
+            errorMessage = Array.isArray(data.non_field_errors)
+              ? data.non_field_errors.join(' ')
+              : data.non_field_errors;
+          } else if (data?.message) {
+            errorMessage = data.message;
+          } else if (data?.detail) {
+            errorMessage = data.detail;
+          } else {
+            errorMessage = 'Please check your information and try again.';
+          }
+          isRetryable = true;
+        } else if (status === 409) {
+          errorTitle = 'Duplicate Information';
+          errorMessage = 'A business with this information already exists. Please check your details.';
+          isRetryable = true;
+        } else if (status === 413) {
+          errorTitle = 'File Too Large';
+          errorMessage = 'Your business logo is too large. Please choose a smaller image (max 2MB).';
+          isRetryable = true;
+        } else if (status === 422) {
+          errorTitle = 'Invalid Data';
+          errorMessage = 'Some of your information is invalid. Please review and correct it.';
+          isRetryable = true;
+        } else if (status >= 500) {
+          errorTitle = 'Server Error';
+          errorMessage = 'Our servers are experiencing issues. Please try again in a few minutes.';
+          isRetryable = true;
+        } else if (data?.message) {
+          errorMessage = data.message;
+        } else if (data?.detail) {
+          errorMessage = data.detail;
+        }
+      }
+
+      // Show error toast with retry option for retryable errors
+      const toastConfig = {
+        title: errorTitle,
         description: errorMessage,
         status: 'error',
-        duration: 5000,
+        duration: isRetryable ? 8000 : 6000,
         isClosable: true,
-      });
+        position: 'top'
+      };
+
+      if (isRetryable) {
+        toastConfig.action = (
+          <Button
+            size="sm"
+            colorScheme="orange"
+            onClick={() => {
+              // Clear error state and allow retry
+              setIsSubmitting(false);
+              setEmailVerificationSent(false);
+              setVerificationCode('');
+              // Retry the submission
+              handleSubmit(new Event('submit'));
+            }}
+          >
+            Try Again
+          </Button>
+        );
+      }
+
+      toast(toastConfig);
     } finally {
       setIsSubmitting(false);
     }
@@ -354,11 +1164,11 @@ function BusinessProfile({ onSubmit, ...props }) {
                 <Mail size={40} color="#38A169" />
               </Box>
               
-              <Heading size="lg">Verify Your Email</Heading>
+              <Heading size="lg">Verify Your Email (Optional)</Heading>
               
               <Text color={textColor}>
                 We've sent a verification code to <strong>{businessProfile.contact_email}</strong>.
-                Please enter the 6-digit code below to continue.
+                You can verify your email now or skip this step and complete your profile setup.
               </Text>
               
               <VStack spacing={4} w="full">
@@ -383,32 +1193,48 @@ function BusinessProfile({ onSubmit, ...props }) {
                   ))}
                 </PinInput>
                 
-                {isVerifying ? (
-                  <Button
-                    isLoading
-                    loadingText="Verifying..."
-                    colorScheme="orange"
-                    size="lg"
-                    w="full"
-                    mt={4}
-                  />
-                ) : (
-                  <Button
-                    colorScheme="orange"
-                    size="lg"
-                    w="full"
-                    mt={4}
-                    onClick={() => handleSubmit(new Event('submit'))}
-                    isDisabled={verificationCode.length !== 6}
-                    _disabled={{
-                      opacity: 0.7,
-                      cursor: 'not-allowed',
-                      _hover: { bg: 'orange.500' }
-                    }}
-                  >
-                    Verify & Continue
-                  </Button>
-                )}
+                <HStack spacing={4} w="full">
+                  {isVerifying ? (
+                    <Button
+                      isLoading
+                      loadingText="Verifying..."
+                      colorScheme="orange"
+                      size="lg"
+                      flex={1}
+                    />
+                  ) : (
+                    <>
+                      <Button
+                        colorScheme="orange"
+                        size="lg"
+                        flex={1}
+                        onClick={() => handleSubmit(new Event('submit'))}
+                        isDisabled={verificationCode.length !== 6}
+                        _disabled={{
+                          opacity: 0.7,
+                          cursor: 'not-allowed',
+                          _hover: { bg: 'orange.500' }
+                        }}
+                      >
+                        Verify & Continue
+                      </Button>
+                      <Button
+                        variant="outline"
+                        colorScheme="gray"
+                        size="lg"
+                        flex={1}
+                        onClick={() => {
+                          // Skip verification and continue with profile submission
+                          setEmailVerificationSent(false);
+                          setVerificationCode('');
+                          handleSubmit(new Event('submit'));
+                        }}
+                      >
+                        Skip & Continue
+                      </Button>
+                    </>
+                  )}
+                </HStack>
                 
                 <HStack justify="center" mt={4}>
                   <Text color={textColor}>Didn't receive a code?</Text>
@@ -438,7 +1264,25 @@ function BusinessProfile({ onSubmit, ...props }) {
           variants={containerVariants}
         >
           {/* Header */}
-          <MotionBox variants={itemVariants} textAlign="center" mb={8}>
+          <MotionBox variants={itemVariants} textAlign="center" mb={8} position="relative">
+            {/* Logout Button */}
+            <Box position="absolute" top={0} right={0}>
+              <Button
+                variant="ghost"
+                colorScheme="gray"
+                size="sm"
+                leftIcon={<LogOut size={16} />}
+                onClick={handleLogout}
+                _hover={{ 
+                  bg: 'gray.100',
+                  transform: 'translateY(-1px)'
+                }}
+                transition="all 0.2s"
+              >
+                Logout
+              </Button>
+            </Box>
+
             <Image 
               src="/assets/images/logo-main.png" 
               alt="Veyu Logo" 
@@ -508,7 +1352,7 @@ function BusinessProfile({ onSubmit, ...props }) {
                           <Avatar
                             size="2xl"
                             src={logoPreview}
-                            name={businessProfile?.business_name}
+                            name={getBusinessName()}
                             bg="orange.100"
                             color="#F4A950"
                             border="4px solid"
@@ -562,55 +1406,27 @@ function BusinessProfile({ onSubmit, ...props }) {
                         </Text>
                       </VStack>
 
-                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                        <FormControl isRequired>
-                          <FormLabel color="gray.700" fontWeight="semibold">
-                            Business Name
-                          </FormLabel>
-                          <InputGroup>
-                            <InputLeftElement>
-                              <Building size={20} color="gray" />
-                            </InputLeftElement>
-                            <Input
-                              value={businessProfile.business_name}
-                              onChange={(e) => changeValue('business_name', e.target.value)}
-                              placeholder="Your Business Name"
-                              size="lg"
-                              bg="gray.50"
-                              border="2px solid"
-                              borderColor={borderColor}
-                              _hover={{ borderColor: 'orange.300' }}
-                              _focus={{ 
-                                borderColor: '#F4A950', 
-                                bg: 'white',
-                                shadow: '0 0 0 1px #F4A950'
-                              }}
-                              pl={12}
-                            />
-                          </InputGroup>
-                        </FormControl>
-
-                        <FormControl isRequired>
-                          <FormLabel color="gray.700" fontWeight="semibold">
-                            Business Headline
-                          </FormLabel>
-                          <Input
-                            value={businessProfile.headline}
-                            onChange={(e) => changeValue('headline', e.target.value)}
-                            placeholder="Your business motto or tagline"
-                            size="lg"
-                            bg="gray.50"
-                            border="2px solid"
-                            borderColor={borderColor}
-                            _hover={{ borderColor: 'orange.300' }}
-                            _focus={{ 
-                              borderColor: '#F4A950', 
-                              bg: 'white',
-                              shadow: '0 0 0 1px #F4A950'
-                            }}
-                          />
-                        </FormControl>
-                      </SimpleGrid>
+                      {/* Business name field removed - collected during signup */}
+                      <FormControl isRequired>
+                        <FormLabel color="gray.700" fontWeight="semibold">
+                          Business Headline
+                        </FormLabel>
+                        <Input
+                          value={businessProfile.headline}
+                          onChange={(e) => changeValue('headline', e.target.value)}
+                          placeholder="Your business motto or tagline"
+                          size="lg"
+                          bg="gray.50"
+                          border="2px solid"
+                          borderColor={borderColor}
+                          _hover={{ borderColor: 'orange.300' }}
+                          _focus={{ 
+                            borderColor: '#F4A950', 
+                            bg: 'white',
+                            shadow: '0 0 0 1px #F4A950'
+                          }}
+                        />
+                      </FormControl>
 
                       <FormControl isRequired>
                         <FormLabel color="gray.700" fontWeight="semibold">
@@ -708,7 +1524,7 @@ function BusinessProfile({ onSubmit, ...props }) {
                               type="tel"
                               value={businessProfile.contact_phone}
                               onChange={(e) => changeValue('contact_phone', e.target.value)}
-                              placeholder="+1 (555) 123-4567"
+                              placeholder="+234 801 234 5678"
                               size="lg"
                               bg="gray.50"
                               border="2px solid"
@@ -722,6 +1538,9 @@ function BusinessProfile({ onSubmit, ...props }) {
                               pl={12}
                             />
                           </InputGroup>
+                          <Text fontSize="xs" color={textColor} mt={1}>
+                            Include country code (e.g., +234 for Nigeria, +1 for US/Canada)
+                          </Text>
                         </FormControl>
                       </SimpleGrid>
                     </VStack>
@@ -778,6 +1597,7 @@ function BusinessProfile({ onSubmit, ...props }) {
                     shadow="lg"
                     border="1px solid"
                     borderColor={borderColor}
+                    data-testid="services-section"
                   >
                     <VStack spacing={6} align="stretch">
                       <HStack spacing={3} mb={4}>
@@ -929,14 +1749,14 @@ function BusinessProfile({ onSubmit, ...props }) {
                       <Avatar
                         size="xl"
                         src={logoPreview}
-                        name={businessProfile.business_name}
+                        name={getBusinessName()}
                         bg="orange.100"
                         color="#F4A950"
                       />
                       
                       <VStack spacing={2} textAlign="center">
                         <Text fontWeight="bold" color="gray.800">
-                          {businessProfile.business_name || 'Your Business Name'}
+                          {getBusinessName()}
                         </Text>
                         <Text fontSize="sm" color={textColor}>
                           {businessProfile.headline || 'Your business headline'}

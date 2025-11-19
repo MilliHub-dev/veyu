@@ -4,6 +4,7 @@ import {GlobalStore} from '../../../App';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import {MechanicDashboardSideBar, MechanicNavbar, UnauthenticatedNavbar} from '../../../components/nav';
 import {VerificationNotice} from '../../../components';
+import { mapBusinessProfileResponse, handleApiError } from '../../../utils/businessUtils';
 import {
   Box,
   Container,
@@ -71,19 +72,39 @@ function MechanicDashboardLayout({children, hideSidebar, ...props}) {
       try {
         const res = await axios.get('/mechanics/me/');
         if (res?.data) {
-          const data = objectifyJSON(res.data);
-          if (data) {
-            console.log("Mechanic data loaded:", data);
+          const rawData = objectifyJSON(res.data);
+          if (rawData) {
+            // Use utility function to map API response to consistent structure
+            const mappedData = mapBusinessProfileResponse(rawData);
+            console.log("Mechanic data loaded:", mappedData);
             setMechanic({
-              ...data,
+              ...mappedData,
               isNew: false
             });
             return;
           }
         }
       } catch (apiError) {
-        console.log("Using default mechanic profile:", apiError.message);
-        // Set the default profile if the endpoint doesn't exist or returns 404
+        // Use utility function for consistent error handling
+        const errorInfo = handleApiError(apiError);
+        console.log("API Error:", errorInfo.message);
+        
+        // If 404, it means the mechanic profile doesn't exist yet
+        if (apiError.response?.status === 404) {
+          console.log("Using default mechanic profile - profile not found");
+          setMechanic(defaultMechanic);
+          return;
+        }
+        
+        // For other errors, show notification but still use default profile
+        notify({
+          title: 'Profile Loading Issue',
+          description: errorInfo.message,
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
+        
         setMechanic(defaultMechanic);
         return;
       }
@@ -95,16 +116,24 @@ function MechanicDashboardLayout({children, hideSidebar, ...props}) {
     } catch (error) {
       console.error("Error in init:", error);
       
+      // Use utility function for consistent error handling
+      const errorInfo = handleApiError(error);
+      
       // If 404, it means the mechanic profile doesn't exist yet
       if (error.response?.status === 404) {
         setMechanic({
+          id: authUser?.id,
           user: authUser,
-          isNew: true
+          isNew: true,
+          business_name: authUser ? `${authUser.first_name} ${authUser.last_name}'s Auto Shop` : 'My Auto Shop',
+          services: [],
+          status: 'pending_verification',
+          verified_business: false
         });
       } else {
         notify({
           title: 'Error',
-          description: error.response?.data?.message || 'Failed to load mechanic profile',
+          description: errorInfo.message,
           status: 'error',
           duration: 5000,
           isClosable: true,
@@ -217,6 +246,7 @@ function MechanicDashboardLayout({children, hideSidebar, ...props}) {
            sidebarOpen={sidebarOpen}
            onClose={() => setSidebarState(false)}
            setSidebarState={setSidebarState}
+           loading={loading}
            // display={hideSidebar && 'none'}
            mode={hideSidebar ? 'drawer' : 'block'}
           />

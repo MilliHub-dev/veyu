@@ -56,6 +56,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { auth } from "../../firebase";
 import firebase from 'firebase/compat/app';
 import authService from '../../services/authService';
+import { formatErrorForUser, createErrorNotification, logError } from '../../utils/errorHandling';
 
 const MotionBox = motion(Box);
 const MotionCard = motion(Card);
@@ -107,23 +108,118 @@ export const LoginView = ({ ...props }) => {
     setIsLoading(true);
     
     try {
-      const data = await authService.login(email, password);
+      const result = await authService.login(email, password);
       
-      onAuthenticated(data);
-      notify({
-        'title': 'Welcome Back!',
-        'body': `Successfully logged in! Welcome back ${data?.user?.user_type || data?.user_type}`,
-        'color': 'green'
-      });
+      // Handle both response formats: {success, data: {user, tokens}} or {user, tokens}
+      let user;
+      
+      if (result.success && result.data) {
+        // New format: {success, data: {user, tokens}}
+        user = result.data.user;
+      } else if (result.user) {
+        // Direct format: {user, tokens}
+        user = result.user;
+      }
+      
+      if (user) {
+        // Pass the full result to onAuthenticated, not just the user
+        onAuthenticated(result);
+        
+        notify({
+          'title': 'Welcome Back!',
+          'body': `Successfully logged in! Welcome back ${user?.first_name || user?.user_type}`,
+          'color': 'green'
+        });
 
-      const userType = data?.user?.user_type || data?.user_type;
-      switch (userType) {
-        case 'dealer': redirect('/dashboard'); break;
-        case 'mechanic': redirect('/dashboard'); break;
-        default: redirect(`/home?user=${data?.user?.email || data?.email}`); break;
+        // Handle missing user data gracefully
+        const userType = user?.user_type;
+        if (!userType) {
+          console.warn('⚠️ User type missing from login response, defaulting to customer');
+        }
+        
+        // Use email verification status instead of business profile completion
+        // Handle missing verification fields gracefully - default to false for business users
+        const isEmailVerified = user?.email_verified === true || user?.is_verified === true;
+        
+        console.log('🔐 Login redirect check:', {
+          userType: userType || 'unknown',
+          email_verified: user?.email_verified,
+          is_verified: user?.is_verified,
+          isEmailVerified,
+          redirectUrl: authService.getPostLoginRedirectUrl()
+        });
+        
+        // Redirect based on user type and email verification status
+        if (userType === 'dealer' || userType === 'mechanic') {
+          if (isEmailVerified) {
+            console.log('🔄 Business user with verified email - redirecting to dashboard');
+            redirect('/dashboard');
+          } else {
+            console.log('🔄 Business user with unverified email - redirecting to business profile');
+            redirect('/business-profile');
+          }
+        } else {
+          // Customer users always redirect to home regardless of verification status
+          // Handle missing email gracefully
+          const userEmail = user?.email || 'unknown';
+          console.log('🔄 Customer user - redirecting to home');
+          redirect(`/home?user=${userEmail}`);
+        }
+      } else {
+        throw new Error('Login failed - no user data received. Please try again.');
       }
     } catch (error) {
-      return onError(error.message);
+      // Enhanced error handling with detailed logging and user-friendly messages
+      console.error('🚨 Login Error:', {
+        error: error,
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack
+      });
+
+      let errorMessage = error.message;
+      
+      // Handle specific API error responses
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        if (status === 400) {
+          if (data?.email) {
+            errorMessage = 'Please enter a valid email address.';
+          } else if (data?.password) {
+            errorMessage = 'Password is required.';
+          } else if (data?.non_field_errors) {
+            errorMessage = Array.isArray(data.non_field_errors) 
+              ? data.non_field_errors.join(' ') 
+              : data.non_field_errors;
+          } else {
+            errorMessage = 'Invalid login credentials. Please check your email and password.';
+          }
+        } else if (status === 401) {
+          errorMessage = 'Invalid email or password. Please try again.';
+        } else if (status === 429) {
+          errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error. Please try again in a few minutes.';
+        } else if (data?.message) {
+          errorMessage = data.message;
+        } else if (data?.detail) {
+          errorMessage = data.detail;
+        }
+      } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        errorMessage = 'Connection timeout. Please check your internet connection and try again.';
+      } else if (error.message.includes('Network Error')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      }
+
+      // Create an error object with the processed message
+      const processedError = {
+        ...error,
+        message: errorMessage,
+        context: 'login'
+      };
+      return onError(processedError);
     } finally {
       setIsLoading(false);
     }
@@ -147,31 +243,128 @@ export const LoginView = ({ ...props }) => {
           'color': 'green'
         });
 
-        const userType = data?.user?.user_type || data?.user_type;
-        switch (userType) {
-          case 'dealer': redirect('/dashboard'); break;
-          case 'mechanic': redirect('/dashboard'); break;
-          default: redirect(`/home?user=${data?.user?.email || data?.email}`); break;
+        // Extract user data from response and handle missing data gracefully
+        const userData = data?.user || data;
+        const userType = userData?.user_type;
+        if (!userType) {
+          console.warn('⚠️ User type missing from Google login response, defaulting to customer');
+        }
+        
+        // Handle missing verification fields gracefully - default to false for business users
+        const isEmailVerified = userData?.email_verified === true || userData?.is_verified === true;
+        
+        console.log('🔐 Google login redirect check:', {
+          userType: userType || 'unknown',
+          email_verified: userData?.email_verified,
+          is_verified: userData?.is_verified,
+          isEmailVerified
+        });
+
+        // Use same redirect logic as regular login
+        if (userType === 'dealer' || userType === 'mechanic') {
+          if (isEmailVerified) {
+            console.log('🔄 Google business user with verified email - redirecting to dashboard');
+            redirect('/dashboard');
+          } else {
+            console.log('🔄 Google business user with unverified email - redirecting to business profile');
+            redirect('/business-profile');
+          }
+        } else {
+          // Customer users always redirect to home regardless of verification status
+          // Handle missing email gracefully
+          const userEmail = userData?.email || 'unknown';
+          console.log('🔄 Google customer user - redirecting to home');
+          redirect(`/home?user=${userEmail}`);
         }
       }
     } catch (error) {
-      console.error("Google sign-in error", error);
-      onError("Failed to sign in with Google. Please try again.");
+      // Enhanced Google sign-in error handling
+      console.error("🚨 Google Sign-in Error:", {
+        error: error,
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      let errorMessage = "Failed to sign in with Google. Please try again.";
+      
+      // Handle specific Google sign-in errors
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "Google sign-in was cancelled. Please try again if you want to continue.";
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = "Pop-up was blocked by your browser. Please allow pop-ups for this site and try again.";
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = "Network error during Google sign-in. Please check your connection and try again.";
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = "Too many Google sign-in attempts. Please wait a few minutes before trying again.";
+      } else if (error.response) {
+        const { status, data } = error.response;
+        
+        if (status === 400) {
+          errorMessage = "Invalid Google authentication. Please try signing in again.";
+        } else if (status === 401) {
+          errorMessage = "Google authentication failed. Please try again.";
+        } else if (status >= 500) {
+          errorMessage = "Server error during Google sign-in. Please try again in a few minutes.";
+        } else if (data?.message) {
+          errorMessage = data.message;
+        }
+      } else if (error.message.includes('Network Error')) {
+        errorMessage = "Network error during Google sign-in. Please check your connection and try again.";
+      }
+
+      // Create an error object with the processed message
+      const processedError = {
+        ...error,
+        message: errorMessage,
+        context: 'google-signin'
+      };
+      onError(processedError);
     } finally {
       setIsGoogleLoading(false);
     }
   };
   
-  function onError(message, reload = false) {
+  function onError(error, reload = false, showRetry = true) {
+    // Use the enhanced error handling utility
+    const errorInfo = formatErrorForUser(error, 'login');
+    
+    // Log additional context for login errors
+    logError(error, 'Login', {
+      email: email ? email.substring(0, 3) + '***' : 'not provided',
+      hasPassword: !!password,
+      userAgent: navigator.userAgent
+    });
+
+    // Create notification configuration
+    const retryCallback = showRetry ? () => {
+      // Clear error state and allow retry
+      setIsLoading(false);
+      setIsGoogleLoading(false);
+      // Focus on email field for user convenience
+      const emailInput = document.querySelector('input[type="email"]');
+      if (emailInput) emailInput.focus();
+    } : null;
+
+    const notificationConfig = createErrorNotification(errorInfo, retryCallback);
+    
+    // Convert to the format expected by the notify function
+    const legacyNotificationConfig = {
+      'title': notificationConfig.title,
+      'body': notificationConfig.description,
+      'color': 'red',
+      'duration': notificationConfig.duration
+    };
+
     if (notify && typeof notify === 'function') {
-      notify({
-        'title': 'Login Failed',
-        'body': message || 'Something went wrong! Please try again.',
-        'color': 'red'
-      });
+      notify(legacyNotificationConfig);
     } else {
-      console.error('Notify function not available:', message);
+      console.error('Notify function not available:', error.message);
+      // Fallback to alert if notify is not available
+      alert(`${notificationConfig.title}: ${notificationConfig.description}`);
     }
+    
     if (reload) {
       refresh();
     }

@@ -50,6 +50,8 @@ import {objectifyJSON, jsonifyObject} from '../../../utils';
 import {MapPin, Search, MoreVertical, TrendingUp, Users, Calendar, DollarSign, Clock, CheckCircle, Share2} from 'lucide-react';
 import { mechanicService } from '../../../services';
 import { useToast } from '@chakra-ui/react';
+import { useDashboardError } from '../../../hooks/useDashboardError';
+import { InlineError, EmptyStateError } from '../../../components/ErrorDisplay';
 
 // Modern Metric Card Component
 const MetricCard = ({ title, value, change, icon: IconComponent, suffix, color = "blue" }) => {
@@ -137,64 +139,80 @@ const StatusColor = {
 export const MechanicOverview = () => {
   const {authUser, naturalDate, naturalTime} = useContext(GlobalStore);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [bookingHistory, setBookingHistory] = useState([]);
   const toast = useToast();
+  
+  // Enhanced error handling
+  const { 
+    error, 
+    clearError, 
+    executeWithErrorHandling, 
+    createRetryFunction 
+  } = useDashboardError('mechanic dashboard');
 
   async function getData(){
-    try {
-      setError(null);
-      const data = await mechanicService.getDashboardData();
-      
-      console.log("Dashboard Data:", data);
-      setDashboardData(data.data || data);
-      setPendingRequests(data.data?.pending_requests || data.pending_requests || []);
-      setBookingHistory(data.data?.booking_history || data.booking_history || []);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      setError(error.message);
-      toast({
-        title: 'Error',
-        description: 'Failed to load dashboard data. Please try again.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
+    return executeWithErrorHandling(
+      async () => {
+        const data = await mechanicService.getDashboardData();
+        
+        console.log("Dashboard Data:", data);
+        setDashboardData(data.data || data);
+        setPendingRequests(data.data?.pending_requests || data.pending_requests || []);
+        setBookingHistory(data.data?.booking_history || data.booking_history || []);
+        return data;
+      },
+      { 
+        customContext: 'loading mechanic dashboard data'
+      }
+    );
   }
 
   async function init(){
     setLoading(true);
-    await getData();
-    setLoading(false);
-  }
-
-  async function handleAcceptRequest(requestId){
+    clearError();
+    
     try {
-      await mechanicService.acceptBooking(requestId);
-      
-      toast({
-        title: 'Success',
-        description: 'Request accepted successfully!',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-
-      // Refresh data
       await getData();
     } catch (error) {
-      console.error("Error accepting request:", error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to accept request. Please try again.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+      // Error is handled by executeWithErrorHandling
+    } finally {
+      setLoading(false);
     }
+  }
+
+  // Create retry function
+  const retryInit = createRetryFunction(
+    async () => {
+      await init();
+    },
+    { 
+      maxRetries: 2,
+      customContext: 'retrying mechanic dashboard load'
+    }
+  );
+
+  async function handleAcceptRequest(requestId){
+    await executeWithErrorHandling(
+      async () => {
+        await mechanicService.acceptBooking(requestId);
+        
+        toast({
+          title: 'Success',
+          description: 'Request accepted successfully!',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+
+        // Refresh data
+        await getData();
+      },
+      { 
+        customContext: 'accepting booking request'
+      }
+    );
   }
   
   async function handleDeclineRequest(requestId){
@@ -266,23 +284,31 @@ export const MechanicOverview = () => {
     )
   }
 
-  if (error && !dashboardData) {
+  if (error && !dashboardData && !loading) {
     return (
       <Container maxW="7xl" py={8}>
-        <VStack spacing={8}>
-          <Box textAlign="center">
-            <Text fontSize="lg" color="red.500" mb={4}>Failed to load dashboard</Text>
-            <Button onClick={init} colorScheme="blue">
-              Try Again
-            </Button>
-          </Box>
-        </VStack>
+        <EmptyStateError 
+          error={error}
+          onRetry={retryInit}
+          title="Unable to load dashboard"
+          description="There was a problem loading your mechanic dashboard."
+        />
       </Container>
     )
   }
 
   return (
     <Container maxW="7xl" py={8}>
+      {/* Error Display */}
+      {error && (
+        <InlineError 
+          error={error} 
+          onRetry={retryInit}
+          onDismiss={clearError}
+          showDetails={true}
+        />
+      )}
+
       {/* Modern Header */}
       <Box mb={8}>
         <Flex justify="space-between" align="center" mb={2}>

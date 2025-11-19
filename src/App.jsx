@@ -3,11 +3,14 @@ import { Outlet, BrowserRouter as Router, Routes, Route, Navigate } from "react-
 import Cookies from "js-cookie";
 import axios from "axios";
 import { ChakraProvider, useToast } from "@chakra-ui/react";
+import { apiClient, TokenManager } from "./services/api";
 import ErrorBoundary from "./components/error";
 import { LoadingSpinner } from "./components/loaders";
+import BusinessProfileGuard from "./components/BusinessProfileGuard";
 import VeyuTheme from "./theme.jsx";
 import {APIProvider} from '@vis.gl/react-google-maps';
 import {Autocomplete, LoadScript} from "@react-google-maps/api";
+import { enhanceUserWithCompletionStatus } from "./utils/profileCompletionUtils";
 
 // Lazy-loaded pages (split chunks)
 const Layout = lazy(() => import("./pages/Layout"));
@@ -33,6 +36,7 @@ const MechanicDetailPage = lazy(() => import("./pages/marketplace/mechanics/Mech
 const LoginView = lazy(() => import("./pages/auth/Login"));
 const SignupView = lazy(() => import("./pages/auth/Signup"));
 const BusinessSignupView = lazy(() => import("./pages/auth/BusinessProfile"));
+const BusinessProfileSetup = lazy(() => import("./pages/auth/BusinessProfile"));
 const ChatLayout = lazy(() => import("./pages/marketplace/chat/Layout"));
 const ChatRoom = lazy(() => import("./pages/marketplace/chat/ChatRoom"));
 const CartPage = lazy(() => import("./pages/marketplace/CartPage"));
@@ -41,6 +45,11 @@ const CheckoutWithInspection = lazy(() => import("./pages/marketplace/checkout/C
 const DocumentSigningPage = lazy(() => import("./pages/marketplace/checkout/DocumentSigningPage"));
 const NotificationsPage = lazy(() => import("./pages/marketplace/Notifications"));
 
+// Inspection Pages
+const InspectionSlipPage = lazy(() => import("./pages/marketplace/inspection/InspectionSlipPage"));
+const InspectionFormPage = lazy(() => import("./pages/marketplace/inspection/InspectionFormPage"));
+const DocumentPreviewPage = lazy(() => import("./pages/marketplace/inspection/DocumentPreviewPage"));
+
 // Mechanic Dashboard
 const MechanicDashboardLayout = lazy(() => import("./pages/dashboard/mechanic/Layout"));
 const MechanicDashboard = lazy(() => import("./pages/dashboard/mechanic/MechanicDashboard"));
@@ -48,7 +57,7 @@ const BookingsAdmin = lazy(() => import("./pages/dashboard/mechanic/Bookings"));
 const ServiceOfferings = lazy(() => import("./pages/dashboard/mechanic/services/ServiceOfferings"));
 const MechanicAnalytics = lazy(() => import("./pages/dashboard/mechanic/Analytics"));
 const CreateServiceOffering = lazy(() => import("./pages/dashboard/mechanic/services/CreateServiceOffering"));
-const BusinessProfile = lazy(() => import("./pages/dashboard/mechanic/settings/BusinessProfile"));
+const MechanicBusinessProfile = lazy(() => import("./pages/dashboard/mechanic/settings/BusinessProfile"));
 
 // Dealer Dashboard
 const DealerProfile = lazy(() => import("./pages/marketplace/DealerProfile"));
@@ -80,19 +89,21 @@ function App() {
     try { return Number(n || 0).toLocaleString(); } catch { return '0'; }
   };
 
-  const axiosClient = axios.create({
-    baseURL: "https://dev.veyu.cc/api/v1",
-    headers: { "Content-Type": "application/json" },
-    withCredentials: false, // Disabled due to backend CORS wildcard (*) config
-    timeout: 30000, // 30 second timeout
-  });
 
-  // Sync axios auth header
+
+  // Use the centralized API client instead of creating a new one
+  const axiosClient = apiClient;
+
+  // Sync token with the old axios instance for backward compatibility
   useEffect(() => {
-    if (authUser?.token) {
-      axiosClient.defaults.headers.Authorization = `Token ${authUser.token}`;
+    const token = TokenManager.getAccessToken();
+    if (token) {
+      // Set Bearer token for the new format
+      axiosClient.defaults.headers.Authorization = `Bearer ${token}`;
+      console.log('🔐 Token synced with axios client:', `Bearer ${token.substring(0, 20)}...`);
     } else {
       delete axiosClient.defaults.headers.Authorization;
+      console.log('🔐 No token found, removed Authorization header');
     }
   }, [authUser]);
 
@@ -104,59 +115,215 @@ function App() {
   };
 
   const onAuthenticated = (data) => {
-    // Store user data
-    localStorage.setItem("veyu-auth-user", JSON.stringify(data));
-    localStorage.setItem("veyu_user_data", JSON.stringify(data.user || data));
-    
-    // Store tokens - check different possible formats
-    let accessToken = null;
-    if (data.token) {
-      if (typeof data.token === 'string') {
-        // Token is a string directly
-        accessToken = data.token;
-      } else if (data.token.access) {
-        // Token is an object with access/refresh
-        accessToken = data.token.access;
-        if (data.token.refresh) {
-          localStorage.setItem("veyu_refresh_token", data.token.refresh);
+    try {
+      console.log('🔐 App.jsx onAuthenticated called with:', data);
+      
+      // Handle missing authentication data gracefully
+      if (!data || typeof data !== 'object') {
+        console.error('❌ Invalid authentication data provided');
+        return;
+      }
+      
+      // Extract user data from various response formats with graceful handling
+      let userData = data.user || data;
+      
+      // Handle missing or invalid user data gracefully
+      if (!userData || typeof userData !== 'object') {
+        console.error('❌ No valid user data found in authentication response');
+        return;
+      }
+      
+      // Provide sensible defaults for missing user data fields
+      const safeUserData = {
+        id: userData.id || null,
+        email: userData.email || '',
+        first_name: userData.first_name || '',
+        last_name: userData.last_name || '',
+        user_type: userData.user_type || 'customer',
+        phone_number: userData.phone_number || '',
+        business_name: userData.business_name || '',
+        email_verified: userData.email_verified || false,
+        is_verified: userData.is_verified || false,
+        business_profile_completed: userData.business_profile_completed || false,
+        ...userData // Preserve any additional fields
+      };
+      
+      // Enhance user data with business_profile_completed field if not present
+      const enhancedUserData = enhanceUserWithCompletionStatus(safeUserData);
+      
+      // Store user data in both formats for compatibility
+      localStorage.setItem("veyu-auth-user", JSON.stringify({ ...data, user: enhancedUserData }));
+      localStorage.setItem("veyu_user_data", JSON.stringify(enhancedUserData));
+      
+      // Store tokens using TokenManager for consistency with graceful handling
+      let accessToken = null;
+      let refreshToken = null;
+      
+      try {
+        if (data.token) {
+          if (typeof data.token === 'string') {
+            // Token is a string directly (old format)
+            accessToken = data.token;
+          } else if (data.token.access) {
+            // Token is an object with access/refresh (new format)
+            accessToken = data.token.access;
+            refreshToken = data.token.refresh;
+          }
+        } else if (data.tokens) {
+          // Tokens object (new format)
+          accessToken = data.tokens.access;
+          refreshToken = data.tokens.refresh;
+        } else if (data.access_token) {
+          // Direct access_token field
+          accessToken = data.access_token;
+          refreshToken = data.refresh_token;
+        } else if (data.api_token) {
+          // API token field
+          accessToken = data.api_token;
         }
+        
+        if (accessToken) {
+          TokenManager.setTokens(accessToken, refreshToken);
+          console.log('🔐 Tokens stored via TokenManager');
+        } else {
+          console.warn('⚠️ No access token found in authentication data');
+        }
+      } catch (tokenError) {
+        console.error('❌ Error processing authentication tokens:', tokenError);
       }
-    } else if (data.access_token) {
-      accessToken = data.access_token;
-      if (data.refresh_token) {
-        localStorage.setItem("veyu_refresh_token", data.refresh_token);
-      }
-    } else if (data.api_token) {
-      accessToken = data.api_token;
+      
+      // Set the enhanced user data
+      setAuthUser({ ...data, user: enhancedUserData });
+      setAuthState(true);
+      
+      console.log('✅ Authentication completed with graceful handling:', {
+        userId: enhancedUserData.id,
+        userType: enhancedUserData.user_type,
+        emailVerified: enhancedUserData.email_verified || enhancedUserData.is_verified,
+        hasRequiredFields: !!(enhancedUserData.email && enhancedUserData.user_type)
+      });
+    } catch (error) {
+      console.error('❌ Error in onAuthenticated with graceful handling:', error);
     }
-    
-    if (accessToken) {
-      localStorage.setItem("veyu_access_token", accessToken);
-    }
-    
-    setAuthUser(data);
-    setAuthState(true);
   };
 
   const onLogout = () => {
     setAuthState(false);
     setAuthUser(null);
     
-    // Clear all possible auth data
-    ['veyu-auth-user', 'veyu_user_data', 'veyu_access_token', 'veyu_refresh_token',
-     'access_token', 'refresh_token', 'token', 'user_data'].forEach(key => {
-      localStorage.removeItem(key);
-    });
+    // Use TokenManager to clear tokens properly
+    TokenManager.clearTokens();
     
     window.location.href = '/login';
   };
 
   const getAuthUser = () => {
-    const user = localStorage.getItem("veyu-auth-user");
-    if (user) {
-      const data = JSON.parse(user);
-      setAuthUser(data);
-      setAuthState(true);
+    try {
+      // Check if we have a valid token first
+      const hasToken = TokenManager.isAuthenticated();
+      
+      if (hasToken) {
+        // Try to get user data from localStorage with graceful error handling
+        let userData = null;
+        let fullAuthData = null;
+        
+        // Try new format first
+        const newUserData = localStorage.getItem("veyu_user_data");
+        if (newUserData) {
+          try {
+            userData = JSON.parse(newUserData);
+            
+            // Validate user data structure
+            if (userData && typeof userData === 'object') {
+              // Provide sensible defaults for missing user data fields
+              userData = {
+                id: userData.id || null,
+                email: userData.email || '',
+                first_name: userData.first_name || '',
+                last_name: userData.last_name || '',
+                user_type: userData.user_type || 'customer',
+                phone_number: userData.phone_number || '',
+                business_name: userData.business_name || '',
+                email_verified: userData.email_verified || false,
+                is_verified: userData.is_verified || false,
+                business_profile_completed: userData.business_profile_completed || false,
+                ...userData // Preserve any additional fields
+              };
+            } else {
+              console.warn('⚠️ Invalid user data format in veyu_user_data');
+              userData = null;
+            }
+          } catch (e) {
+            console.error('❌ Error parsing veyu_user_data:', e);
+            userData = null;
+          }
+        }
+        
+        // Try to get full auth data for backward compatibility
+        const oldUserData = localStorage.getItem("veyu-auth-user");
+        if (oldUserData) {
+          try {
+            fullAuthData = JSON.parse(oldUserData);
+            // If we don't have userData from new format, extract from old format
+            if (!userData && fullAuthData) {
+              const extractedUser = fullAuthData.user || fullAuthData;
+              if (extractedUser && typeof extractedUser === 'object') {
+                userData = {
+                  id: extractedUser.id || null,
+                  email: extractedUser.email || '',
+                  first_name: extractedUser.first_name || '',
+                  last_name: extractedUser.last_name || '',
+                  user_type: extractedUser.user_type || 'customer',
+                  phone_number: extractedUser.phone_number || '',
+                  business_name: extractedUser.business_name || '',
+                  email_verified: extractedUser.email_verified || false,
+                  is_verified: extractedUser.is_verified || false,
+                  business_profile_completed: extractedUser.business_profile_completed || false,
+                  ...extractedUser // Preserve any additional fields
+                };
+              }
+            }
+          } catch (e) {
+            console.error('❌ Error parsing veyu-auth-user:', e);
+            fullAuthData = null;
+          }
+        }
+        
+        if (userData) {
+          // Enhance user data with completion status for backward compatibility
+          const enhancedUserData = enhanceUserWithCompletionStatus(userData);
+          
+          // Update localStorage with enhanced data
+          localStorage.setItem("veyu_user_data", JSON.stringify(enhancedUserData));
+          
+          // Prepare full auth data structure
+          let authData;
+          if (fullAuthData) {
+            authData = { ...fullAuthData, user: enhancedUserData };
+          } else {
+            authData = enhancedUserData;
+          }
+          
+          console.log('🔐 Restored user session with graceful handling:', {
+            userId: enhancedUserData.id,
+            userType: enhancedUserData.user_type,
+            emailVerified: enhancedUserData.email_verified || enhancedUserData.is_verified,
+            hasRequiredFields: !!(enhancedUserData.email && enhancedUserData.user_type)
+          });
+          
+          setAuthUser(authData);
+          setAuthState(true);
+        } else {
+          console.log('🔐 Token exists but no valid user data found, clearing tokens');
+          TokenManager.clearTokens();
+        }
+      } else {
+        console.log('🔐 No valid token found');
+      }
+    } catch (error) {
+      console.error('❌ Error in getAuthUser with graceful handling:', error);
+      // Clear potentially corrupted data
+      TokenManager.clearTokens();
     }
   };
 
@@ -197,7 +364,11 @@ function App() {
                   <Fragment>
                     {/* Dealer Dashboard */}
                     {authUser.user_type === "dealer" ? (
-                      <Route element={<DealerDashboardLayout />}>
+                      <Route element={
+                        <BusinessProfileGuard>
+                          <DealerDashboardLayout />
+                        </BusinessProfileGuard>
+                      }>
                         <Route path="/dashboard" element={<DealerDashboard />} />
                         <Route path="/orders" element={<OrderListAdmin />} />
                         <Route path="/inventory" element={<Outlet />}>
@@ -212,7 +383,11 @@ function App() {
                       </Route>
                     ) : authUser.user_type === "mechanic" ? (
                       /* Mechanic Dashboard */
-                      <Route element={<MechanicDashboardLayout />}>
+                      <Route element={
+                        <BusinessProfileGuard>
+                          <MechanicDashboardLayout />
+                        </BusinessProfileGuard>
+                      }>
                         <Route path="/dashboard" element={<MechanicDashboard />} />
                         <Route path="/bookings" element={<BookingsAdmin />} />
                         <Route path="/analytics" element={<MechanicAnalytics />} />
@@ -221,7 +396,7 @@ function App() {
                           <Route path="add" element={<CreateServiceOffering />} />
                           <Route path="" element={<ServiceOfferings />} />
                         </Route>
-                        <Route path="/settings" element={<BusinessProfile />} />
+                        <Route path="/settings" element={<MechanicBusinessProfile />} />
                         <Route path="/notifications" element={<NotificationsPage />} />
                         <Route path="/*" element={<Navigate to="/dashboard" />} />
                       </Route>
@@ -240,6 +415,9 @@ function App() {
                         <Route path="/checkout/pay" element={<CheckoutPage />} />
                         <Route path="/checkout/docs" element={<DocumentSigningPage />} />
                         <Route path="/checkout/inspection" element={<CheckoutWithInspection />} />
+                        <Route path="/inspection/slip" element={<InspectionSlipPage />} />
+                        <Route path="/inspection/form" element={<InspectionFormPage />} />
+                        <Route path="/inspection/document" element={<DocumentPreviewPage />} />
                         <Route path="/search/cars" element={<CarSearchPage />} />
                         <Route path="/search/mechanics" element={<MechanicSearchPage />} />
                         <Route path="/notifications" element={<NotificationsPage />} />
@@ -248,13 +426,20 @@ function App() {
                       </Route>
                     )}
 
+                    {/* Business Profile Setup Route - for post-signup business profile completion */}
+                    <Route path="/business-profile" element={<BusinessProfileSetup />} />
+
                     {/* Wallet Routes */}
                     <Route
                       element={
                         authUser.user_type === "dealer" ? (
-                          <DealerDashboardLayout hideSidebar hideFooter />
+                          <BusinessProfileGuard>
+                            <DealerDashboardLayout hideSidebar hideFooter />
+                          </BusinessProfileGuard>
                         ) : authUser.user_type === "mechanic" ? (
-                          <MechanicDashboardLayout hideSidebar hideFooter />
+                          <BusinessProfileGuard>
+                            <MechanicDashboardLayout hideSidebar hideFooter />
+                          </BusinessProfileGuard>
                         ) : (
                           <Layout hideFooter />
                         )

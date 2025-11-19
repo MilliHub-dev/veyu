@@ -193,7 +193,7 @@ function ListingsAdmin({children, ...props}) {
         </ButtonGroup>
       </Flex>
 
-      <Heading my={3} size="md"> Car Listings </Heading>
+      <Heading my={3} size="md"> Listings </Heading>
       <ListingTable listings={paginated} total={matches.length} page={page} totalPages={totalPages} onPrev={() => setPage(p => Math.max(1, p-1))} onNext={() => setPage(p => Math.min(totalPages, p+1))} />
     </Box>
   )
@@ -246,7 +246,7 @@ function ListingTable({ listings, total, page, totalPages, onPrev, onNext }) {
         <Thead bg='gray.50'>
           <Tr>
             <Th gap={2} alignItems="center"> # - <Checkbox isChecked={selected?.length === listings?.length} onChange={toggleSelectAll} /> </Th>
-            <Th columns={3}>Car Listing</Th>
+            <Th columns={3}> Listing</Th>
             <Th>Status</Th>
             <Th>Views</Th>
             <Th>Actions</Th>

@@ -4,6 +4,8 @@ import {GlobalStore} from '../../../App';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import {DealerDashboardSideBar} from '../../../components/nav';
 import {StatCard} from '../../../components/charts';
+import { useDashboardError } from '../../../hooks/useDashboardError';
+import { InlineError, EmptyStateError } from '../../../components/ErrorDisplay';
 import {
   Box,
   Container,
@@ -82,6 +84,15 @@ function Dashboard({ }) {
   const borderCol = 'gray.200';
   const tableHeadBg = 'gray.50';
   const [dateRange, setDateRange] = useState('30d');
+  
+  // Enhanced error handling
+  const { 
+    error, 
+    clearError, 
+    executeWithErrorHandling, 
+    createRetryFunction,
+    executeBatch 
+  } = useDashboardError('dealer dashboard');
   const formatCurrency = (value) => {
     return `₦${parseInt(value).toLocaleString()}`;
   };
@@ -131,57 +142,88 @@ function Dashboard({ }) {
   }
 
   async function getWalletBalance(){
-    try{
-      const res = await axios.get('/wallet/balance/');
-      const data = objectifyJSON(res.data);
-      console.log("Wallet:", data)
-      setWallet(data?.data || {});
-    }catch(error){
-      notify({ title: "Failed to load wallet", body: error?.message, color: 'red' });
-    }
+    return executeWithErrorHandling(
+      async () => {
+        const res = await axios.get('/wallet/balance/');
+        const data = objectifyJSON(res.data);
+        console.log("Wallet:", data);
+        setWallet(data?.data || {});
+        return data;
+      },
+      { 
+        customContext: 'loading wallet balance',
+        showNotification: false // We'll handle this at the batch level
+      }
+    );
   }
   
   async function getDashboardData(){
-    try{
-      const res = await axios.get('/admin/dealership/dashboard/');
-      const data = objectifyJSON(res.data);
-      const payload = data?.data || {};
-      setDashboardData(payload);
-      setChartData(payload?.chart_data || null);
-      console.log("Chart Data:", payload?.chart_data);
-      setRecentOrders(Array.isArray(payload?.recent_orders) ? payload.recent_orders : []);
-    }catch(error){
-      notify({ title: "Failed to load dashboard", body: error?.message, color: 'red' });
-    }
+    return executeWithErrorHandling(
+      async () => {
+        const res = await axios.get('/admin/dealership/dashboard/');
+        const data = objectifyJSON(res.data);
+        const payload = data?.data || {};
+        setDashboardData(payload);
+        setChartData(payload?.chart_data || null);
+        console.log("Chart Data:", payload?.chart_data);
+        setRecentOrders(Array.isArray(payload?.recent_orders) ? payload.recent_orders : []);
+        return payload;
+      },
+      { 
+        customContext: 'loading dashboard data',
+        showNotification: false
+      }
+    );
   }
 
   async function getWalletTransactions(){
-    try{
-      const res = await axios.get('/wallet/transactions/');
-      const data = objectifyJSON(res.data);
-    }catch(error){
-      notify({
-        title: "Oops! An error occurred.",
-        body: error.message,
-        color: 'red',
-      })
-    }
+    return executeWithErrorHandling(
+      async () => {
+        const res = await axios.get('/wallet/transactions/');
+        const data = objectifyJSON(res.data);
+        return data;
+      },
+      { 
+        customContext: 'loading wallet transactions',
+        showNotification: false
+      }
+    );
   }
 
   async function init(){
     setLoadingState(true);
-    try{
-      await Promise.all([
-        getWalletBalance(),
-        getWalletTransactions(),
-        getDashboardData(),
-      ]);
-    }catch(error){
-      // Errors are handled in individual functions
+    clearError(); // Clear any previous errors
+    
+    try {
+      await executeBatch([
+        getWalletBalance,
+        getWalletTransactions,
+        getDashboardData
+      ], {
+        continueOnError: true, // Continue loading other data even if one fails
+        customContext: 'initializing dashboard',
+        onPartialSuccess: (results, errors) => {
+          console.log('Dashboard loaded with some errors:', { results, errors });
+        }
+      });
+    } catch (error) {
+      // Errors are handled by executeBatch
+      console.error('Dashboard initialization failed:', error);
     } finally {
       setLoadingState(false);
     }
   }
+
+  // Create retry function for failed operations
+  const retryInit = createRetryFunction(
+    async () => {
+      await init();
+    },
+    { 
+      maxRetries: 2,
+      customContext: 'retrying dashboard load'
+    }
+  );
 
   useEffect(() => {
     init();
@@ -217,7 +259,7 @@ function Dashboard({ }) {
           <Table>
             <Thead bg={tableHeadBg}>
               <Tr>
-                <Th>Car Listings</Th>
+                <Th>Listings</Th>
                 <Th>Amount</Th>
                 <Th>Date</Th>
                 <Th>Status</Th>
@@ -242,6 +284,16 @@ function Dashboard({ }) {
 
   return (
     <Box w={'100%'}>
+      {/* Error Display */}
+      {error && (
+        <InlineError 
+          error={error} 
+          onRetry={retryInit}
+          onDismiss={clearError}
+          showDetails={true}
+        />
+      )}
+
       <Box py={6} borderBottom={`2px solid ${borderCol}`}>
         <Flex justify="space-between" align="center">
           <Box>
@@ -333,7 +385,14 @@ function Dashboard({ }) {
         </ButtonGroup>
       </Flex>
       <TableContainer w={'100%'} variant="simple" borderWidth={1} borderRadius="lg" borderColor={borderCol} bg={cardBg} boxShadow='sm'>
-        {(!recentOrders || recentOrders.length === 0) ? (
+        {error && !loading ? (
+          <EmptyStateError 
+            error={error}
+            onRetry={retryInit}
+            title="Unable to load recent orders"
+            description="There was a problem loading your recent orders data."
+          />
+        ) : (!recentOrders || recentOrders.length === 0) ? (
           <Box p={8} textAlign="center">
             <Text color="gray.600">No recent orders yet.</Text>
           </Box>
@@ -341,7 +400,7 @@ function Dashboard({ }) {
           <Table variant="simple" textWrap="nowrap" overflow="auto">
             <Thead bg={tableHeadBg}>
               <Tr>
-                <Th columns={5}>Car Listings</Th>
+                <Th columns={5}> Listings</Th>
                 <Th>Amount</Th>
                 <Th>Date</Th>
                 <Th>Status</Th>

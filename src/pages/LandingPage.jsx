@@ -260,15 +260,15 @@ export default HomePage; function
             <Tabs
               variant="soft-rounded"
               colorScheme="blue"
-              onChange={(i) => setType(['vehicles', 'bikes', 'boats', 'mechanics'][i])}
+              onChange={(i) => setType(['cars', 'bikes', 'boats', 'mechanics'][i])}
               mb={4}
             >
               <TabList flexWrap="wrap" bg="whiteAlpha.100" p={2} borderRadius="xl">
-                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}>🚗 Vehicles</Tab>
-                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}>✈️ Aircraft</Tab>
-                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}>🏍️ Bikes</Tab>
-                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}>🚤 Boats</Tab>
-                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}>🔧 Mechanics</Tab>
+                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}> cars</Tab>
+                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}> Aircraft</Tab>
+                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}> Bikes</Tab>
+                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}> Boats</Tab>
+                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}> Mechanics</Tab>
               </TabList>
             </Tabs>
 

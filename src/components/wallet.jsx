@@ -1,4 +1,4 @@
-import {useState, useEfect, useContext} from 'react';
+import {useState, useEffect, useContext} from 'react';
 import {
 	Box,
 	Modal,
@@ -267,3 +267,10 @@ export const WalletPaymentModal = ({
 }
 
 
+
+
+// Export wallet components
+export { default as WalletOverview } from './WalletOverview';
+export { default as DepositModal } from './DepositModal';
+export { default as WithdrawModal } from './WithdrawModal';
+export { default as TransferModal } from './TransferModal';
