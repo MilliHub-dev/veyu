@@ -50,9 +50,10 @@ import { SignupContext } from "./Signup";
 import { motion } from 'framer-motion';
 import { CustomPlacesAutocomplete } from "../../components/maps";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { objectifyJSON } from "../../utils";
+
 import authService from "../../services/authService";
 import dealershipService from "../../services/dealershipService";
+import { TokenManager } from "../../services/api";
 import { formatErrorForUser, createErrorNotification, handleValidationErrors, logError } from '../../utils/errorHandling';
 import { getUserDisplayName, getBusinessDisplayName, getUserEmail, getUserPhone } from "../../utils/userDataUtils";
 
@@ -881,18 +882,14 @@ function BusinessProfile({ onSubmit, ...props }) {
       }
       
       // Submit to the correct endpoint for creating dealership/mechanic profile
-      // Use authService for consistent authentication handling with automatic token refresh
-      // This ensures all API requests include valid authentication headers
-      const res = await axios.put('/admin/dealership/settings/', profileData, { 
-        headers: {
-          ...headers,
-          'Authorization': `Bearer ${authService.getAccessToken()}` // Ensure token is included
-        }
-      });
+      // Use dealershipService for consistent authentication handling with automatic token refresh
+      // This ensures all API requests include valid authentication headers and proper error handling
+      console.log('🔄 Submitting business profile using dealershipService...');
+      const data = await dealershipService.updateSettings(profileData);
       
-      const data = objectifyJSON(res.data);
+      console.log('✅ Business profile submission successful:', data);
 
-      if (res.status === 200 || res.status === 201) {
+      if (data) {
         toast({
           title: 'Success!',
           description: 'Business profile created successfully! Welcome to Veyu!',
@@ -930,6 +927,17 @@ function BusinessProfile({ onSubmit, ...props }) {
             localStorage.setItem('veyu_user_data', JSON.stringify(verifiedUser));
             localStorage.setItem('veyu-auth-user', JSON.stringify(verifiedUser));
             console.log('✅ Updated email verification status in authService data');
+            
+            // Update the GlobalStore's authUser state to reflect the changes
+            // This ensures the routing logic uses the updated user data
+            onAuthenticated({
+              user: verifiedUser,
+              tokens: {
+                access: authService.getAccessToken(),
+                refresh: TokenManager.getRefreshToken()
+              }
+            });
+            console.log('✅ Updated GlobalStore authUser state');
           }
         } catch (error) {
           console.error('❌ Error updating email verification status:', error);
