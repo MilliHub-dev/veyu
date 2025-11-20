@@ -218,7 +218,7 @@ export const BusinessProfile = ({  }) => {
     try {
       const res = await axios.put('/admin/mechanics/settings/', payload, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          // Don't set Content-Type - let browser set it with boundary
         }
       });
       const data = objectifyJSON(res.data);

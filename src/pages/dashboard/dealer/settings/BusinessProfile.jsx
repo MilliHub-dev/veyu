@@ -3,15 +3,16 @@ import {
   Input, Textarea, VStack, Heading,
   Image, Flex, HStack, Text,
   Divider, Tag, SimpleGrid, Badge,
-  Skeleton,
+  Skeleton, Icon,
 } from "@chakra-ui/react";
 import { useState, useEffect, useContext, useRef } from "react";
 import { GlobalStore } from '../../../../App'
-import { CloudUpload } from "lucide-react";
+import { CloudUpload, MapPin } from "lucide-react";
 import { apiClient } from '../../../../services/api';
 import VerificationStatusDisplay from '../../../../components/VerificationStatusDisplay';
 import authService from '../../../../services/authService';
 import { getBusinessDisplayName } from '../../../../utils/userDataUtils';
+import { CustomPlacesAutocomplete } from '../../../../components/maps';
 
 
 
@@ -34,6 +35,8 @@ export const BusinessProfile = () => {
     extended_services: [], // New extended services array
     contact_email: '',
     contact_phone: '',
+    location: null, // Location object with address details
+    location_id: null, // Location ID for API submission
     // Verification status fields
     verified_business: false,
     business_verification_status: 'not_submitted',
@@ -300,7 +303,10 @@ export const BusinessProfile = () => {
         rejection_reason: data.rejection_reason || null,
         // Add CAC and TIN from verification status
         cac_number: verificationData.cac_number || data.cac_number || '',
-        tin_number: verificationData.tin_number || data.tin_number || ''
+        tin_number: verificationData.tin_number || data.tin_number || '',
+        // Handle location data - could be an object or ID
+        location: typeof data.location === 'object' ? data.location : prev.location,
+        location_id: typeof data.location === 'number' ? data.location : (data.location?.id || prev.location_id)
       }));
 
       // Check for missing business name after data is loaded
@@ -389,6 +395,7 @@ export const BusinessProfile = () => {
         ...(dealership.contact_phone && { contact_phone: dealership.contact_phone }),
         ...(dealership.cac_number && { cac_number: dealership.cac_number }),
         ...(dealership.tin_number && { tin_number: dealership.tin_number }),
+        ...(dealership.location_id && { location: dealership.location_id }),
       };
 
       // Log the business name being sent to API for debugging
@@ -420,7 +427,7 @@ export const BusinessProfile = () => {
         });
         
         requestData = formData;
-        headers['Content-Type'] = 'multipart/form-data';
+        // Don't set Content-Type - let browser set it with boundary
       } else {
         // Regular JSON request
         requestData = settingsData;
@@ -460,7 +467,10 @@ export const BusinessProfile = () => {
           // Ensure verification fields are updated from response
           verified_business: data.verified_business ?? prev.verified_business,
           business_verification_status: data.business_verification_status || prev.business_verification_status,
-          rejection_reason: data.rejection_reason || prev.rejection_reason
+          rejection_reason: data.rejection_reason || prev.rejection_reason,
+          // Handle location data from response
+          location: typeof data.location === 'object' ? data.location : prev.location,
+          location_id: typeof data.location === 'number' ? data.location : (data.location?.id || prev.location_id)
         }));
 
         // Update business name in auth service storage for consistency
@@ -1055,16 +1065,96 @@ export const BusinessProfile = () => {
 
           <Box bg="white" border="1px solid" borderColor="#d0d5dd" borderRadius="xl" p={6}>
             <Heading size="md" mb={4}>Contact Details</Heading>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <VStack spacing={4} align="stretch">
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                <FormControl>
+                  <FormLabel>Email</FormLabel>
+                  <Input type="email" name="contact_email" value={dealership?.contact_email} onChange={handleChange} bg="white" color="#101828" borderColor="#d0d5dd" />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Customer Care Phone Number</FormLabel>
+                  <Input type="tel" name="contact_phone" value={dealership?.contact_phone} onChange={handleChange} bg="white" color="#101828" borderColor="#d0d5dd" />
+                </FormControl>
+              </SimpleGrid>
+              
               <FormControl>
-                <FormLabel>Email</FormLabel>
-                <Input type="email" name="contact_email" value={dealership?.contact_email} onChange={handleChange} bg="white" color="#101828" borderColor="#d0d5dd" />
+                <FormLabel>
+                  <HStack spacing={2}>
+                    <Icon as={MapPin} boxSize={4} color="#F4A950" />
+                    <Text>Business Location</Text>
+                  </HStack>
+                </FormLabel>
+                <CustomPlacesAutocomplete
+                  value={dealership?.location?.formatted_address || ''}
+                  placeholder="Enter your business address"
+                  onPlaceChange={async (locationData) => {
+                    console.log('📍 Location selected:', locationData);
+                    
+                    // First, create/update the location via profile endpoint
+                    try {
+                      const locationPayload = {
+                        location: JSON.stringify({
+                          lat: locationData.lat,
+                          lng: locationData.lng,
+                          state: locationData.state,
+                          city: locationData.city,
+                          country: locationData.country,
+                          zip_code: locationData.zip_code,
+                          place_id: locationData.place_id,
+                          formatted_address: locationData.formatted_address,
+                          street_address: locationData.formatted_address
+                        })
+                      };
+                      
+                      const response = await apiClient.put('/accounts/profile/', locationPayload);
+                      const profileData = response.data;
+                      
+                      // Extract location ID from response
+                      const locationId = profileData.location?.id || profileData.location_id;
+                      
+                      console.log('✅ Location saved with ID:', locationId);
+                      
+                      // Update dealership state with location data and ID
+                      setDealership(prev => ({
+                        ...prev,
+                        location: locationData,
+                        location_id: locationId
+                      }));
+                      
+                      notify({
+                        title: 'Location Updated',
+                        description: 'Your business location has been saved.',
+                        status: 'success',
+                        duration: 3000,
+                        isClosable: true
+                      });
+                    } catch (error) {
+                      console.error('❌ Error saving location:', error);
+                      notify({
+                        title: 'Location Error',
+                        description: 'Failed to save location. Please try again.',
+                        status: 'error',
+                        duration: 5000,
+                        isClosable: true
+                      });
+                    }
+                  }}
+                  inputProps={{
+                    bg: "white",
+                    color: "#101828",
+                    borderColor: "#d0d5dd",
+                    _hover: { borderColor: "#d0d5dd" },
+                    _focus: { borderColor: "#0460cc", boxShadow: "0 0 0 1px #0460cc" }
+                  }}
+                />
+                {dealership?.location?.formatted_address && (
+                  <Text fontSize="xs" color="gray.600" mt={2}>
+                    <Icon as={MapPin} boxSize={3} display="inline" mr={1} />
+                    {dealership.location.formatted_address}
+                  </Text>
+                )}
               </FormControl>
-              <FormControl>
-                <FormLabel>Customer Care Phone Number</FormLabel>
-                <Input type="tel" name="contact_phone" value={dealership?.contact_phone} onChange={handleChange} bg="white" color="#101828" borderColor="#d0d5dd" />
-              </FormControl>
-            </SimpleGrid>
+            </VStack>
           </Box>
 
           <HStack>
@@ -1149,6 +1239,12 @@ export const BusinessProfile = () => {
             >
               <Text noOfLines={1}>{dealership?.contact_email || 'email@example.com'}</Text>
               <Text noOfLines={1}>{dealership?.contact_phone || '+234 000 000 0000'}</Text>
+              {dealership?.location?.formatted_address && (
+                <HStack spacing={1}>
+                  <Icon as={MapPin} boxSize={3} />
+                  <Text noOfLines={1} fontSize="xs">{dealership.location.formatted_address}</Text>
+                </HStack>
+              )}
             </VStack>
             <VStack spacing={2} align="stretch">
               <Flex flexWrap="wrap" gap={2}>

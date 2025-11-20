@@ -274,45 +274,47 @@ function BusinessProfile({ onSubmit, ...props }) {
     }
   };
 
-  // Helper function to verify authentication with API call (used during form submission)
+  // Helper function to verify authentication before form submission
+  // Note: We don't need to make an API call here since the actual profile submission
+  // will handle token refresh automatically via the API interceptor
   const verifyAuthenticationWithAPI = async () => {
     try {
       const token = authService.getAccessToken();
       if (!token) {
-        throw new Error('No authentication token found');
+        console.error('No authentication token found');
+        toast({
+          title: 'Authentication Required',
+          description: 'Please log in to continue.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        navigate('/login', { 
+          state: { 
+            message: 'Please log in to set up your business profile.',
+            returnTo: '/business-profile'
+          }
+        });
+        return false;
       }
 
-      // Verify token is still valid by making a test API call
-      try {
-        await authService.getProfile();
-        return true;
-      } catch (error) {
-        // If profile call fails with 401, try to refresh token
-        if (error.status === 401) {
-          console.log('Token expired, attempting refresh...');
-          try {
-            await authService.refreshToken();
-            console.log('Token refreshed successfully');
-            return true;
-          } catch (refreshError) {
-            console.error('Token refresh failed:', refreshError);
-            throw new Error('Authentication failed - please log in again');
-          }
-        }
-        throw error;
-      }
+      // Token exists, proceed with submission
+      // If the token is expired, the API interceptor will automatically refresh it
+      // during the actual profile submission API call
+      console.log('✅ Authentication token verified, proceeding with submission');
+      return true;
     } catch (error) {
-      console.error('Authentication verification failed:', error);
+      console.error('Authentication check failed:', error);
       toast({
         title: 'Authentication Error',
-        description: 'Session expired. Please log in again.',
+        description: 'Unable to verify authentication. Please try logging in again.',
         status: 'error',
         duration: 5000,
         isClosable: true,
       });
       navigate('/login', { 
         state: { 
-          message: 'Session expired during profile setup. Please log in again.',
+          message: 'Authentication error. Please log in again.',
           returnTo: '/business-profile'
         }
       });
@@ -447,25 +449,7 @@ function BusinessProfile({ onSubmit, ...props }) {
       });
       return true;
     } catch (error) {
-      // Handle authentication failures during profile setup
-      if (error.status === 401) {
-        console.error('Authentication failed during email verification');
-        toast({
-          title: 'Authentication Error',
-          description: 'Session expired. Please log in again.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        navigate('/login', { 
-          state: { 
-            message: 'Session expired during profile setup. Please log in again.',
-            returnTo: '/business-profile'
-          }
-        });
-        return false;
-      }
-
+      // Note: 401 errors are automatically handled by the API interceptor
       // Enhanced email verification error handling
       console.error('🚨 Email Verification Error:', {
         error: error,
@@ -541,25 +525,7 @@ function BusinessProfile({ onSubmit, ...props }) {
       const response = await authService.verifyEmail(email, code);
       return response.verified === true || response.success === true;
     } catch (error) {
-      // Handle authentication failures during profile setup
-      if (error.status === 401) {
-        console.error('Authentication failed during email code verification');
-        toast({
-          title: 'Authentication Error',
-          description: 'Session expired. Please log in again.',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-        navigate('/login', { 
-          state: { 
-            message: 'Session expired during profile setup. Please log in again.',
-            returnTo: '/business-profile'
-          }
-        });
-        return false;
-      }
-
+      // Note: 401 errors are automatically handled by the API interceptor
       // Enhanced email code verification error handling
       console.error('🚨 Email Code Verification Error:', {
         error: error,
@@ -691,25 +657,13 @@ function BusinessProfile({ onSubmit, ...props }) {
         emailVerificationSent
       });
       
-      // Optional email verification - only attempt if email is NOT already verified
-      // This is now non-blocking and will not prevent profile submission
-      if (!emailVerificationSent && businessProfile.contact_email && !isEmailAlreadyVerified) {
-        console.log('Email not verified, attempting optional verification process');
-        try {
-          await sendVerificationEmail(businessProfile.contact_email);
-          setEmailVerificationSent(true);
-          console.log('Email verification sent successfully, but continuing with profile submission');
-          // Continue with profile submission instead of returning
-        } catch (error) {
-          // If verification fails, log the error but continue with submission
-          console.log('Email verification failed, but continuing with profile submission:', error.message);
-          // Continue to profile submission below
-        }
-      }
-      
-      // If email is already verified, skip verification step
+      // Skip email verification entirely if email is already verified during signup
       if (isEmailAlreadyVerified) {
-        console.log('Email already verified, skipping verification step');
+        console.log('✅ Email already verified during signup, skipping verification step');
+      } else {
+        console.log('⚠️ Email not verified, but continuing with profile submission (verification is optional)');
+        // Note: Email verification is now optional and won't block profile submission
+        // Users can verify their email later if needed
       }
       
       // Optional email verification with code - if code is provided, attempt verification
@@ -762,6 +716,10 @@ function BusinessProfile({ onSubmit, ...props }) {
       
       // Prepare business profile data
       // Clean location data to avoid circular references
+      // Use street_address if available, otherwise use formatted_address
+      const addressField = businessProfile.location?.street_address || 
+                          businessProfile.location?.formatted_address || '';
+      
       const cleanLocation = {
         lat: businessProfile.location?.lat || '',
         lng: businessProfile.location?.lng || '',
@@ -770,7 +728,8 @@ function BusinessProfile({ onSubmit, ...props }) {
         city: businessProfile.location?.city || '',
         zip_code: businessProfile.location?.zip_code || '',
         place_id: businessProfile.location?.place_id || '',
-        street_address: businessProfile.location?.street_address || '',
+        street_address: addressField,
+        formatted_address: addressField, // Include both for compatibility
       };
       
       // Use FormData if logo is included, otherwise use JSON
@@ -835,7 +794,22 @@ function BusinessProfile({ onSubmit, ...props }) {
         validationErrors.push('At least one service is required');
       }
       
-      if (!businessProfile.location?.street_address?.trim()) {
+      // Debug location data structure
+      console.log('🔍 Location validation check:', {
+        hasLocation: !!businessProfile.location,
+        location: businessProfile.location,
+        hasStreetAddress: !!businessProfile.location?.street_address,
+        streetAddress: businessProfile.location?.street_address,
+        hasFormattedAddress: !!businessProfile.location?.formatted_address,
+        formattedAddress: businessProfile.location?.formatted_address,
+        locationKeys: businessProfile.location ? Object.keys(businessProfile.location) : []
+      });
+      
+      // Check for either street_address or formatted_address
+      const hasAddress = businessProfile.location?.street_address?.trim() || 
+                        businessProfile.location?.formatted_address?.trim();
+      
+      if (!hasAddress) {
         validationErrors.push('Business location is required');
       }
       
@@ -898,120 +872,93 @@ function BusinessProfile({ onSubmit, ...props }) {
           isClosable: true,
         });
         
-        // Update stored user data with business profile info and email verification status
-        const updatedUserData = {
-          ...authUser,
+        // Get current user from authService to ensure we have the latest data
+        const currentUser = authService.getCurrentUser();
+        if (!currentUser) {
+          throw new Error('Unable to retrieve current user data');
+        }
+        
+        // Create updated user data with business profile completion and email verification
+        const verifiedUser = {
+          ...currentUser,
           business_name: businessName, // Using business name from user data
           headline: businessProfile.headline,
           business_profile_completed: true, // Mark business profile as completed
           email_verified: true, // Mark email as verified since profile is complete
           is_verified: true, // Alternative verification field
         };
-        localStorage.setItem('veyu-auth-user', JSON.stringify(updatedUserData));
-        localStorage.setItem('veyu_user_data', JSON.stringify(updatedUserData));
+        
+        // Update both storage locations FIRST before calling onAuthenticated
+        // veyu_user_data stores just the user object
+        localStorage.setItem('veyu_user_data', JSON.stringify(verifiedUser));
+        
+        // veyu-auth-user stores the full auth structure with user nested inside
+        const authData = {
+          user: verifiedUser,
+          tokens: {
+            access: authService.getAccessToken(),
+            refresh: TokenManager.getRefreshToken()
+          }
+        };
+        localStorage.setItem('veyu-auth-user', JSON.stringify(authData));
+        console.log('✅ Updated user data in localStorage with email verification status');
         
         // Update business profile completion status using authService
         authService.updateBusinessProfileCompletionStatus(true);
         
-        // Also update the authService's current user data to reflect email verification
-        try {
-          const currentUser = authService.getCurrentUser();
-          if (currentUser) {
-            const verifiedUser = {
-              ...currentUser,
-              email_verified: true,
-              is_verified: true,
-              business_profile_completed: true
-            };
-            // Update both storage locations
-            localStorage.setItem('veyu_user_data', JSON.stringify(verifiedUser));
-            localStorage.setItem('veyu-auth-user', JSON.stringify(verifiedUser));
-            console.log('✅ Updated email verification status in authService data');
-            
-            // Update the GlobalStore's authUser state to reflect the changes
-            // This ensures the routing logic uses the updated user data
-            onAuthenticated({
-              user: verifiedUser,
-              tokens: {
-                access: authService.getAccessToken(),
-                refresh: TokenManager.getRefreshToken()
-              }
-            });
-            console.log('✅ Updated GlobalStore authUser state');
+        // Update the GlobalStore's authUser state to reflect the changes
+        // This ensures the routing logic uses the updated user data
+        // IMPORTANT: Call onAuthenticated AFTER updating localStorage
+        // Flatten user properties to top level for backward compatibility with routing
+        onAuthenticated({
+          ...verifiedUser, // Spread user properties at top level for authUser.user_type access
+          user: verifiedUser, // Also keep nested for consistency
+          tokens: {
+            access: authService.getAccessToken(),
+            refresh: TokenManager.getRefreshToken()
           }
-        } catch (error) {
-          console.error('❌ Error updating email verification status:', error);
-        }
+        });
+        console.log('✅ Updated GlobalStore authUser state');
         
-        // Use the correct redirect logic based on user type and email verification
-        const userType = updatedUserData.user_type;
-        let redirectUrl = '/dashboard'; // Default
+        // Use the correct redirect logic based on user type
+        const userType = verifiedUser.user_type;
+        let redirectUrl = '/dashboard'; // Default for business users
         
         if (userType === 'dealer' || userType === 'mechanic') {
           // Business users with verified email go to dashboard
           redirectUrl = '/dashboard';
         } else {
           // Customer users go to home
-          redirectUrl = `/home?user=${updatedUserData.email}`;
+          redirectUrl = `/home?user=${verifiedUser.email}`;
         }
         
         console.log('🔄 Redirecting after profile completion:', {
           userType,
           emailVerified: true,
-          redirectUrl
+          businessProfileCompleted: true,
+          redirectUrl,
+          verifiedUser
         });
         
-        // Redirect after a short delay
+        // Debug: Check what's in localStorage before redirect
+        console.log('📦 LocalStorage before redirect:', {
+          veyu_user_data: localStorage.getItem('veyu_user_data'),
+          'veyu-auth-user': localStorage.getItem('veyu-auth-user')
+        });
+        
+        // Force a page reload to ensure App.jsx re-evaluates routing with updated state
+        // This prevents the BusinessProfileGuard from using stale state
         setTimeout(() => {
-          navigate(redirectUrl, { replace: true });
+          console.log('🚀 Executing redirect to:', redirectUrl);
+          window.location.href = redirectUrl;
         }, 1500);
       } else {
         throw new Error(data.message || 'Failed to set up business profile');
       }
     } catch (error) {
-      // Handle authentication failures during profile setup with automatic retry
-      if (error.response?.status === 401 || error.status === 401) {
-        console.error('Authentication failed during profile setup');
-        
-        // Try to refresh token automatically before redirecting
-        try {
-          console.log('Attempting automatic token refresh...');
-          await authService.refreshToken();
-          
-          // Retry the profile submission with new token
-          console.log('Token refreshed, retrying profile submission...');
-          toast({
-            title: 'Session Refreshed',
-            description: 'Retrying profile submission...',
-            status: 'info',
-            duration: 3000,
-            isClosable: true,
-          });
-          
-          // Retry the submission
-          setTimeout(() => {
-            handleSubmit(new Event('submit'));
-          }, 1000);
-          return;
-          
-        } catch (refreshError) {
-          console.error('Token refresh failed during profile setup:', refreshError);
-          toast({
-            title: 'Authentication Error',
-            description: 'Session expired. Please log in again.',
-            status: 'error',
-            duration: 5000,
-            isClosable: true,
-          });
-          navigate('/login', { 
-            state: { 
-              message: 'Session expired during profile setup. Please log in again.',
-              returnTo: '/business-profile'
-            }
-          });
-          return;
-        }
-      }
+      // Note: 401 errors are automatically handled by the API interceptor
+      // which will refresh the token and retry the request
+      // Only handle other error types here
 
       // Enhanced error handling with detailed logging and user-friendly messages
       console.error('🚨 Business Profile Setup Error:', {
@@ -1576,7 +1523,15 @@ function BusinessProfile({ onSubmit, ...props }) {
                           Business Address
                         </FormLabel>
                         <CustomPlacesAutocomplete
-                          onSelect={(location) => changeValue('location', location)}
+                          onPlaceChange={(location) => {
+                            // Map formatted_address to street_address for consistency
+                            const mappedLocation = {
+                              ...location,
+                              street_address: location.formatted_address || location.street_address || ''
+                            };
+                            console.log('📍 Location selected:', mappedLocation);
+                            changeValue('location', mappedLocation);
+                          }}
                           placeholder="Enter your business address"
                           inputProps={{
                             size: "lg",

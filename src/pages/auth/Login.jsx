@@ -137,25 +137,46 @@ export const LoginView = ({ ...props }) => {
           console.warn('⚠️ User type missing from login response, defaulting to customer');
         }
         
-        // Use email verification status instead of business profile completion
-        // Handle missing verification fields gracefully - default to false for business users
-        const isEmailVerified = user?.email_verified === true || user?.is_verified === true;
+        // Check if business profile is complete by checking if business settings exist
+        // For business users, we need to verify they have completed their profile setup
+        let hasCompletedProfile = false;
+        
+        if (userType === 'dealer' || userType === 'mechanic') {
+          try {
+            // Try to fetch business settings to check if profile is complete
+            const dealershipService = (await import('../../services/dealershipService')).default;
+            const settings = await dealershipService.getSettings();
+            
+            // If settings exist with required fields, profile is complete
+            hasCompletedProfile = !!(settings && settings.business_name && settings.contact_email);
+            
+            console.log('🔐 Business profile check:', {
+              hasSettings: !!settings,
+              hasBusinessName: !!settings?.business_name,
+              hasContactEmail: !!settings?.contact_email,
+              hasCompletedProfile
+            });
+          } catch (error) {
+            console.log('⚠️ Could not fetch business settings, assuming profile incomplete:', error.message);
+            hasCompletedProfile = false;
+          }
+        }
         
         console.log('🔐 Login redirect check:', {
           userType: userType || 'unknown',
           email_verified: user?.email_verified,
           is_verified: user?.is_verified,
-          isEmailVerified,
+          hasCompletedProfile,
           redirectUrl: authService.getPostLoginRedirectUrl()
         });
         
-        // Redirect based on user type and email verification status
+        // Redirect based on user type and profile completion status
         if (userType === 'dealer' || userType === 'mechanic') {
-          if (isEmailVerified) {
-            console.log('🔄 Business user with verified email - redirecting to dashboard');
+          if (hasCompletedProfile) {
+            console.log('🔄 Business user with completed profile - redirecting to dashboard');
             redirect('/dashboard');
           } else {
-            console.log('🔄 Business user with unverified email - redirecting to business profile');
+            console.log('🔄 Business user with incomplete profile - redirecting to business profile setup');
             redirect('/business-profile');
           }
         } else {
@@ -250,23 +271,44 @@ export const LoginView = ({ ...props }) => {
           console.warn('⚠️ User type missing from Google login response, defaulting to customer');
         }
         
-        // Handle missing verification fields gracefully - default to false for business users
-        const isEmailVerified = userData?.email_verified === true || userData?.is_verified === true;
+        // Check if business profile is complete by checking if business settings exist
+        let hasCompletedProfile = false;
+        
+        if (userType === 'dealer' || userType === 'mechanic') {
+          try {
+            // Try to fetch business settings to check if profile is complete
+            const dealershipService = (await import('../../services/dealershipService')).default;
+            const settings = await dealershipService.getSettings();
+            
+            // If settings exist with required fields, profile is complete
+            hasCompletedProfile = !!(settings && settings.business_name && settings.contact_email);
+            
+            console.log('🔐 Google business profile check:', {
+              hasSettings: !!settings,
+              hasBusinessName: !!settings?.business_name,
+              hasContactEmail: !!settings?.contact_email,
+              hasCompletedProfile
+            });
+          } catch (error) {
+            console.log('⚠️ Could not fetch business settings for Google login, assuming profile incomplete:', error.message);
+            hasCompletedProfile = false;
+          }
+        }
         
         console.log('🔐 Google login redirect check:', {
           userType: userType || 'unknown',
           email_verified: userData?.email_verified,
           is_verified: userData?.is_verified,
-          isEmailVerified
+          hasCompletedProfile
         });
 
         // Use same redirect logic as regular login
         if (userType === 'dealer' || userType === 'mechanic') {
-          if (isEmailVerified) {
-            console.log('🔄 Google business user with verified email - redirecting to dashboard');
+          if (hasCompletedProfile) {
+            console.log('🔄 Google business user with completed profile - redirecting to dashboard');
             redirect('/dashboard');
           } else {
-            console.log('🔄 Google business user with unverified email - redirecting to business profile');
+            console.log('🔄 Google business user with incomplete profile - redirecting to business profile setup');
             redirect('/business-profile');
           }
         } else {

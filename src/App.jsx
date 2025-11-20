@@ -193,7 +193,13 @@ function App() {
       }
       
       // Set the enhanced user data
-      setAuthUser({ ...data, user: enhancedUserData });
+      // Flatten user properties to top level for backward compatibility with routing
+      // The routing checks authUser.user_type, so we need it at the top level
+      setAuthUser({ 
+        ...data, 
+        ...enhancedUserData, // Spread user properties at top level
+        user: enhancedUserData // Also keep nested for consistency
+      });
       setAuthState(true);
       
       console.log('✅ Authentication completed with graceful handling:', {
