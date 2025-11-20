@@ -108,11 +108,7 @@ export default function AddListing() {
       );
     }
 
-    const res = await axios.post('/admin/dealership/listings/create/', payload, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    const res = await axios.post('/admin/dealership/listings/create/', payload);
 
     if (res.status === 200) {
       setCurrentStep(currentStep + 1)
@@ -244,8 +240,7 @@ export default function AddListing() {
 
       const res = await axios.post(
         '/admin/dealership/listings/create/',
-        form,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        form
       );
       const data = objectifyJSON(res.data)
 

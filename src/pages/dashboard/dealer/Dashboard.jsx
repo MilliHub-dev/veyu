@@ -1,9 +1,9 @@
-import {useState, useEffect, useContext} from 'react';
-import {Link} from 'react-router-dom';
-import {GlobalStore} from '../../../App';
-import {objectifyJSON, jsonifyObject} from '../../../utils';
-import {DealerDashboardSideBar} from '../../../components/nav';
-import {StatCard} from '../../../components/charts';
+import { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
+import { GlobalStore } from '../../../App';
+import { objectifyJSON, jsonifyObject } from '../../../utils';
+import { DealerDashboardSideBar } from '../../../components/nav';
+import { StatCard } from '../../../components/charts';
 import { useDashboardError } from '../../../hooks/useDashboardError';
 import { InlineError, EmptyStateError } from '../../../components/ErrorDisplay';
 import {
@@ -63,8 +63,8 @@ import {
   MdWarning,
 } from "react-icons/md"
 import { BsWallet2 } from "react-icons/bs"
-import {StatusBadge} from '../../../components'
-import {DealershipContext} from './Layout'
+import { StatusBadge } from '../../../components'
+import { DealershipContext } from './Layout'
 
 
 
@@ -73,8 +73,8 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip)
 
 
 function Dashboard({ }) {
-  const {axios, notify, authUser, commaInt} = useContext(GlobalStore);
-  const {dealership} = useContext(DealershipContext);
+  const { axios, notify, authUser, commaInt } = useContext(GlobalStore);
+  const { dealership } = useContext(DealershipContext);
   const [wallet, setWallet] = useState({});
   const [loading, setLoadingState] = useState(true);
   const [recentOrders, setRecentOrders] = useState([])
@@ -84,14 +84,14 @@ function Dashboard({ }) {
   const borderCol = 'gray.200';
   const tableHeadBg = 'gray.50';
   const [dateRange, setDateRange] = useState('30d');
-  
+
   // Enhanced error handling
-  const { 
-    error, 
-    clearError, 
-    executeWithErrorHandling, 
+  const {
+    error,
+    clearError,
+    executeWithErrorHandling,
     createRetryFunction,
-    executeBatch 
+    executeBatch
   } = useDashboardError('dealer dashboard');
   const formatCurrency = (value) => {
     return `₦${parseInt(value).toLocaleString()}`;
@@ -104,7 +104,7 @@ function Dashboard({ }) {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { 
+    plugins: {
       legend: { display: false },
       tooltip: { enabled: true }
     },
@@ -114,12 +114,12 @@ function Dashboard({ }) {
     },
   };
 
-  function onSetRange(range){
+  function onSetRange(range) {
     setDateRange(range);
     getDashboardData();
   }
 
-  function exportOrdersCsv(){
+  function exportOrdersCsv() {
     const rows = [
       ['Car', 'Order Type', 'Price', 'Status', 'Client', 'Last Updated'],
       ...recentOrders.map(o => [
@@ -131,7 +131,7 @@ function Dashboard({ }) {
         o?.last_updated,
       ])
     ];
-    const csv = rows.map(r => r.map(v => (v === undefined || v === null) ? '' : String(v).replace(/"/g,'""')).map(v => `"${v}"`).join(',')).join('\n');
+    const csv = rows.map(r => r.map(v => (v === undefined || v === null) ? '' : String(v).replace(/"/g, '""')).map(v => `"${v}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -141,23 +141,34 @@ function Dashboard({ }) {
     URL.revokeObjectURL(url);
   }
 
-  async function getWalletBalance(){
+  async function getWalletBalance() {
     return executeWithErrorHandling(
       async () => {
-        const res = await axios.get('/wallet/balance/');
-        const data = objectifyJSON(res.data);
-        console.log("Wallet:", data);
-        setWallet(data?.data || {});
-        return data;
+        try {
+          const res = await axios.get('/wallet/balance/');
+          const data = objectifyJSON(res.data);
+          console.log("Wallet:", data);
+          setWallet(data?.data || {});
+          return data;
+        } catch (err) {
+          // If wallet doesn't exist (404), return default empty wallet
+          if (err.response && err.response.status === 404) {
+            console.log("Wallet not found, using default empty wallet");
+            const defaultWallet = { balance: 0, currency: 'NGN' };
+            setWallet(defaultWallet);
+            return { data: defaultWallet };
+          }
+          throw err;
+        }
       },
-      { 
+      {
         customContext: 'loading wallet balance',
         showNotification: false // We'll handle this at the batch level
       }
     );
   }
-  
-  async function getDashboardData(){
+
+  async function getDashboardData() {
     return executeWithErrorHandling(
       async () => {
         const res = await axios.get('/admin/dealership/dashboard/');
@@ -169,31 +180,39 @@ function Dashboard({ }) {
         setRecentOrders(Array.isArray(payload?.recent_orders) ? payload.recent_orders : []);
         return payload;
       },
-      { 
+      {
         customContext: 'loading dashboard data',
         showNotification: false
       }
     );
   }
 
-  async function getWalletTransactions(){
+  async function getWalletTransactions() {
     return executeWithErrorHandling(
       async () => {
-        const res = await axios.get('/wallet/transactions/');
-        const data = objectifyJSON(res.data);
-        return data;
+        try {
+          const res = await axios.get('/wallet/transactions/');
+          const data = objectifyJSON(res.data);
+          return data;
+        } catch (err) {
+          // If wallet doesn't exist (404), return empty transactions list
+          if (err.response && err.response.status === 404) {
+            return { data: [] };
+          }
+          throw err;
+        }
       },
-      { 
+      {
         customContext: 'loading wallet transactions',
         showNotification: false
       }
     );
   }
 
-  async function init(){
+  async function init() {
     setLoadingState(true);
     clearError(); // Clear any previous errors
-    
+
     try {
       await executeBatch([
         getWalletBalance,
@@ -219,7 +238,7 @@ function Dashboard({ }) {
     async () => {
       await init();
     },
-    { 
+    {
       maxRetries: 2,
       customContext: 'retrying dashboard load'
     }
@@ -227,10 +246,10 @@ function Dashboard({ }) {
 
   useEffect(() => {
     init();
-    
+
   }, [])
 
-  if (loading){
+  if (loading) {
     return (
       <Box w={'100%'}>
         <Box py={6} borderBottom={`2px solid ${borderCol}`}>
@@ -239,7 +258,7 @@ function Dashboard({ }) {
         </Box>
 
         <SimpleGrid gap={4} my={5} minChildWidth={'250px'}>
-          {[1,2,3].map((i) => (
+          {[1, 2, 3].map((i) => (
             <Box key={i} p={5} borderWidth={1} borderColor={borderCol} borderRadius='xl' bg={cardBg} boxShadow='sm'>
               <Skeleton height='14px' width='40%' mb={2} />
               <Skeleton height='28px' width='60%' />
@@ -286,8 +305,8 @@ function Dashboard({ }) {
     <Box w={'100%'}>
       {/* Error Display */}
       {error && (
-        <InlineError 
-          error={error} 
+        <InlineError
+          error={error}
           onRetry={retryInit}
           onDismiss={clearError}
           showDetails={true}
@@ -325,7 +344,7 @@ function Dashboard({ }) {
       </Box>
 
       <SimpleGrid gap={4} direction={'row'} flexWrap={'wrap'} my={5} minChildWidth={'250px'}>
-        
+
         <Box as={StatCard}
           borderWidth={1} borderRadius='xl' bg={cardBg} boxShadow='md' borderColor={borderCol}
           title={"Revenue"}
@@ -341,9 +360,9 @@ function Dashboard({ }) {
           // change={-2}
           // data={sparklineData.impressions}
           format={(v) => {
-            if (v > 1000){
+            if (v > 1000) {
               return `${(parseInt(v) / 1000).toFixed(3)}K`
-            }else{
+            } else {
               return `${(parseInt(v))}`
             }
           }}
@@ -362,9 +381,9 @@ function Dashboard({ }) {
         <Flex justify="space-between" align="center" mb={2}>
           <Heading size={'sm'} fontWeight="500"> Revenue Earnings </Heading>
           <ButtonGroup size="sm" isAttached>
-            <Button variant={dateRange==='7d'?'solid':'outline'} colorScheme={dateRange==='7d'?'blue':undefined} onClick={() => onSetRange('7d')}>7d</Button>
-            <Button variant={dateRange==='30d'?'solid':'outline'} colorScheme={dateRange==='30d'?'blue':undefined} onClick={() => onSetRange('30d')}>30d</Button>
-            <Button variant={dateRange==='90d'?'solid':'outline'} colorScheme={dateRange==='90d'?'blue':undefined} onClick={() => onSetRange('90d')}>90d</Button>
+            <Button variant={dateRange === '7d' ? 'solid' : 'outline'} colorScheme={dateRange === '7d' ? 'blue' : undefined} onClick={() => onSetRange('7d')}>7d</Button>
+            <Button variant={dateRange === '30d' ? 'solid' : 'outline'} colorScheme={dateRange === '30d' ? 'blue' : undefined} onClick={() => onSetRange('30d')}>30d</Button>
+            <Button variant={dateRange === '90d' ? 'solid' : 'outline'} colorScheme={dateRange === '90d' ? 'blue' : undefined} onClick={() => onSetRange('90d')}>90d</Button>
           </ButtonGroup>
         </Flex>
         <Box h={'300px'} borderWidth={1} borderColor={borderCol} borderRadius='xl' bg={cardBg} boxShadow='sm' p={3}>
@@ -386,7 +405,7 @@ function Dashboard({ }) {
       </Flex>
       <TableContainer w={'100%'} variant="simple" borderWidth={1} borderRadius="lg" borderColor={borderCol} bg={cardBg} boxShadow='sm'>
         {error && !loading ? (
-          <EmptyStateError 
+          <EmptyStateError
             error={error}
             onRetry={retryInit}
             title="Unable to load recent orders"
@@ -431,7 +450,7 @@ function Dashboard({ }) {
                   </Td>
                   <Td>
                     <Text color="green.500" fontWeight="medium">
-                      {order?.order_item?.price ? `${(order.order_item.price/10**6).toFixed(2)}M` : '—'}
+                      {order?.order_item?.price ? `${(order.order_item.price / 10 ** 6).toFixed(2)}M` : '—'}
                     </Text>
                   </Td>
                   <Td>

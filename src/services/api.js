@@ -6,12 +6,14 @@ const API_BASE_URL = 'https://dev.veyu.cc/api/v1';
 // Create axios instance with proper configuration
 // withCredentials is explicitly set to false to prevent CORS issues
 // when the backend uses wildcard (*) for Access-Control-Allow-Origin
+// NOTE: We don't set a default Content-Type here because:
+// - FormData needs 'multipart/form-data' with boundary (set automatically by axios)
+// - JSON needs 'application/json' (set in request interceptor)
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
   withCredentials: false,
   headers: {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
 });
@@ -21,7 +23,7 @@ const TokenManager = {
   getAccessToken: () => {
     // First try the new token format
     let token = localStorage.getItem('veyu_access_token');
-    
+
     // If not found, try to get from old auth user format
     if (!token) {
       try {
@@ -39,7 +41,7 @@ const TokenManager = {
         console.log('🔄 TokenManager: Could not parse old auth data');
       }
     }
-    
+
     return token;
   },
   getRefreshToken: () => localStorage.getItem('veyu_refresh_token'),
@@ -54,17 +56,79 @@ const TokenManager = {
     }
   },
   clearTokens: () => {
+    console.log('🗑️ TokenManager: Clearing all tokens and user data');
     localStorage.removeItem('veyu_access_token');
     localStorage.removeItem('veyu_refresh_token');
     localStorage.removeItem('veyu_user_data');
     localStorage.removeItem('veyu-auth-user'); // Also clear old format
   },
-  isAuthenticated: () => !!TokenManager.getAccessToken(),
+  isAuthenticated: () => {
+    const hasAccessToken = !!TokenManager.getAccessToken();
+    const hasRefreshToken = !!TokenManager.getRefreshToken();
+
+    if (!hasAccessToken && !hasRefreshToken) {
+      console.log('❌ TokenManager: No tokens found - user not authenticated');
+      return false;
+    }
+
+    if (!hasAccessToken && hasRefreshToken) {
+      console.log('⚠️ TokenManager: Access token missing but refresh token exists');
+      return true; // Can try to refresh
+    }
+
+    return true;
+  },
+  // Decode JWT token to check expiration (without verification)
+  isTokenExpired: (token) => {
+    if (!token) return true;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expirationTime = payload.exp * 1000; // Convert to milliseconds
+      const currentTime = Date.now();
+      const isExpired = currentTime >= expirationTime;
+
+      if (isExpired) {
+        console.log('⏰ TokenManager: Token has expired');
+      }
+
+      return isExpired;
+    } catch (e) {
+      console.error('❌ TokenManager: Failed to decode token', e);
+      return true; // Assume expired if we can't decode
+    }
+  },
+  // Check if access token is expired
+  isAccessTokenExpired: () => {
+    const token = TokenManager.getAccessToken();
+    return TokenManager.isTokenExpired(token);
+  }
 };
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and set Content-Type
 apiClient.interceptors.request.use(
   (config) => {
+    // Ensure headers object exists
+    if (!config.headers) {
+      config.headers = {};
+    }
+
+    // Set Content-Type based on data type
+    // IMPORTANT: Don't set Content-Type for FormData - axios will set it automatically with boundary
+    if (config.data instanceof FormData) {
+      // IMPORTANT: Only delete Content-Type if this is NOT a retry
+      // On retry, we want to preserve all headers including Authorization
+      if (!config._isRetry) {
+        delete config.headers['Content-Type'];
+        console.log(`📦 FormData detected - letting axios set Content-Type with boundary`);
+      } else {
+        console.log(`📦 FormData retry - preserving all headers`);
+      }
+    } else if (config.data && typeof config.data === 'object') {
+      // For JSON data, explicitly set Content-Type
+      config.headers['Content-Type'] = 'application/json';
+    }
+
     // List of endpoints that should NOT have tokens attached
     const publicEndpoints = [
       '/accounts/login/',
@@ -78,17 +142,13 @@ apiClient.interceptors.request.use(
     ];
 
     // Check if this is a public endpoint
-    const isPublicEndpoint = publicEndpoints.some(endpoint => 
+    const isPublicEndpoint = publicEndpoints.some(endpoint =>
       config.url?.includes(endpoint)
     );
 
     if (!isPublicEndpoint) {
       const token = TokenManager.getAccessToken();
       if (token) {
-        // Ensure headers object exists
-        if (!config.headers) {
-          config.headers = {};
-        }
         config.headers.Authorization = `Bearer ${token}`;
         console.log(`🔑 API Request: ${config.method?.toUpperCase()} ${config.url} - Bearer token attached (${token.substring(0, 20)}...)`);
       } else {
@@ -134,7 +194,7 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = TokenManager.getRefreshToken();
         if (refreshToken) {
-          console.log('Attempting token refresh...');
+          console.log('🔄 Attempting token refresh...');
 
           const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
             refresh: refreshToken,
@@ -144,30 +204,79 @@ apiClient.interceptors.response.use(
           TokenManager.setTokens(access, refresh);
 
           // Retry original request with new token
-          // Ensure headers object exists
+          // IMPORTANT: For FormData requests, we must preserve the Authorization header
+          // and prevent the interceptor from deleting Content-Type
+
+          // Mark this as a retry to skip Content-Type manipulation
+          originalRequest._isRetry = true;
+
+          // Update the Authorization header with the new token
           if (!originalRequest.headers) {
             originalRequest.headers = {};
           }
           originalRequest.headers.Authorization = `Bearer ${access}`;
-          
-          console.log('🔄 Retrying request with new token:', originalRequest.url);
+
+          console.log('✅ Token refreshed successfully, retrying request:', originalRequest.url);
+          console.log('🔍 Retry config:', {
+            hasAuth: !!originalRequest.headers.Authorization,
+            authHeader: originalRequest.headers.Authorization ? originalRequest.headers.Authorization.substring(0, 30) + '...' : 'MISSING',
+            hasContentType: !!originalRequest.headers['Content-Type'],
+            isFormData: originalRequest.data instanceof FormData,
+            isRetry: originalRequest._isRetry
+          });
+
           return apiClient(originalRequest);
         } else {
-          console.log('No refresh token available, redirecting to login');
+          console.log('❌ No refresh token available, redirecting to login');
           TokenManager.clearTokens();
+
+          // Show user-friendly notification
+          if (window.notify) {
+            window.notify({
+              title: 'Session Expired',
+              description: 'Your session has expired. Please log in again.',
+              status: 'warning',
+              duration: 5000,
+              isClosable: true
+            });
+          }
+
           if (!window.location.pathname.includes('/login')) {
-            window.location.href = '/login';
+            setTimeout(() => {
+              window.location.href = '/login?session_expired=true';
+            }, 1000);
           }
           return Promise.reject(error);
         }
       } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
+        console.error('❌ Token refresh failed:', refreshError);
+
+        // Check if refresh token itself is invalid/expired
+        const isRefreshTokenInvalid = refreshError.response?.status === 401;
+
+        if (isRefreshTokenInvalid) {
+          console.log('❌ Refresh token is invalid or expired');
+        }
+
         // Refresh failed, clear tokens and redirect to login
         TokenManager.clearTokens();
 
+        // Show user-friendly notification
+        if (window.notify) {
+          window.notify({
+            title: 'Session Expired',
+            description: 'Your session has expired. Please log in again to continue.',
+            status: 'error',
+            duration: 5000,
+            isClosable: true
+          });
+        }
+
         // Only redirect if we're not already on the login page
         if (!window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
+          setTimeout(() => {
+            window.location.href = '/login?session_expired=true';
+          }, 1000);
         }
 
         return Promise.reject(refreshError);
@@ -245,8 +354,8 @@ const handleApiError = (error) => {
       message = data.error;
     } else if (data?.non_field_errors) {
       // Handle Django REST framework non-field errors
-      message = Array.isArray(data.non_field_errors) 
-        ? data.non_field_errors.join(' ') 
+      message = Array.isArray(data.non_field_errors)
+        ? data.non_field_errors.join(' ')
         : data.non_field_errors;
     } else if (status === 400) {
       // Handle field-specific validation errors
@@ -259,7 +368,7 @@ const handleApiError = (error) => {
             fieldErrors.push(`${field}: ${errors}`);
           }
         });
-        
+
         if (fieldErrors.length > 0) {
           message = fieldErrors.join('; ');
         } else {
@@ -292,7 +401,7 @@ const handleApiError = (error) => {
         requestData: error.config?.data,
         headers: error.config?.headers
       });
-      
+
       if (data && typeof data === 'object' && data.message) {
         message = `Server error: ${data.message}`;
       } else if (data && typeof data === 'string' && data.includes('error')) {

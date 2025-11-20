@@ -10,9 +10,11 @@ import { useState, useEffect, useContext, useRef } from "react";
 import { FaUpload } from "react-icons/fa";
 import {GlobalStore} from '../../../../App'
 import {objectifyJSON, jsonifyObject} from '../../../../utils'
-import { Search, Bell, CloudUpload, ChevronDown, ArrowRight, User, Building, Phone, Mail, FileText } from "lucide-react";
+import { Search, Bell, CloudUpload, ChevronDown, ArrowRight, User, Building, Phone, Mail, FileText, MapPin } from "lucide-react";
 import authService from '../../../../services/authService';
 import { getBusinessDisplayName } from '../../../../utils/userDataUtils';
+import { CustomPlacesAutocomplete } from '../../../../components/maps';
+import locationService from '../../../../services/locationService';
 
 
 let mechServices = [
@@ -36,6 +38,8 @@ export const BusinessProfile = ({  }) => {
     services: [],
     contact_email: '',
     contact_phone: '',
+    location: null, // Location object with address details
+    location_id: null, // Location ID for API submission
   });
 
   const handleChange = (e) => {
@@ -191,6 +195,31 @@ export const BusinessProfile = ({  }) => {
       return false;
     }
 
+    // Step 1: Handle location creation/update if location data exists
+    let locationId = mechanic.location_id;
+    
+    if (mechanic.location && mechanic.location.street_address) {
+      try {
+        console.log('📍 Processing location data...');
+        const locationResult = await locationService.createOrUpdateLocation(
+          mechanic.location,
+          mechanic.location_id
+        );
+        locationId = locationResult.id;
+        console.log('✅ Location processed, ID:', locationId);
+      } catch (locationError) {
+        console.error('❌ Location processing failed:', locationError);
+        notify({
+          title: 'Location Error',
+          description: 'Failed to save location. Please check your address and try again.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true
+        });
+        // Continue with profile update even if location fails
+      }
+    }
+
     // Log the business name being sent to API for debugging
     console.log('📤 Sending mechanic profile update with business_name:', {
       business_name: trimmedBusinessName,
@@ -209,7 +238,11 @@ export const BusinessProfile = ({  }) => {
       } else if (key === 'business_name') {
         // Ensure business_name is properly trimmed before sending
         payload.append(key, trimmedBusinessName)
-      } else {
+      } else if (key === 'location_id' && locationId) {
+        // Add location ID if it exists
+        payload.append('location', locationId)
+      } else if (key !== 'location' && key !== 'location_id') {
+        // Skip location object, only send location_id
         console.log("New setting")
         payload.append(key, mechanic[key])
       }
@@ -608,6 +641,67 @@ export const BusinessProfile = ({  }) => {
                 />
               </FormControl>
             </SimpleGrid>
+          </CardBody>
+        </Card>
+
+        {/* Business Location */}
+        <Card shadow="sm">
+          <CardHeader>
+            <Flex align="center">
+              <MapPin size={20} style={{ marginRight: "8px" }} />
+              <Box>
+                <Heading size="md" color="gray.900">Business Location</Heading>
+                <Text fontSize="sm" color="gray.600" mt={1}>
+                  Where customers can find you
+                </Text>
+              </Box>
+            </Flex>
+          </CardHeader>
+          <CardBody>
+            <FormControl>
+              <FormLabel fontWeight="semibold" color="gray.700">
+                <Flex align="center">
+                  <MapPin size={16} style={{ marginRight: "8px" }} />
+                  Business Address
+                </Flex>
+              </FormLabel>
+              <CustomPlacesAutocomplete
+                value={mechanic?.location?.formatted_address || mechanic?.location?.street_address || ''}
+                placeholder="Enter your business address"
+                onPlaceChange={(locationData) => {
+                  console.log('📍 Location selected:', locationData);
+                  
+                  // Store location data in state - will be saved when form is submitted
+                  setMechanic(prev => ({
+                    ...prev,
+                    location: {
+                      ...locationData,
+                      street_address: locationData.formatted_address || locationData.street_address
+                    }
+                  }));
+                  
+                  notify({
+                    title: 'Location Selected',
+                    description: 'Click "Save Changes" to update your business location.',
+                    status: 'info',
+                    duration: 3000,
+                    isClosable: true
+                  });
+                }}
+                inputProps={{
+                  bg: "white",
+                  borderColor: "gray.200",
+                  _hover: { borderColor: "gray.300" },
+                  _focus: { borderColor: "blue.500", boxShadow: "0 0 0 1px #3182ce" }
+                }}
+              />
+              {mechanic?.location?.formatted_address && (
+                <Text fontSize="xs" color="gray.600" mt={2}>
+                  <MapPin size={12} style={{ display: "inline", marginRight: "4px" }} />
+                  {mechanic.location.formatted_address}
+                </Text>
+              )}
+            </FormControl>
           </CardBody>
         </Card>
 

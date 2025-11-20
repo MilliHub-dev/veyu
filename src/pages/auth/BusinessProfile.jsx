@@ -1,7 +1,6 @@
 import { 
   CloudUpload, 
   Building,
-  MapPin,
   Phone,
   Mail,
   Camera,
@@ -48,7 +47,6 @@ import { useContext, useRef, useState, useEffect } from "react";
 import { GlobalStore } from "../../App";
 import { SignupContext } from "./Signup";
 import { motion } from 'framer-motion';
-import { CustomPlacesAutocomplete } from "../../components/maps";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import authService from "../../services/authService";
@@ -89,16 +87,6 @@ function BusinessProfile({ onSubmit, ...props }) {
     logo: null,
     business_name: '',
     services: [],
-    location: {
-      lat: '',
-      lng: '',
-      country: '',
-      state: '',
-      city: '',
-      zip_code: '',
-      place_id: '',
-      street_address: '',
-    },
     business_type: 'business',
     about: '',
     headline: '',
@@ -177,8 +165,7 @@ function BusinessProfile({ onSubmit, ...props }) {
         console.log('✅ Business profile data fetched:', {
           hasBusinessName: !!profileData.business_name,
           businessName: profileData.business_name,
-          hasServices: !!profileData.services?.length,
-          hasLocation: !!profileData.location
+          hasServices: !!profileData.services?.length
         });
         
         // Update the business profile state with fetched data
@@ -190,7 +177,6 @@ function BusinessProfile({ onSubmit, ...props }) {
           contact_phone: profileData.contact_phone || prev.contact_phone,
           contact_email: profileData.contact_email || prev.contact_email,
           services: profileData.services || prev.services,
-          location: profileData.location || prev.location,
           business_type: profileData.business_type || prev.business_type
         }));
         
@@ -410,18 +396,16 @@ function BusinessProfile({ onSubmit, ...props }) {
     let completedFields = 0;
     const requiredFields = [
       // Removed 'business_name' since it's collected during signup
+      // Removed 'location' since it will be set from settings page later
       'business_type',
       'contact_phone',
       'contact_email',
       'services',
-      'location',
       'headline'
     ];
 
     requiredFields.forEach(field => {
       if (field === 'services' && profile[field]?.length > 0) {
-        completedFields++;
-      } else if (field === 'location' && profile[field]?.street_address) {
         completedFields++;
       } else if (profile[field]) {
         completedFields++;
@@ -715,23 +699,6 @@ function BusinessProfile({ onSubmit, ...props }) {
       }
       
       // Prepare business profile data
-      // Clean location data to avoid circular references
-      // Use street_address if available, otherwise use formatted_address
-      const addressField = businessProfile.location?.street_address || 
-                          businessProfile.location?.formatted_address || '';
-      
-      const cleanLocation = {
-        lat: businessProfile.location?.lat || '',
-        lng: businessProfile.location?.lng || '',
-        country: businessProfile.location?.country || '',
-        state: businessProfile.location?.state || '',
-        city: businessProfile.location?.city || '',
-        zip_code: businessProfile.location?.zip_code || '',
-        place_id: businessProfile.location?.place_id || '',
-        street_address: addressField,
-        formatted_address: addressField, // Include both for compatibility
-      };
-      
       // Use FormData if logo is included, otherwise use JSON
       let profileData;
       let headers = {};
@@ -748,7 +715,7 @@ function BusinessProfile({ onSubmit, ...props }) {
         contact_phone: businessProfile.contact_phone,
         contact_email: businessProfile.contact_email,
         services: businessProfile.services,
-        location: cleanLocation,
+        // Location will be set from settings page later
       };
       
       // TODO: Handle logo upload separately if needed
@@ -794,25 +761,6 @@ function BusinessProfile({ onSubmit, ...props }) {
         validationErrors.push('At least one service is required');
       }
       
-      // Debug location data structure
-      console.log('🔍 Location validation check:', {
-        hasLocation: !!businessProfile.location,
-        location: businessProfile.location,
-        hasStreetAddress: !!businessProfile.location?.street_address,
-        streetAddress: businessProfile.location?.street_address,
-        hasFormattedAddress: !!businessProfile.location?.formatted_address,
-        formattedAddress: businessProfile.location?.formatted_address,
-        locationKeys: businessProfile.location ? Object.keys(businessProfile.location) : []
-      });
-      
-      // Check for either street_address or formatted_address
-      const hasAddress = businessProfile.location?.street_address?.trim() || 
-                        businessProfile.location?.formatted_address?.trim();
-      
-      if (!hasAddress) {
-        validationErrors.push('Business location is required');
-      }
-      
       if (validationErrors.length > 0) {
         // Use the enhanced validation error handling utility
         const validationConfig = handleValidationErrors(validationErrors, {
@@ -843,7 +791,6 @@ function BusinessProfile({ onSubmit, ...props }) {
         contact_email: businessProfile.contact_email,
         services: businessProfile.services,
         servicesCount: businessProfile.services?.length || 0,
-        cleanLocation: cleanLocation,
         headers: headers
       });
       
@@ -971,8 +918,7 @@ function BusinessProfile({ onSubmit, ...props }) {
           business_name: businessName,
           contact_phone: businessProfile.contact_phone,
           contact_email: businessProfile.contact_email,
-          services_count: businessProfile.services?.length || 0,
-          location_provided: !!businessProfile.location?.street_address
+          services_count: businessProfile.services?.length || 0
         },
         timestamp: new Date().toISOString()
       });
@@ -1007,8 +953,6 @@ function BusinessProfile({ onSubmit, ...props }) {
               : `Email error: ${data.contact_email}`;
           } else if (data?.services) {
             errorMessage = 'Please select at least one service that you offer.';
-          } else if (data?.location) {
-            errorMessage = 'Please provide a valid business location.';
           } else if (data?.business_name) {
             errorMessage = Array.isArray(data.business_name)
               ? `Business name error: ${data.business_name.join(', ')}`
@@ -1498,55 +1442,6 @@ function BusinessProfile({ onSubmit, ...props }) {
                           </Text>
                         </FormControl>
                       </SimpleGrid>
-                    </VStack>
-                  </Box>
-                </MotionBox>
-
-                {/* Location */}
-                <MotionBox variants={itemVariants}>
-                  <Box
-                    bg={cardBg}
-                    p={8}
-                    borderRadius="2xl"
-                    shadow="lg"
-                    border="1px solid"
-                    borderColor={borderColor}
-                  >
-                    <VStack spacing={6} align="stretch">
-                      <HStack spacing={3} mb={4}>
-                        <Icon as={MapPin} boxSize={6} color="#F4A950" />
-                        <Heading size="md" color="gray.800">Business Location</Heading>
-                      </HStack>
-
-                      <FormControl isRequired>
-                        <FormLabel color="gray.700" fontWeight="semibold">
-                          Business Address
-                        </FormLabel>
-                        <CustomPlacesAutocomplete
-                          onPlaceChange={(location) => {
-                            // Map formatted_address to street_address for consistency
-                            const mappedLocation = {
-                              ...location,
-                              street_address: location.formatted_address || location.street_address || ''
-                            };
-                            console.log('📍 Location selected:', mappedLocation);
-                            changeValue('location', mappedLocation);
-                          }}
-                          placeholder="Enter your business address"
-                          inputProps={{
-                            size: "lg",
-                            bg: "gray.50",
-                            border: "2px solid",
-                            borderColor: borderColor,
-                            _hover: { borderColor: 'orange.300' },
-                            _focus: { 
-                              borderColor: '#F4A950', 
-                              bg: 'white',
-                              shadow: '0 0 0 1px #F4A950'
-                            }
-                          }}
-                        />
-                      </FormControl>
                     </VStack>
                   </Box>
                 </MotionBox>

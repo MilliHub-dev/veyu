@@ -1005,6 +1005,7 @@ GET /api/v1/admin/dealership/settings/
     "offers_rental": true,
     "offers_drivers": false,
     "offers_trade_in": false,
+     "location": 1
     "extended_services": [
       {
         "name": "Car Detailing",

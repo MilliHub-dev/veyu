@@ -13,6 +13,7 @@ import VerificationStatusDisplay from '../../../../components/VerificationStatus
 import authService from '../../../../services/authService';
 import { getBusinessDisplayName } from '../../../../utils/userDataUtils';
 import { CustomPlacesAutocomplete } from '../../../../components/maps';
+import locationService from '../../../../services/locationService';
 
 
 
@@ -64,7 +65,7 @@ export const BusinessProfile = () => {
   const checkAndPromptForBusinessName = () => {
     try {
       const businessName = authService.getBusinessName();
-      
+
       if (!businessName) {
         notify({
           title: 'Business Name Required',
@@ -73,17 +74,17 @@ export const BusinessProfile = () => {
           duration: 6000,
           isClosable: true,
         });
-        
+
         // Focus on business name field if available
         const businessNameInput = document.querySelector('input[name="business_name"]');
         if (businessNameInput) {
           businessNameInput.focus();
           businessNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        
+
         return false;
       }
-      
+
       return true;
     } catch (error) {
       console.error('❌ Error checking business name:', error);
@@ -133,10 +134,10 @@ export const BusinessProfile = () => {
       });
     } else if (error.response?.status === 401) {
       // Authentication error - redirect to login
-      setError({ 
-        type: 'auth', 
+      setError({
+        type: 'auth',
         message: 'Please log in again',
-        retryable: false 
+        retryable: false
       });
       setRetryCount(0); // Reset retry count for auth errors
       notify({
@@ -150,15 +151,15 @@ export const BusinessProfile = () => {
     } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
       // Network timeout error - retryable
       const canRetry = retryCount < MAX_RETRY_ATTEMPTS;
-      setError({ 
-        type: 'network', 
-        message: canRetry 
+      setError({
+        type: 'network',
+        message: canRetry
           ? `Request timed out. Retrying... (${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`
           : 'Request timed out. Please check your connection and try again.',
         retryable: true,
         canAutoRetry: canRetry
       });
-      
+
       if (canRetry) {
         // Auto-retry for network timeouts
         setTimeout(() => retryDealershipFetch(), 1000);
@@ -173,8 +174,8 @@ export const BusinessProfile = () => {
       }
     } else if (!navigator.onLine) {
       // Network connection error - retryable
-      setError({ 
-        type: 'network', 
+      setError({
+        type: 'network',
         message: 'No internet connection. Please check your network and try again.',
         retryable: true,
         canAutoRetry: false
@@ -189,15 +190,27 @@ export const BusinessProfile = () => {
     } else {
       // General server errors with retry options
       const canRetry = retryCount < MAX_RETRY_ATTEMPTS;
-      setError({ 
-        type: 'general', 
-        message: canRetry 
+
+      // Log detailed error information for debugging
+      console.error('❌ Dealership fetch error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        code: error.code,
+        url: error.config?.url,
+        method: error.config?.method
+      });
+
+      setError({
+        type: 'general',
+        message: canRetry
           ? `Unable to load profile data. Retrying... (${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`
           : 'Unable to load profile data. You can still update your settings.',
         retryable: true,
         canAutoRetry: canRetry
       });
-      
+
       if (canRetry) {
         // Auto-retry for general server errors
         setTimeout(() => retryDealershipFetch(), 2000);
@@ -226,13 +239,13 @@ export const BusinessProfile = () => {
     }
 
     const delay = RETRY_DELAYS[retryCount] || RETRY_DELAYS[RETRY_DELAYS.length - 1];
-    
+
     // Wait for the exponential backoff delay
     await new Promise(resolve => setTimeout(resolve, delay));
-    
+
     // Increment retry count
     setRetryCount(prev => prev + 1);
-    
+
     // Retry the fetch
     await getDealership();
   }
@@ -252,16 +265,16 @@ export const BusinessProfile = () => {
     setLoading(true);
     // Add error state reset at start of function
     setError(null);
-    
+
     try {
       // Try the dealership-specific endpoint first
       const response = await apiClient.get('/admin/dealership/');
       // API returns data wrapped in a data object: { error: false, data: {...} }
       const data = response.data.data || response.data;
-      
+
       // Reset retry count on successful fetch
       setRetryCount(0);
-      
+
       // Fetch verification status to get CAC and TIN numbers
       let verificationData = {};
       try {
@@ -272,7 +285,7 @@ export const BusinessProfile = () => {
         console.log('Could not fetch verification status:', verificationError);
         // Continue without verification data if it fails
       }
-      
+
       // Log verification status data for debugging
       console.log('Verification status data received:', {
         verified_business: data.verified_business,
@@ -281,38 +294,67 @@ export const BusinessProfile = () => {
         cac_number: verificationData.cac_number,
         tin_number: verificationData.tin_number
       });
-      
-      // Log the business name received from API for debugging
-      console.log('📥 Received dealership data from GET /admin/dealership/ with business_name:', {
+
+      // Log the business name and logo received from API for debugging
+      console.log('📥 Received dealership data from GET /admin/dealership/:', {
         business_name: data.business_name,
         has_business_name: !!data.business_name,
+        logo: data.logo,
+        has_logo: !!data.logo,
+        logo_type: typeof data.logo,
         endpoint: '/admin/dealership/',
         method: 'GET'
       });
 
-      setDealership(prev => ({
-        ...prev,
-        ...data,
-        // Preserve any existing file preview
-        logo: prev.logo?.preview ? prev.logo : data.logo,
-        // Ensure business_name is properly set from API response
-        business_name: data.business_name || prev.business_name || '',
-        // Ensure verification fields have default values if missing
-        verified_business: data.verified_business ?? false,
-        business_verification_status: data.business_verification_status || 'not_submitted',
-        rejection_reason: data.rejection_reason || null,
-        // Add CAC and TIN from verification status
-        cac_number: verificationData.cac_number || data.cac_number || '',
-        tin_number: verificationData.tin_number || data.tin_number || '',
-        // Handle location data - could be an object or ID
-        location: typeof data.location === 'object' ? data.location : prev.location,
-        location_id: typeof data.location === 'number' ? data.location : (data.location?.id || prev.location_id)
-      }));
+      // Fetch location details if we only have an ID
+      let locationData = data.location;
+      if (typeof data.location === 'number') {
+        try {
+          console.log('📍 Fetching location details for ID:', data.location);
+          const locationResponse = await apiClient.get(`/locations/${data.location}/`);
+          locationData = locationResponse.data.data || locationResponse.data;
+          console.log('✅ Location details fetched:', locationData);
+        } catch (locationError) {
+          console.error('❌ Failed to fetch location details:', locationError);
+          // Keep the ID if fetch fails
+          locationData = { id: data.location };
+        }
+      }
 
-      // Check for missing business name after data is loaded
-      setTimeout(() => {
-        checkAndPromptForBusinessName();
-      }, 500);
+      setDealership(prev => {
+        // Fetch location details if we only have an ID
+        // Note: We can't await inside this synchronous reducer, so we used the pre-fetched locationData above
+
+        const updatedDealership = {
+          ...prev,
+          ...data,
+          // Preserve any existing file preview
+          logo: prev.logo?.preview ? prev.logo : data.logo,
+          // Ensure business_name is properly set from API response
+          business_name: data.business_name || prev.business_name || '',
+          // Ensure verification fields have default values if missing
+          verified_business: data.verified_business ?? false,
+          business_verification_status: data.business_verification_status || 'not_submitted',
+          rejection_reason: data.rejection_reason || null,
+          // Add CAC and TIN from verification status
+          cac_number: verificationData.cac_number || data.cac_number || '',
+          tin_number: verificationData.tin_number || data.tin_number || '',
+          // Handle location data - now we have the full object
+          location: locationData,
+          location_id: locationData?.id || data.location
+        };
+
+        console.log('📝 Setting dealership state with logo:', {
+          logo: updatedDealership.logo,
+          has_logo: !!updatedDealership.logo,
+          logo_type: typeof updatedDealership.logo,
+          is_file_object: !!updatedDealership.logo?.file
+        });
+
+        return updatedDealership;
+      });
+
+
     } catch (error) {
       // Implement try-catch with handleDealershipError call
       handleDealershipError(error);
@@ -335,7 +377,7 @@ export const BusinessProfile = () => {
     try {
       // Prepare services array for API (required field)
       const allServices = getAllSelectedServices();
-      
+
       // Enhanced business name validation before submission
       if (!dealership.business_name || !dealership.business_name.trim()) {
         notify({
@@ -345,14 +387,14 @@ export const BusinessProfile = () => {
           duration: 6000,
           isClosable: true
         });
-        
+
         // Focus on business name field
         const businessNameInput = document.querySelector('input[name="business_name"]');
         if (businessNameInput) {
           businessNameInput.focus();
           businessNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        
+
         return false;
       }
 
@@ -366,14 +408,39 @@ export const BusinessProfile = () => {
           duration: 5000,
           isClosable: true
         });
-        
+
         const businessNameInput = document.querySelector('input[name="business_name"]');
         if (businessNameInput) {
           businessNameInput.focus();
           businessNameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-        
+
         return false;
+      }
+
+      // Step 1: Handle location creation/update if location data exists
+      let locationId = dealership.location_id;
+
+      if (dealership.location && dealership.location.street_address) {
+        try {
+          console.log('📍 Processing location data...');
+          const locationResult = await locationService.createOrUpdateLocation(
+            dealership.location,
+            dealership.location_id
+          );
+          locationId = locationResult.id;
+          console.log('✅ Location processed, ID:', locationId);
+        } catch (locationError) {
+          console.error('❌ Location processing failed:', locationError);
+          notify({
+            title: 'Location Error',
+            description: 'Failed to save location. Please check your address and try again.',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true
+          });
+          // Continue with profile update even if location fails
+        }
       }
 
       // Build the settings data object with required fields
@@ -381,13 +448,13 @@ export const BusinessProfile = () => {
         // Required fields based on API documentation - business_name is always required
         business_name: trimmedBusinessName,
         services: allServices, // This is required by the API
-        
+
         // Core service boolean flags
         offers_purchase: dealership.offers_purchase || false,
         offers_rental: dealership.offers_rental || false,
         offers_drivers: dealership.offers_drivers || false,
         offers_trade_in: dealership.offers_trade_in || false,
-        
+
         // Optional fields - only include if they have values
         ...(dealership.about && { about: dealership.about }),
         ...(dealership.headline && { headline: dealership.headline }),
@@ -395,7 +462,7 @@ export const BusinessProfile = () => {
         ...(dealership.contact_phone && { contact_phone: dealership.contact_phone }),
         ...(dealership.cac_number && { cac_number: dealership.cac_number }),
         ...(dealership.tin_number && { tin_number: dealership.tin_number }),
-        ...(dealership.location_id && { location: dealership.location_id }),
+        ...(locationId && { location: locationId }),
       };
 
       // Log the business name being sent to API for debugging
@@ -413,19 +480,20 @@ export const BusinessProfile = () => {
       if (dealership.logo && typeof dealership.logo === 'object' && dealership.logo.file) {
         // Create FormData for file upload
         const formData = new FormData();
-        
+
         // Add the logo file
         formData.append('new-logo', dealership.logo.file);
-        
+
+        // Add all other fields to FormData
         // Add all other fields to FormData
         Object.entries(settingsData).forEach(([key, value]) => {
           if (Array.isArray(value)) {
-            formData.append(key, JSON.stringify(value));
+            value.forEach(item => formData.append(key, item));
           } else {
             formData.append(key, value);
           }
         });
-        
+
         requestData = formData;
         // Don't set Content-Type - let browser set it with boundary
       } else {
@@ -456,6 +524,21 @@ export const BusinessProfile = () => {
           method: 'PUT'
         });
 
+        // Fetch location details if we only have an ID in the response
+        let locationData = data.location;
+        if (typeof data.location === 'number') {
+          try {
+            console.log('📍 Fetching location details for ID:', data.location);
+            const locationResponse = await apiClient.get(`/locations/${data.location}/`);
+            locationData = locationResponse.data.data || locationResponse.data;
+            console.log('✅ Location details fetched:', locationData);
+          } catch (locationError) {
+            console.error('❌ Failed to fetch location details:', locationError);
+            // Keep the ID if fetch fails
+            locationData = { id: data.location };
+          }
+        }
+
         // Update local state with the saved data including verification status
         setDealership(prev => ({
           ...prev,
@@ -468,9 +551,9 @@ export const BusinessProfile = () => {
           verified_business: data.verified_business ?? prev.verified_business,
           business_verification_status: data.business_verification_status || prev.business_verification_status,
           rejection_reason: data.rejection_reason || prev.rejection_reason,
-          // Handle location data from response
-          location: typeof data.location === 'object' ? data.location : prev.location,
-          location_id: typeof data.location === 'number' ? data.location : (data.location?.id || prev.location_id)
+          // Handle location data from response - now we have the full object
+          location: locationData,
+          location_id: locationData?.id || data.location
         }));
 
         // Update business name in auth service storage for consistency
@@ -488,22 +571,41 @@ export const BusinessProfile = () => {
 
       let errorMessage = 'Unable to save your profile. Please check your information and try again.';
       let errorTitle = 'Save Failed';
-      
+
       if (error.response?.status === 400) {
         const responseData = error.response.data;
-        
-        if (responseData?.message === 'Missing required fields') {
+
+        // Check for detailed validation errors first, as they are more specific
+        if (responseData?.details || responseData?.errors) {
+          // Handle detailed validation errors
+          const errors = [];
+          const errorData = responseData.details || responseData.errors || responseData;
+
+          Object.entries(errorData).forEach(([field, messages]) => {
+            const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            if (Array.isArray(messages)) {
+              errors.push(...messages.map(msg => `${fieldName}: ${msg}`));
+            } else {
+              errors.push(`${fieldName}: ${messages}`);
+            }
+          });
+
+          if (errors.length > 0) {
+            errorMessage = errors.join('\n');
+            errorTitle = 'Validation Error';
+          }
+        } else if (responseData?.message === 'Missing required fields') {
           // Handle missing required fields error with enhanced business name validation
           const missingFields = [];
           if (!dealership.business_name || !dealership.business_name.trim()) {
             missingFields.push('Business Name');
           }
           if (getAllSelectedServices().length === 0) missingFields.push('Services');
-          
+
           if (missingFields.length > 0) {
             errorMessage = `Please fill in the following required fields: ${missingFields.join(', ')}`;
             errorTitle = 'Required Fields Missing';
-            
+
             // Focus on business name field if it's missing
             if (missingFields.includes('Business Name')) {
               setTimeout(() => {
@@ -518,24 +620,7 @@ export const BusinessProfile = () => {
             errorMessage = 'Some required fields are missing. Please check your form and try again.';
             errorTitle = 'Required Fields Missing';
           }
-        } else if (responseData?.details || responseData?.errors) {
-          // Handle detailed validation errors
-          const errors = [];
-          const errorData = responseData.details || responseData.errors || responseData;
-          
-          Object.entries(errorData).forEach(([field, messages]) => {
-            const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            if (Array.isArray(messages)) {
-              errors.push(...messages.map(msg => `${fieldName}: ${msg}`));
-            } else {
-              errors.push(`${fieldName}: ${messages}`);
-            }
-          });
-          
-          if (errors.length > 0) {
-            errorMessage = errors.join('\n');
-            errorTitle = 'Validation Error';
-          }
+
         } else if (typeof responseData === 'string') {
           errorMessage = responseData;
           errorTitle = 'Validation Error';
@@ -565,7 +650,7 @@ export const BusinessProfile = () => {
   // Service mapping configuration based on API documentation
   const coreServiceMapping = {
     'Car Sale': 'offers_purchase',
-    'Car Sales': 'offers_purchase', 
+    'Car Sales': 'offers_purchase',
     'Vehicle Sales': 'offers_purchase',
     'Car Rental': 'offers_rental',
     'Car Leasing': 'offers_rental',
@@ -635,18 +720,18 @@ export const BusinessProfile = () => {
   // Helper function to get all selected services (core + extended)
   const getAllSelectedServices = () => {
     const services = [];
-    
+
     // Add core services based on boolean flags
     if (dealership.offers_purchase) services.push('Car Sale');
     if (dealership.offers_rental) services.push('Car Leasing');
     if (dealership.offers_drivers) services.push('Drivers');
     if (dealership.offers_trade_in) services.push('Trade-In Services');
-    
+
     // Add extended services
     dealership.extended_services?.forEach(service => {
       services.push(service.name);
     });
-    
+
     return services;
   };
 
@@ -666,7 +751,7 @@ export const BusinessProfile = () => {
         description: `${serviceName} services`,
         price_range: 'Contact for pricing'
       };
-      
+
       setDealership(prev => ({
         ...prev,
         extended_services: [...(prev.extended_services || []), serviceData]
@@ -728,11 +813,11 @@ export const BusinessProfile = () => {
 
   // Error State Component
   const ErrorState = ({ error, onRetry }) => (
-    <Box 
-      bg="red.50" 
-      border="1px solid" 
-      borderColor="red.200" 
-      borderRadius="xl" 
+    <Box
+      bg="red.50"
+      border="1px solid"
+      borderColor="red.200"
+      borderRadius="xl"
       p={6}
       mb={6}
     >
@@ -741,9 +826,9 @@ export const BusinessProfile = () => {
           {error.message}
         </Text>
         {error.retryable && !error.canAutoRetry && (
-          <Button 
-            colorScheme="red" 
-            variant="outline" 
+          <Button
+            colorScheme="red"
+            variant="outline"
             onClick={onRetry}
             size="sm"
           >
@@ -770,7 +855,7 @@ export const BusinessProfile = () => {
       {error && (
         <ErrorState error={error} onRetry={handleManualRetry} />
       )}
-      
+
       <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} alignItems="start">
         <VStack spacing={6} align="stretch" gridColumn={{ md: 'span 2' }}>
           {/* Logo Upload Card */}
@@ -778,15 +863,52 @@ export const BusinessProfile = () => {
             <VStack>
               {
                 dealership?.logo?.file ? (
-                  <Image src={dealership?.logo?.preview} w="80px" />
+                  <Image
+                    src={dealership?.logo?.preview}
+                    w="80px"
+                    h="80px"
+                    objectFit="cover"
+                    borderRadius="md"
+                    fallbackSrc="https://via.placeholder.com/80?text=Logo"
+                    alt="Business Logo Preview"
+                  />
+                ) : dealership?.logo ? (
+                  <Image
+                    src={dealership?.logo}
+                    w="80px"
+                    h="80px"
+                    objectFit="cover"
+                    borderRadius="md"
+                    fallbackSrc="https://via.placeholder.com/80?text=Logo"
+                    alt="Business Logo"
+                    onError={(e) => {
+                      console.error('Logo failed to load:', dealership?.logo);
+                      e.target.src = 'https://via.placeholder.com/80?text=Logo';
+                    }}
+                  />
                 ) : (
-                  <Image src={dealership?.logo} w="80px" />
+                  <Box
+                    w="80px"
+                    h="80px"
+                    bg="gray.100"
+                    borderRadius="md"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    <Text fontSize="xs" color="gray.500">No Logo</Text>
+                  </Box>
                 )
               }
               <Button onClick={e => imageRef.current.click()} variant="link" color="#0460cc" fontSize="sm" fontWeight="medium" leftIcon={<CloudUpload size={16} />}>
-                Upload image
+                {dealership?.logo ? 'Change image' : 'Upload image'}
               </Button>
               <Input type="file" hidden ref={imageRef} accept="image/*" onInput={handleImageUpload} />
+              {dealership?.logo && typeof dealership?.logo === 'string' && (
+                <Text fontSize="xs" color="gray.500" noOfLines={1} maxW="200px">
+                  {dealership.logo.split('/').pop()}
+                </Text>
+              )}
             </VStack>
           </Box>
 
@@ -795,12 +917,12 @@ export const BusinessProfile = () => {
             <VStack spacing={4} align="stretch">
               <FormControl isRequired>
                 <FormLabel fontSize={{ base: "sm", md: "md" }}>Business Name</FormLabel>
-                <Input 
-                  name="business_name" 
-                  value={dealership?.business_name || ''} 
-                  onChange={handleChange} 
-                  bg="white" 
-                  color="#101828" 
+                <Input
+                  name="business_name"
+                  value={dealership?.business_name || ''}
+                  onChange={handleChange}
+                  bg="white"
+                  color="#101828"
                   borderColor={!dealership?.business_name ? "red.300" : "#d0d5dd"}
                   size={{ base: "md", md: "lg" }}
                   placeholder="Enter your business name"
@@ -812,30 +934,30 @@ export const BusinessProfile = () => {
                 )}
                 <Text fontSize="xs" color="gray.500" mt={2}> @{slugify(dealership?.business_name || '')} </Text>
               </FormControl>
-              
+
               <FormControl>
                 <FormLabel fontSize={{ base: "sm", md: "md" }}>Headline</FormLabel>
-                <Input 
-                  name="headline" 
-                  value={dealership?.headline} 
-                  onChange={handleChange} 
-                  bg="white" 
-                  color="#101828" 
+                <Input
+                  name="headline"
+                  value={dealership?.headline}
+                  onChange={handleChange}
+                  bg="white"
+                  color="#101828"
                   borderColor="#d0d5dd"
                   size={{ base: "md", md: "lg" }}
                   placeholder="A catchy headline for your business"
                 />
               </FormControl>
-              
+
               <FormControl>
                 <FormLabel fontSize={{ base: "sm", md: "md" }}>About</FormLabel>
-                <Textarea 
-                  name="about" 
-                  value={dealership?.about} 
-                  onChange={handleChange} 
-                  maxLength={400} 
-                  bg="white" 
-                  color="#101828" 
+                <Textarea
+                  name="about"
+                  value={dealership?.about}
+                  onChange={handleChange}
+                  maxLength={400}
+                  bg="white"
+                  color="#101828"
                   borderColor="#d0d5dd"
                   minH={{ base: "120px", md: "150px" }}
                   resize="vertical"
@@ -850,9 +972,9 @@ export const BusinessProfile = () => {
           <Box bg="white" border="1px solid" borderColor="#d0d5dd" borderRadius="xl" p={{ base: 4, md: 6 }}>
             <HStack justify="space-between" mb={4}>
               <Heading size={{ base: "sm", md: "md" }}>Verification Status</Heading>
-              <Button 
-                size="sm" 
-                variant="ghost" 
+              <Button
+                size="sm"
+                variant="ghost"
                 onClick={getDealership}
                 isLoading={loading}
                 loadingText="Refreshing..."
@@ -860,7 +982,7 @@ export const BusinessProfile = () => {
                 Refresh
               </Button>
             </HStack>
-            <VerificationStatusDisplay 
+            <VerificationStatusDisplay
               verifiedBusiness={dealership?.verified_business}
               verificationStatus={dealership?.business_verification_status}
               rejectionReason={dealership?.rejection_reason}
@@ -877,26 +999,26 @@ export const BusinessProfile = () => {
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
               <FormControl>
                 <FormLabel>CAC Number</FormLabel>
-                <Input 
-                  name="cac_number" 
-                  disabled 
-                  value={dealership?.cac_number || ''} 
-                  onChange={handleChange} 
-                  bg="gray.50" 
-                  color="#101828" 
+                <Input
+                  name="cac_number"
+                  disabled
+                  value={dealership?.cac_number || ''}
+                  onChange={handleChange}
+                  bg="gray.50"
+                  color="#101828"
                   borderColor="#d0d5dd"
                   placeholder="Pending verification"
                 />
               </FormControl>
               <FormControl>
                 <FormLabel>TIN Number</FormLabel>
-                <Input 
-                  name="tin_number" 
-                  disabled 
-                  value={dealership?.tin_number || ''} 
-                  onChange={handleChange} 
-                  bg="gray.50" 
-                  color="#101828" 
+                <Input
+                  name="tin_number"
+                  disabled
+                  value={dealership?.tin_number || ''}
+                  onChange={handleChange}
+                  bg="gray.50"
+                  color="#101828"
                   borderColor="#d0d5dd"
                   placeholder="Pending verification"
                 />
@@ -907,7 +1029,7 @@ export const BusinessProfile = () => {
           {/* Services List Selector */}
           <Box border="1px solid" borderColor="#d0d5dd" borderRadius="xl" bg="white" overflow="hidden">
             <Box p={4} borderBottom="1px solid" borderColor="#d0d5dd">
-              <FormLabel fontWeight="medium" mb={2}> 
+              <FormLabel fontWeight="medium" mb={2}>
                 Choose services
               </FormLabel>
               <Flex flexWrap="wrap" gap={2}>
@@ -1076,7 +1198,7 @@ export const BusinessProfile = () => {
                   <Input type="tel" name="contact_phone" value={dealership?.contact_phone} onChange={handleChange} bg="white" color="#101828" borderColor="#d0d5dd" />
                 </FormControl>
               </SimpleGrid>
-              
+
               <FormControl>
                 <FormLabel>
                   <HStack spacing={2}>
@@ -1085,59 +1207,27 @@ export const BusinessProfile = () => {
                   </HStack>
                 </FormLabel>
                 <CustomPlacesAutocomplete
-                  value={dealership?.location?.formatted_address || ''}
+                  value={dealership?.location?.formatted_address || dealership?.location?.street_address || ''}
                   placeholder="Enter your business address"
-                  onPlaceChange={async (locationData) => {
+                  onPlaceChange={(locationData) => {
                     console.log('📍 Location selected:', locationData);
-                    
-                    // First, create/update the location via profile endpoint
-                    try {
-                      const locationPayload = {
-                        location: JSON.stringify({
-                          lat: locationData.lat,
-                          lng: locationData.lng,
-                          state: locationData.state,
-                          city: locationData.city,
-                          country: locationData.country,
-                          zip_code: locationData.zip_code,
-                          place_id: locationData.place_id,
-                          formatted_address: locationData.formatted_address,
-                          street_address: locationData.formatted_address
-                        })
-                      };
-                      
-                      const response = await apiClient.put('/accounts/profile/', locationPayload);
-                      const profileData = response.data;
-                      
-                      // Extract location ID from response
-                      const locationId = profileData.location?.id || profileData.location_id;
-                      
-                      console.log('✅ Location saved with ID:', locationId);
-                      
-                      // Update dealership state with location data and ID
-                      setDealership(prev => ({
-                        ...prev,
-                        location: locationData,
-                        location_id: locationId
-                      }));
-                      
-                      notify({
-                        title: 'Location Updated',
-                        description: 'Your business location has been saved.',
-                        status: 'success',
-                        duration: 3000,
-                        isClosable: true
-                      });
-                    } catch (error) {
-                      console.error('❌ Error saving location:', error);
-                      notify({
-                        title: 'Location Error',
-                        description: 'Failed to save location. Please try again.',
-                        status: 'error',
-                        duration: 5000,
-                        isClosable: true
-                      });
-                    }
+
+                    // Store location data in state - will be saved when form is submitted
+                    setDealership(prev => ({
+                      ...prev,
+                      location: {
+                        ...locationData,
+                        street_address: locationData.formatted_address || locationData.street_address
+                      }
+                    }));
+
+                    notify({
+                      title: 'Location Selected',
+                      description: 'Click "Save Changes" to update your business location.',
+                      status: 'info',
+                      duration: 3000,
+                      isClosable: true
+                    });
                   }}
                   inputProps={{
                     bg: "white",
@@ -1162,13 +1252,13 @@ export const BusinessProfile = () => {
           </HStack>
         </VStack>
 
-        <Box 
-          position={{ base: "relative", lg: "sticky" }} 
-          top={4} 
-          bg="white" 
-          border="1px solid" 
-          borderColor="#d0d5dd" 
-          borderRadius="xl" 
+        <Box
+          position={{ base: "relative", lg: "sticky" }}
+          top={4}
+          bg="white"
+          border="1px solid"
+          borderColor="#d0d5dd"
+          borderRadius="xl"
           p={{ base: 4, md: 6 }}
           h="fit-content"
         >
@@ -1179,16 +1269,16 @@ export const BusinessProfile = () => {
             <HStack spacing={3}>
               {
                 dealership?.logo?.file ? (
-                  <Image 
-                    src={dealership?.logo?.preview} 
+                  <Image
+                    src={dealership?.logo?.preview}
                     w={{ base: "50px", md: "60px" }}
                     h={{ base: "50px", md: "60px" }}
                     objectFit="cover"
                     borderRadius="md"
                   />
                 ) : (
-                  <Image 
-                    src={dealership?.logo} 
+                  <Image
+                    src={dealership?.logo}
                     w={{ base: "50px", md: "60px" }}
                     h={{ base: "50px", md: "60px" }}
                     objectFit="cover"
@@ -1198,24 +1288,24 @@ export const BusinessProfile = () => {
               }
               <Box flex={1} minW={0}>
                 <HStack spacing={2} align="center" mb={1}>
-                  <Heading 
-                    as="h3" 
-                    fontSize={{ base: "sm", md: "md" }} 
-                    fontWeight="semibold" 
+                  <Heading
+                    as="h3"
+                    fontSize={{ base: "sm", md: "md" }}
+                    fontWeight="semibold"
                     color="#101828"
                     noOfLines={1}
                     flex={1}
                   >
                     {dealership?.business_name || 'Business name'}
                   </Heading>
-                  <VerificationStatusDisplay 
+                  <VerificationStatusDisplay
                     verifiedBusiness={dealership?.verified_business}
                     verificationStatus={dealership?.business_verification_status}
                     isCompact={true}
                   />
                 </HStack>
-                <Text 
-                  fontSize={{ base: "xs", md: "sm" }} 
+                <Text
+                  fontSize={{ base: "xs", md: "sm" }}
                   color="#667085"
                   noOfLines={1}
                 >
@@ -1224,17 +1314,17 @@ export const BusinessProfile = () => {
               </Box>
             </HStack>
             <Divider />
-            <Text 
-              fontSize={{ base: "xs", md: "sm" }} 
+            <Text
+              fontSize={{ base: "xs", md: "sm" }}
               color="#667085"
               noOfLines={{ base: 3, md: 4 }}
             >
               {dealership?.about || 'Tell customers about your business...'}
             </Text>
-            <VStack 
-              align="start" 
-              spacing={1} 
-              fontSize={{ base: "xs", md: "sm" }} 
+            <VStack
+              align="start"
+              spacing={1}
+              fontSize={{ base: "xs", md: "sm" }}
               color="#667085"
             >
               <Text noOfLines={1}>{dealership?.contact_email || 'email@example.com'}</Text>
@@ -1249,9 +1339,9 @@ export const BusinessProfile = () => {
             <VStack spacing={2} align="stretch">
               <Flex flexWrap="wrap" gap={2}>
                 {getAllSelectedServices().map((service, i) => (
-                  <Badge 
-                    key={i} 
-                    colorScheme="blue" 
+                  <Badge
+                    key={i}
+                    colorScheme="blue"
                     variant="subtle"
                     fontSize={{ base: "xs", md: "sm" }}
                   >
@@ -1262,7 +1352,7 @@ export const BusinessProfile = () => {
                   <Text color="gray.500" fontSize="xs">No services selected</Text>
                 )}
               </Flex>
-              
+
               {/* Show extended services details in preview */}
               {dealership.extended_services && dealership.extended_services.length > 0 && (
                 <Box>
