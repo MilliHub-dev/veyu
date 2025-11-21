@@ -482,7 +482,7 @@ export const BusinessProfile = () => {
         const formData = new FormData();
 
         // Add the logo file
-        formData.append('new-logo', dealership.logo.file);
+        formData.append('logo', dealership.logo.file);
 
         // Add all other fields to FormData
         // Add all other fields to FormData

@@ -1005,7 +1005,6 @@ GET /api/v1/admin/dealership/settings/
     "offers_rental": true,
     "offers_drivers": false,
     "offers_trade_in": false,
-     "location": 1
     "extended_services": [
       {
         "name": "Car Detailing",
@@ -1030,7 +1029,7 @@ PUT /api/v1/admin/dealership/settings/
 ```
 **Request (multipart/form-data):**
 ```
-new-logo: <file> (optional)
+logo: <file> (optional)
 business_name: "AutoMax Dealers Ltd"
 about: "Leading car dealership in Lagos..."
 slug: "automax-dealers" (optional)
@@ -1038,6 +1037,7 @@ headline: "Your trusted car partner"
 services: ["Car Sale", "Car Leasing", "Drivers", "Car Detailing", "Vehicle Inspection"]
 contact_phone: "+2348012345678"
 contact_email: "info@automax.com"
+location: 1 (optional - Location ID)
 offers_purchase: true
 offers_rental: true
 offers_drivers: true
@@ -1051,6 +1051,7 @@ offers_trade_in: false
     "uuid": "550e8400-e29b-41d4-a716-446655440000",
     "business_name": "AutoMax Dealers Ltd",
     "logo": "https://res.cloudinary.com/...",
+    "location": "Lagos, Nigeria - John Doe",
     "about": "Leading car dealership in Lagos...",
     "headline": "Your trusted car partner",
     "contact_email": "info@automax.com",
@@ -1071,6 +1072,19 @@ offers_trade_in: false
         "price_range": "₦10,000 - ₦25,000"
       }
     ]
+  }
+}
+```
+
+**Error Response (400 - Invalid Location):**
+```json
+{
+  "error": true,
+  "message": "Invalid location ID. Location not found or does not belong to you.",
+  "details": {
+    "field_errors": {
+      "location": ["Location not found or access denied"]
+    }
   }
 }
 ```
@@ -1122,7 +1136,7 @@ All dealership endpoints now include both core service flags and extended servic
 - No breaking changes to existing API contracts
 - All dealership-related endpoints (`/api/v1/admin/dealership/`, `/api/v1/admin/dealership/settings/`, `/api/v1/listings/dealer/{uuid}/`) now include `extended_services` field
 
-**Note:** Logo upload is supported via the `new-logo` field in multipart/form-data format.
+**Note:** Logo upload is supported via the `logo` field in multipart/form-data format.
 
 **⚠️ Deprecation Notice:** The POST method for this endpoint is deprecated and will be removed on December 1, 2025. Please use PUT method instead. The POST method currently returns deprecation headers for backward compatibility.
 
@@ -1374,7 +1388,7 @@ PUT /api/v1/admin/mechanics/settings/
 ```
 **Request (multipart/form-data):**
 ```
-new-logo: <file> (optional)
+logo: <file> (optional)
 business_name: "AutoFix Mechanics Ltd"
 about: "Professional automotive repair services with 10+ years experience..."
 slug: "autofix-mechanics" (optional)
@@ -2411,7 +2425,6 @@ const data = await response.json();
 ```
 
 ---
-
 
 
 **Last Updated:** November 2024  
