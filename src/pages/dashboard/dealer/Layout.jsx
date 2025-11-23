@@ -104,6 +104,7 @@ function DealerDashboardLayout({children, hideSidebar, ...props}) {
 
   const context = {
     dealership,
+    refreshDealership: init, // Expose refresh function to allow components to trigger a refresh
   }
 
   return (

@@ -708,6 +708,23 @@ function BusinessProfile({ onSubmit, ...props }) {
       const currentUser = authService.getCurrentUser();
       const businessName = currentUser?.business_name || businessProfile.business_name;
       
+      // Determine core service flags based on selected services
+      // This matches the API's expected format with boolean flags
+      const coreServices = {
+        offers_purchase: businessProfile.services.some(s => 
+          ['Car Sale', 'Car Sales', 'Vehicle Sales'].includes(s)
+        ),
+        offers_rental: businessProfile.services.some(s => 
+          ['Car Rental', 'Car Leasing', 'Vehicle Rental', 'Vehicle Leasing'].includes(s)
+        ),
+        offers_drivers: businessProfile.services.some(s => 
+          ['Drivers', 'Driver Services', 'Chauffeur Services'].includes(s)
+        ),
+        offers_trade_in: businessProfile.services.some(s => 
+          ['Trade-In Services', 'Trade In', 'Vehicle Trade-In'].includes(s)
+        )
+      };
+      
       profileData = {
         business_name: businessName,
         headline: businessProfile.headline,
@@ -715,6 +732,11 @@ function BusinessProfile({ onSubmit, ...props }) {
         contact_phone: businessProfile.contact_phone,
         contact_email: businessProfile.contact_email,
         services: businessProfile.services,
+        // Add core service boolean flags required by API
+        offers_purchase: coreServices.offers_purchase,
+        offers_rental: coreServices.offers_rental,
+        offers_drivers: coreServices.offers_drivers,
+        offers_trade_in: coreServices.offers_trade_in,
         // Location will be set from settings page later
       };
       
@@ -730,7 +752,21 @@ function BusinessProfile({ onSubmit, ...props }) {
         contact_email: businessProfile.contact_email,
         services: businessProfile.services,
         headline: businessProfile.headline,
-        servicesLength: businessProfile.services?.length
+        servicesLength: businessProfile.services?.length,
+        coreServices: {
+          offers_purchase: businessProfile.services.some(s => 
+            ['Car Sale', 'Car Sales', 'Vehicle Sales'].includes(s)
+          ),
+          offers_rental: businessProfile.services.some(s => 
+            ['Car Rental', 'Car Leasing', 'Vehicle Rental', 'Vehicle Leasing'].includes(s)
+          ),
+          offers_drivers: businessProfile.services.some(s => 
+            ['Drivers', 'Driver Services', 'Chauffeur Services'].includes(s)
+          ),
+          offers_trade_in: businessProfile.services.some(s => 
+            ['Trade-In Services', 'Trade In', 'Vehicle Trade-In'].includes(s)
+          )
+        }
       });
       
       // Validate required fields before submission
@@ -791,6 +827,10 @@ function BusinessProfile({ onSubmit, ...props }) {
         contact_email: businessProfile.contact_email,
         services: businessProfile.services,
         servicesCount: businessProfile.services?.length || 0,
+        offers_purchase: profileData.offers_purchase,
+        offers_rental: profileData.offers_rental,
+        offers_drivers: profileData.offers_drivers,
+        offers_trade_in: profileData.offers_trade_in,
         headers: headers
       });
       

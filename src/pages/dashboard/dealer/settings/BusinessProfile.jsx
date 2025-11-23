@@ -14,11 +14,13 @@ import authService from '../../../../services/authService';
 import { getBusinessDisplayName } from '../../../../utils/userDataUtils';
 import { CustomPlacesAutocomplete } from '../../../../components/maps';
 import locationService from '../../../../services/locationService';
+import { DealershipContext } from '../Layout';
 
 
 
 export const BusinessProfile = () => {
   const { axios, notify } = useContext(GlobalStore);
+  const { refreshDealership } = useContext(DealershipContext);
   const imageRef = useRef();
   const [dealership, setDealership] = useState({
     logo: "", // Placeholder for logo
@@ -102,7 +104,45 @@ export const BusinessProfile = () => {
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    const preview = URL.createObjectURL(file)
+    
+    if (!file) {
+      console.log('⚠️ No file selected');
+      return;
+    }
+    
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      notify({
+        title: 'Invalid File Type',
+        description: 'Please upload an image file (JPEG, PNG, GIF, or WebP)',
+        status: 'error',
+        duration: 5000,
+        isClosable: true
+      });
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      notify({
+        title: 'File Too Large',
+        description: 'Please upload an image smaller than 5MB',
+        status: 'error',
+        duration: 5000,
+        isClosable: true
+      });
+      return;
+    }
+    
+    console.log('✅ Logo file selected:', {
+      name: file.name,
+      size: `${(file.size / 1024).toFixed(2)} KB`,
+      type: file.type
+    });
+    
+    const preview = URL.createObjectURL(file);
     setDealership({ ...dealership, logo: { file, preview } });
   }
 
@@ -267,10 +307,28 @@ export const BusinessProfile = () => {
     setError(null);
 
     try {
-      // Try the dealership-specific endpoint first
-      const response = await apiClient.get('/admin/dealership/');
+      // Use the settings endpoint to get all dealership settings including logo
+      console.log('🔄 Fetching dealership settings from GET /admin/dealership/settings/');
+      const response = await apiClient.get('/admin/dealership/settings/');
       // API returns data wrapped in a data object: { error: false, data: {...} }
       const data = response.data.data || response.data;
+      
+      console.log('✅ Dealership settings fetched:', {
+        has_business_name: !!data.business_name,
+        business_name: data.business_name,
+        has_logo: !!data.logo,
+        logo_url: data.logo,
+        has_services: !!data.services?.length,
+        services_count: data.services?.length,
+        services: data.services,
+        has_extended_services: !!data.extended_services?.length,
+        extended_services_count: data.extended_services?.length,
+        extended_services: data.extended_services,
+        offers_purchase: data.offers_purchase,
+        offers_rental: data.offers_rental,
+        offers_drivers: data.offers_drivers,
+        offers_trade_in: data.offers_trade_in
+      });
 
       // Reset retry count on successful fetch
       setRetryCount(0);
@@ -296,13 +354,13 @@ export const BusinessProfile = () => {
       });
 
       // Log the business name and logo received from API for debugging
-      console.log('📥 Received dealership data from GET /admin/dealership/:', {
+      console.log('📥 Received dealership data from GET /admin/dealership/settings/:', {
         business_name: data.business_name,
         has_business_name: !!data.business_name,
         logo: data.logo,
         has_logo: !!data.logo,
         logo_type: typeof data.logo,
-        endpoint: '/admin/dealership/',
+        endpoint: '/admin/dealership/settings/',
         method: 'GET'
       });
 
@@ -332,6 +390,10 @@ export const BusinessProfile = () => {
           logo: prev.logo?.preview ? prev.logo : data.logo,
           // Ensure business_name is properly set from API response
           business_name: data.business_name || prev.business_name || '',
+          // Ensure extended_services is always an array
+          extended_services: data.extended_services || [],
+          // Ensure services is always an array
+          services: data.services || [],
           // Ensure verification fields have default values if missing
           verified_business: data.verified_business ?? false,
           business_verification_status: data.business_verification_status || 'not_submitted',
@@ -344,11 +406,19 @@ export const BusinessProfile = () => {
           location_id: locationData?.id || data.location
         };
 
-        console.log('📝 Setting dealership state with logo:', {
+        console.log('📝 Setting dealership state:', {
           logo: updatedDealership.logo,
           has_logo: !!updatedDealership.logo,
           logo_type: typeof updatedDealership.logo,
-          is_file_object: !!updatedDealership.logo?.file
+          is_file_object: !!updatedDealership.logo?.file,
+          business_name: updatedDealership.business_name,
+          services: updatedDealership.services,
+          extended_services: updatedDealership.extended_services,
+          extended_services_count: updatedDealership.extended_services?.length,
+          offers_purchase: updatedDealership.offers_purchase,
+          offers_rental: updatedDealership.offers_rental,
+          offers_drivers: updatedDealership.offers_drivers,
+          offers_trade_in: updatedDealership.offers_trade_in
         });
 
         return updatedDealership;
@@ -379,7 +449,12 @@ export const BusinessProfile = () => {
       const allServices = getAllSelectedServices();
 
       // Enhanced business name validation before submission
-      if (!dealership.business_name || !dealership.business_name.trim()) {
+      // First, ensure business_name is a string
+      const businessNameValue = typeof dealership.business_name === 'string' 
+        ? dealership.business_name 
+        : String(dealership.business_name || '');
+      
+      if (!businessNameValue || !businessNameValue.trim()) {
         notify({
           title: 'Business Name Required',
           description: 'Please enter your business name before saving your profile. This is required for your dealership profile.',
@@ -399,7 +474,7 @@ export const BusinessProfile = () => {
       }
 
       // Additional validation for business name length and content
-      const trimmedBusinessName = dealership.business_name.trim();
+      const trimmedBusinessName = businessNameValue.trim();
       if (trimmedBusinessName.length < 2) {
         notify({
           title: 'Invalid Business Name',
@@ -447,9 +522,8 @@ export const BusinessProfile = () => {
       const settingsData = {
         // Required fields based on API documentation - business_name is always required
         business_name: trimmedBusinessName,
-        services: allServices, // This is required by the API
 
-        // Core service boolean flags
+        // Core service boolean flags - backend derives services from these
         offers_purchase: dealership.offers_purchase || false,
         offers_rental: dealership.offers_rental || false,
         offers_drivers: dealership.offers_drivers || false,
@@ -465,13 +539,25 @@ export const BusinessProfile = () => {
         ...(locationId && { location: locationId }),
       };
 
-      // Log the business name being sent to API for debugging
-      console.log('📤 Sending business profile update with business_name:', {
+      // Log the complete settings data being sent to API for debugging
+      console.log('📤 Sending business profile update:', {
         business_name: settingsData.business_name,
-        business_name_length: settingsData.business_name.length,
+        business_name_length: settingsData.business_name?.length,
+        services: settingsData.services,
+        services_count: settingsData.services?.length,
+        offers_purchase: settingsData.offers_purchase,
+        offers_rental: settingsData.offers_rental,
+        offers_drivers: settingsData.offers_drivers,
+        offers_trade_in: settingsData.offers_trade_in,
+        has_location: !!settingsData.location,
+        location_id: settingsData.location,
         endpoint: '/admin/dealership/settings/',
-        method: 'PUT'
+        method: 'PUT',
+        will_use_formdata: !!(dealership.logo && typeof dealership.logo === 'object' && dealership.logo.file)
       });
+      
+      // Log full settingsData for debugging
+      console.log('📋 Full settingsData object:', settingsData);
 
       // Handle logo upload - use FormData if there's a new file to upload
       let requestData;
@@ -479,23 +565,54 @@ export const BusinessProfile = () => {
 
       if (dealership.logo && typeof dealership.logo === 'object' && dealership.logo.file) {
         // Create FormData for file upload
+        console.log('📤 Using FormData for logo upload:', {
+          fileName: dealership.logo.file.name,
+          fileSize: dealership.logo.file.size,
+          fileType: dealership.logo.file.type,
+          isFile: dealership.logo.file instanceof File,
+          isBlob: dealership.logo.file instanceof Blob
+        });
+        
         const formData = new FormData();
 
-        // Add the logo file
-        formData.append('logo', dealership.logo.file);
+        // Add the logo file - ensure it's a valid File object
+        if (dealership.logo.file instanceof File || dealership.logo.file instanceof Blob) {
+          formData.append('logo', dealership.logo.file, dealership.logo.file.name);
+          console.log('✅ Logo file appended to FormData');
+        } else {
+          console.error('❌ Invalid logo file object:', dealership.logo.file);
+        }
 
-        // Add all other fields to FormData
         // Add all other fields to FormData
         Object.entries(settingsData).forEach(([key, value]) => {
           if (Array.isArray(value)) {
-            value.forEach(item => formData.append(key, item));
-          } else {
+            // For arrays, append each item separately with the same key
+            // This is how Django REST Framework expects array data in multipart/form-data
+            if (value.length === 0) {
+              // For empty arrays, we still need to send something
+              // Send an empty string to indicate the field exists but is empty
+              formData.append(key, '');
+            } else {
+              value.forEach(item => {
+                formData.append(key, item);
+              });
+            }
+          } else if (typeof value === 'boolean') {
+            // Convert booleans to strings for FormData
+            formData.append(key, value.toString());
+          } else if (value !== null && value !== undefined) {
             formData.append(key, value);
           }
         });
 
         requestData = formData;
         // Don't set Content-Type - let browser set it with boundary
+        
+        // Debug FormData contents
+        console.log('📦 FormData contents:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`  ${key}:`, value);
+        }
       } else {
         // Regular JSON request
         requestData = settingsData;
@@ -563,17 +680,37 @@ export const BusinessProfile = () => {
 
         // Re-fetch dealership data to get the latest verification status
         await getDealership();
+        
+        // Refresh the global dealership context to update nav and other components
+        if (refreshDealership) {
+          console.log('🔄 Refreshing global dealership context...');
+          await refreshDealership();
+        }
 
         return true;
       }
     } catch (error) {
       console.error('Error saving dealership settings:', error);
+      
+      // Enhanced error logging for debugging
+      console.error('🚨 Detailed error information:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method,
+        sentData: error.config?.data instanceof FormData ? 'FormData (see above)' : error.config?.data
+      });
 
       let errorMessage = 'Unable to save your profile. Please check your information and try again.';
       let errorTitle = 'Save Failed';
 
       if (error.response?.status === 400) {
         const responseData = error.response.data;
+        
+        // Log the exact validation errors from the API
+        console.error('🚨 API Validation Errors:', responseData);
+        console.error('🚨 Validation Error Details:', JSON.stringify(responseData.details || responseData.errors || {}, null, 2));
 
         // Check for detailed validation errors first, as they are more specific
         if (responseData?.details || responseData?.errors) {
@@ -727,12 +864,42 @@ export const BusinessProfile = () => {
     if (dealership.offers_drivers) services.push('Drivers');
     if (dealership.offers_trade_in) services.push('Trade-In Services');
 
-    // Add extended services
+    // Add extended services from extended_services array
     dealership.extended_services?.forEach(service => {
-      services.push(service.name);
+      // Handle both object format {name: "..."} and string format
+      const serviceName = typeof service === 'string' ? service : service?.name;
+      if (serviceName) {
+        services.push(serviceName);
+      }
+    });
+    
+    // FALLBACK: If extended_services is empty but services array exists,
+    // add non-core services from the services array
+    if ((!dealership.extended_services || dealership.extended_services.length === 0) && dealership.services) {
+      const coreServiceNames = ['Car Sale', 'Car Sales', 'Vehicle Sales', 'Car Leasing', 'Car Rental', 
+                                'Vehicle Rental', 'Vehicle Leasing', 'Drivers', 'Driver Services', 
+                                'Chauffeur Services', 'Trade-In Services', 'Trade In', 'Vehicle Trade-In'];
+      
+      dealership.services.forEach(service => {
+        if (service && !coreServiceNames.includes(service) && !services.includes(service)) {
+          services.push(service);
+        }
+      });
+    }
+
+    // Filter out any undefined, null, or empty values
+    const validServices = services.filter(s => s && typeof s === 'string' && s.trim().length > 0);
+
+    console.log('🔍 getAllSelectedServices result:', {
+      core_services_count: validServices.filter(s => ['Car Sale', 'Car Leasing', 'Drivers', 'Trade-In Services'].includes(s)).length,
+      extended_services_count: dealership.extended_services?.length || 0,
+      fallback_services_count: dealership.services?.length || 0,
+      total_services: validServices.length,
+      services: validServices,
+      had_invalid: services.length !== validServices.length
     });
 
-    return services;
+    return validServices;
   };
 
   // Helper function to add a service
