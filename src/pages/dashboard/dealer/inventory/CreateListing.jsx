@@ -291,22 +291,34 @@ export default function AddListing() {
   }
 
   const handlePublish = async () => {
-    const res = await axios.post('/admin/dealership/listings/create/', jsonifyObject({
-      listing: formData?.uuid,
-      action: 'publish-listing'
-    })
-    )
+    try {
+      const payload = new FormData();
+      payload.append('action', 'publish-listing');
+      payload.append('listing', formData?.uuid);
 
-    if (res.status === 200) {
-      toast({
-        title: "Listing submitted for review",
-        description: "We'll notify you once the review is complete.",
-        status: "success",
-        duration: 5000,
-        isClosable: true,
+      const res = await axios.post('/admin/dealership/listings/create/', payload);
+
+      if (res.status === 200) {
+        toast({
+          title: "Listing submitted for review",
+          description: "We'll notify you once the review is complete.",
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+
+        return redirect('/inventory');
+      }
+    } catch (error) {
+      console.error('Publish listing failed:', error);
+      const errorData = error?.response?.data;
+      
+      notify({
+        title: "Unable to publish listing",
+        body: errorData?.message || error?.message || 'An error occurred while publishing',
+        color: 'red',
+        duration: 7000
       });
-
-      return redirect('/inventory');
     }
   }
 

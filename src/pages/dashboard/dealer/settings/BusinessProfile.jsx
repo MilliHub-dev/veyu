@@ -333,24 +333,45 @@ export const BusinessProfile = () => {
       // Reset retry count on successful fetch
       setRetryCount(0);
 
-      // Fetch verification status to get CAC and TIN numbers
+      // Fetch verification status directly from /accounts/verification-status/
       let verificationData = {};
       try {
+        console.log('🔄 Fetching verification status from GET /accounts/verification-status/');
         const verificationResponse = await apiClient.get('/accounts/verification-status/');
-        verificationData = verificationResponse.data;
-        console.log('Verification status data received:', verificationData);
+        // Handle both wrapped and unwrapped response formats
+        verificationData = verificationResponse.data.data || verificationResponse.data;
+        console.log('✅ Verification status data received from /accounts/verification-status/:', {
+          raw_response: verificationResponse.data,
+          parsed_data: verificationData,
+          verified_business: verificationData.verified_business,
+          business_verification_status: verificationData.business_verification_status,
+          cac_number: verificationData.cac_number,
+          tin_number: verificationData.tin_number
+        });
       } catch (verificationError) {
-        console.log('Could not fetch verification status:', verificationError);
+        console.error('❌ Could not fetch verification status from /accounts/verification-status/:', verificationError);
+        console.error('Error details:', {
+          status: verificationError.response?.status,
+          data: verificationError.response?.data,
+          message: verificationError.message
+        });
         // Continue without verification data if it fails
       }
 
       // Log verification status data for debugging
-      console.log('Verification status data received:', {
-        verified_business: data.verified_business,
-        business_verification_status: data.business_verification_status,
-        rejection_reason: data.rejection_reason,
-        cac_number: verificationData.cac_number,
-        tin_number: verificationData.tin_number
+      console.log('📊 Verification status comparison:', {
+        from_settings_api: {
+          verified_business: data.verified_business,
+          business_verification_status: data.business_verification_status,
+          rejection_reason: data.rejection_reason
+        },
+        from_verification_api: {
+          verified_business: verificationData.verified_business,
+          business_verification_status: verificationData.business_verification_status,
+          rejection_reason: verificationData.rejection_reason,
+          cac_number: verificationData.cac_number,
+          tin_number: verificationData.tin_number
+        }
       });
 
       // Log the business name and logo received from API for debugging
@@ -394,10 +415,10 @@ export const BusinessProfile = () => {
           extended_services: data.extended_services || [],
           // Ensure services is always an array
           services: data.services || [],
-          // Ensure verification fields have default values if missing
-          verified_business: data.verified_business ?? false,
-          business_verification_status: data.business_verification_status || 'not_submitted',
-          rejection_reason: data.rejection_reason || null,
+          // Prioritize verification fields from verification-status API over settings API
+          verified_business: verificationData.verified_business ?? data.verified_business ?? false,
+          business_verification_status: verificationData.business_verification_status || data.business_verification_status || 'not_submitted',
+          rejection_reason: verificationData.rejection_reason || data.rejection_reason || null,
           // Add CAC and TIN from verification status
           cac_number: verificationData.cac_number || data.cac_number || '',
           tin_number: verificationData.tin_number || data.tin_number || '',

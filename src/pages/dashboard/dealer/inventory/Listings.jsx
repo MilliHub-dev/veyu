@@ -37,10 +37,15 @@ import {
   InputLeftElement,
   Skeleton,
   ButtonGroup,
+  useDisclosure,
 } from '@chakra-ui/react';
 import { EditIcon, DeleteIcon } from "@chakra-ui/icons";
 import { FaEye } from "react-icons/fa";
 import {DealershipContext} from '../Layout';
+import BoostModal from '../../../../components/boost/BoostModal';
+import BoostBadge from '../../../../components/boost/BoostBadge';
+import BoostPayment from '../../../../components/boost/BoostPayment';
+import boostService from '../../../../services/boostService';
 
 
 function ListingsAdmin({children, ...props}) {
@@ -55,6 +60,11 @@ function ListingsAdmin({children, ...props}) {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const navigate = useNavigate();
+  const { isOpen: isBoostModalOpen, onOpen: onBoostModalOpen, onClose: onBoostModalClose } = useDisclosure();
+  const { isOpen: isPaymentModalOpen, onOpen: onPaymentModalOpen, onClose: onPaymentModalClose } = useDisclosure();
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [boostStatuses, setBoostStatuses] = useState({});
+  const [pendingBoostData, setPendingBoostData] = useState(null);
 
   async function init(){
     // get the dealership
@@ -71,6 +81,9 @@ function ListingsAdmin({children, ...props}) {
         setDraftListings(items.filter(item => item.approved === false));
         setMatches(items);
         setPage(1);
+        
+        // Load boost statuses for all listings
+        loadBoostStatuses(items);
       }
 
       setLoadingState(false);
@@ -79,6 +92,46 @@ function ListingsAdmin({children, ...props}) {
       console.log("error getting dealership:", error)
       setLoadingState(false);
     }
+  }
+
+  async function loadBoostStatuses(listingsArray) {
+    const statuses = {};
+    for (const listing of listingsArray) {
+      try {
+        const response = await boostService.getBoostStatus(listing.uuid);
+        if (response?.data) {
+          statuses[listing.uuid] = response.data;
+        }
+      } catch (error) {
+        // Listing doesn't have a boost, that's okay
+        statuses[listing.uuid] = null;
+      }
+    }
+    setBoostStatuses(statuses);
+  }
+
+  function handleBoostClick(listing) {
+    setSelectedListing(listing);
+    onBoostModalOpen();
+  }
+
+  async function handleBoostSuccess(boostData) {
+    // Store boost data and open payment modal
+    setPendingBoostData(boostData);
+    onPaymentModalOpen();
+  }
+
+  async function handlePaymentSuccess() {
+    notify({
+      title: 'Boost Activated',
+      body: 'Your listing is now boosted!',
+      color: 'green',
+      duration: 3000,
+    });
+    
+    // Refresh listings to show updated boost status
+    init();
+    setPendingBoostData(null);
   }
 
   useEffect(() => {
@@ -194,16 +247,44 @@ function ListingsAdmin({children, ...props}) {
       </Flex>
 
       <Heading my={3} size="md"> Listings </Heading>
-      <ListingTable listings={paginated} total={matches.length} page={page} totalPages={totalPages} onPrev={() => setPage(p => Math.max(1, p-1))} onNext={() => setPage(p => Math.min(totalPages, p+1))} />
+      <ListingTable 
+        listings={paginated} 
+        total={matches.length} 
+        page={page} 
+        totalPages={totalPages} 
+        onPrev={() => setPage(p => Math.max(1, p-1))} 
+        onNext={() => setPage(p => Math.min(totalPages, p+1))}
+        onBoostClick={handleBoostClick}
+        boostStatuses={boostStatuses}
+      />
+      
+      {selectedListing && (
+        <BoostModal
+          isOpen={isBoostModalOpen}
+          onClose={onBoostModalClose}
+          listing={selectedListing}
+          onSuccess={handleBoostSuccess}
+        />
+      )}
+
+      {pendingBoostData && (
+        <BoostPayment
+          isOpen={isPaymentModalOpen}
+          onClose={onPaymentModalClose}
+          boostData={pendingBoostData}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </Box>
   )
 }
 
 
 
-function ListingTable({ listings, total, page, totalPages, onPrev, onNext }) {
+function ListingTable({ listings, total, page, totalPages, onPrev, onNext, onBoostClick, boostStatuses }) {
   const {axios, notify, commaInt} = useContext(GlobalStore);
   const [selected, setSelected] = useState([])
+  const navigate = useNavigate();
   
   function toggleSelectAll(e){
     const _selected = []
@@ -229,6 +310,80 @@ function ListingTable({ listings, total, page, totalPages, onPrev, onNext }) {
     _selected.push(uuid);
     setSelected([..._selected]);
 
+  }
+
+  async function handleDelete(uuid, title) {
+    if (!window.confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Use the DELETE endpoint as per API docs
+      const res = await axios.delete(`/admin/dealership/listings/${uuid}/`);
+      
+      if (res.status === 200 || res.status === 204) {
+        notify({
+          title: "Listing deleted",
+          body: "The listing has been successfully deleted.",
+          color: "green",
+          duration: 3000,
+        });
+        
+        // Refresh the page to update the list
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Delete listing failed:', error);
+      const errorData = error?.response?.data;
+      notify({
+        title: "Unable to delete listing",
+        body: errorData?.message || error?.message || "An error occurred while deleting the listing.",
+        color: "red",
+        duration: 5000,
+      });
+    }
+  }
+
+  function handleBoost(uuid) {
+    navigate(`/inventory/boost/?listing=${uuid}`);
+  }
+
+  async function handlePublishToggle(uuid, currentlyVerified, title) {
+    const action = currentlyVerified ? 'unpublish' : 'publish';
+    const actionText = currentlyVerified ? 'unpublish' : 'publish';
+    
+    if (!window.confirm(`Are you sure you want to ${actionText} "${title}"?`)) {
+      return;
+    }
+
+    try {
+      const payload = new FormData();
+      payload.append('action', action);
+      payload.append('listing', uuid);
+
+      const res = await axios.post('/admin/dealership/listings/', payload);
+      
+      if (res.status === 200) {
+        notify({
+          title: `Listing ${actionText}ed`,
+          body: `The listing has been successfully ${actionText}ed.`,
+          color: "green",
+          duration: 3000,
+        });
+        
+        // Refresh the page to update the list
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error(`${actionText} listing failed:`, error);
+      const errorData = error?.response?.data;
+      notify({
+        title: `Unable to ${actionText} listing`,
+        body: errorData?.message || error?.message || `An error occurred while ${actionText}ing the listing.`,
+        color: "red",
+        duration: 5000,
+      });
+    }
   }
 
   if (!listings || listings.length === 0){
@@ -260,7 +415,12 @@ function ListingTable({ listings, total, page, totalPages, onPrev, onNext }) {
                 <Flex align="center" gap={2}>
                   <Image src={listing?.vehicle?.images[0]?.url} objectFit="cover" boxSize="70px" borderRadius="md" />
                   <Box>
-                    <Text fontWeight="bold">{listing?.title}</Text>
+                    <HStack>
+                      <Text fontWeight="bold">{listing?.title}</Text>
+                      {boostStatuses[listing?.uuid] && (
+                        <BoostBadge boost={boostStatuses[listing?.uuid]} showDetails />
+                      )}
+                    </HStack>
                     <Text fontSize="sm">{commaInt(listing?.price)} {listing?.listing_type === 'rental' && `/${listing.payment_cycle}`}</Text>
                     <Text fontSize="xs" color="gray.500">{listing?.vehicle?.dealership?.location}</Text>
                   </Box>
@@ -273,10 +433,29 @@ function ListingTable({ listings, total, page, totalPages, onPrev, onNext }) {
               </Td>
               <Td>{listing?.viewers?.length}</Td>
               <Td>
-                <Flex gap={2}>
-                  <Button size="sm" colorScheme="green">Boost</Button>
-                  <IconButton as={Link} to={`edit/${listing?.uuid}`} aria-label="Edit" icon={<EditIcon />} size="sm" />
-                  <IconButton aria-label="Delete" icon={<DeleteIcon />} size="sm" colorScheme="red" />
+                <Flex gap={2} flexWrap="wrap">
+                  <Button 
+                    size="sm" 
+                    colorScheme={listing?.verified ? "orange" : "blue"} 
+                    onClick={() => handlePublishToggle(listing?.uuid, listing?.verified, listing?.title)}
+                  >
+                    {listing?.verified ? 'Unpublish' : 'Publish'}
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    colorScheme={boostStatuses[listing?.uuid]?.active ? "orange" : "green"}
+                    onClick={() => onBoostClick(listing)}
+                  >
+                    {boostStatuses[listing?.uuid]?.active ? 'Boosted' : 'Boost'}
+                  </Button>
+                  <IconButton as={Link} to={`/inventory/edit/${listing?.uuid}`} aria-label="Edit" icon={<EditIcon />} size="sm" />
+                  <IconButton 
+                    aria-label="Delete" 
+                    icon={<DeleteIcon />} 
+                    size="sm" 
+                    colorScheme="red" 
+                    onClick={() => handleDelete(listing?.uuid, listing?.title)}
+                  />
                 </Flex>
               </Td>
             </Tr>

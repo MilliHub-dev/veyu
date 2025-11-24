@@ -69,6 +69,7 @@ const EditListingAdmin = lazy(() => import("./pages/dashboard/dealer/inventory/E
 const OrderListAdmin = lazy(() => import("./pages/dashboard/dealer/orders/OrderList"));
 const AnalyticsDashboard = lazy(() => import("./pages/dashboard/dealer/analytics/AnalyticsOverview"));
 const DealershipSettings = lazy(() => import("./pages/dashboard/dealer/settings/Settings"));
+const MyBoosts = lazy(() => import("./pages/dashboard/dealer/boost/MyBoosts"));
 
 // Wallet
 const WalletLayout = lazy(() => import("./pages/marketplace/wallet/Layout"));
@@ -388,6 +389,7 @@ function App() {
                           <Route path="/inventory" element={<Outlet />}>
                             <Route path="edit/:listingId" element={<EditListingAdmin />} />
                             <Route path="add" element={<CreateListingAdmin />} />
+                            <Route path="boost" element={<MyBoosts />} />
                             <Route path="" element={<ListingsAdmin />} />
                           </Route>
                           <Route path="/analytics" element={<AnalyticsDashboard />} />

@@ -128,13 +128,32 @@ export const BusinessProfile = ({  }) => {
         method: 'GET'
       });
 
+      // Fetch location details if we only have an ID
+      let locationData = data.data.location;
+      if (typeof data.data.location === 'number') {
+        try {
+          console.log('📍 Fetching location details for ID:', data.data.location);
+          const locationResponse = await axios.get(`/locations/${data.data.location}/`);
+          const locationResult = objectifyJSON(locationResponse.data);
+          locationData = locationResult.data || locationResult;
+          console.log('✅ Location details fetched:', locationData);
+        } catch (locationError) {
+          console.error('❌ Failed to fetch location details:', locationError);
+          // Keep the ID if fetch fails
+          locationData = { id: data.data.location };
+        }
+      }
+
       setMechanic({
         ...data.data,
         // Ensure business_name is properly set from API response
         business_name: data.data.business_name || '',
         // Add CAC and TIN from verification status
         cac_number: verificationData.cac_number || data.data.cac_number || '',
-        tin_number: verificationData.tin_number || data.data.tin_number || ''
+        tin_number: verificationData.tin_number || data.data.tin_number || '',
+        // Set location data properly
+        location: locationData,
+        location_id: locationData?.id || data.data.location
       });
 
       // Check for missing business name after data is loaded
@@ -267,7 +286,30 @@ export const BusinessProfile = ({  }) => {
         method: 'PUT'
       });
 
-      setMechanic(data.data)
+      // Fetch location details if we only have an ID in the response
+      let locationData = data.data.location;
+      if (typeof data.data.location === 'number') {
+        try {
+          console.log('📍 Fetching location details for ID:', data.data.location);
+          const locationResponse = await axios.get(`/locations/${data.data.location}/`);
+          const locationResult = objectifyJSON(locationResponse.data);
+          locationData = locationResult.data || locationResult;
+          console.log('✅ Location details fetched:', locationData);
+        } catch (locationError) {
+          console.error('❌ Failed to fetch location details:', locationError);
+          // Keep the ID if fetch fails
+          locationData = { id: data.data.location };
+        }
+      }
+
+      setMechanic({
+        ...data.data,
+        // Preserve the local file preview if it exists
+        logo: mechanic.logo?.preview ? mechanic.logo : data.data.logo,
+        // Handle location data from response
+        location: locationData,
+        location_id: locationData?.id || data.data.location
+      })
       
       // Update business name in auth service storage for consistency
       if (data.data.business_name) {
