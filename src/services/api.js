@@ -147,15 +147,14 @@ apiClient.interceptors.request.use(
     );
 
     if (!isPublicEndpoint) {
-      // CRITICAL FIX: For retry requests, use the token already in the Authorization header
-      // Don't fetch from localStorage or do proactive refresh - we just refreshed!
-      if (config._isRetry && config.headers.Authorization) {
-        console.log(`🔄 Retry request - using existing Authorization header`);
-        const existingToken = config.headers.Authorization.replace('Bearer ', '');
-        console.log(`🔑 API Request: ${config.method?.toUpperCase()} ${config.url} - Using retry token (${existingToken.substring(0, 20)}...)`);
+      // Get token from localStorage
+      let token = TokenManager.getAccessToken();
+      
+      if (config._isRetry) {
+        // For retry requests after token refresh, use the fresh token from storage
+        console.log(`🔄 Retry request after token refresh - using fresh token from storage`);
+        console.log(`🔑 API Request: ${config.method?.toUpperCase()} ${config.url} - Using refreshed token (${token ? token.substring(0, 20) + '...' : 'NOT FOUND'})`);
       } else {
-        let token = TokenManager.getAccessToken();
-        
         // Check if token exists and is expired (only for non-retry requests)
         if (token && TokenManager.isTokenExpired(token)) {
           console.log('⚠️ Access token is expired - attempting proactive refresh before request');
@@ -188,17 +187,18 @@ apiClient.interceptors.request.use(
             console.log('⚠️ Refresh token is missing or expired - request will likely fail with 401');
           }
         }
-        
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-          console.log(`🔑 API Request: ${config.method?.toUpperCase()} ${config.url} - Bearer token attached (${token.substring(0, 20)}...)`);
-        } else {
-          console.log(`🚫 API Request: ${config.method?.toUpperCase()} ${config.url} - No token found`);
-          console.log('🔍 Debug: Checking localStorage for tokens...');
-          console.log('veyu_access_token:', localStorage.getItem('veyu_access_token') ? 'EXISTS' : 'NOT FOUND');
-          console.log('veyu_refresh_token:', localStorage.getItem('veyu_refresh_token') ? 'EXISTS' : 'NOT FOUND');
-          console.log('veyu-auth-user:', localStorage.getItem('veyu-auth-user') ? 'EXISTS' : 'NOT FOUND');
-        }
+      }
+      
+      // Attach token to request (for both retry and normal requests)
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log(`🔑 API Request: ${config.method?.toUpperCase()} ${config.url} - Bearer token attached (${token.substring(0, 20)}...)`);
+      } else {
+        console.log(`🚫 API Request: ${config.method?.toUpperCase()} ${config.url} - No token found`);
+        console.log('🔍 Debug: Checking localStorage for tokens...');
+        console.log('veyu_access_token:', localStorage.getItem('veyu_access_token') ? 'EXISTS' : 'NOT FOUND');
+        console.log('veyu_refresh_token:', localStorage.getItem('veyu_refresh_token') ? 'EXISTS' : 'NOT FOUND');
+        console.log('veyu-auth-user:', localStorage.getItem('veyu-auth-user') ? 'EXISTS' : 'NOT FOUND');
       }
     } else {
       console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url} - Public endpoint (no token)`);
@@ -349,30 +349,26 @@ apiClient.interceptors.response.use(
         }
 
         // Retry original request with new token
-        // CRITICAL FIX: Axios doesn't always preserve headers properly on retry
-        // We need to ensure the headers object exists and is properly formatted
-        
-        // Create a new headers object to avoid any axios internal issues
-        const retryHeaders = {
-          ...originalRequest.headers,
-          'Authorization': `Bearer ${access}`
-        };
-        
-        // Delete the common headers that axios adds automatically
-        delete retryHeaders.common;
-        delete retryHeaders.delete;
-        delete retryHeaders.get;
-        delete retryHeaders.head;
-        delete retryHeaders.post;
-        delete retryHeaders.put;
-        delete retryHeaders.patch;
-        
-        originalRequest.headers = retryHeaders;
-
+        // CRITICAL FIX: Store the new token BEFORE retrying so the request interceptor can use it
+        // The request interceptor will pick up the new token from localStorage
         console.log('🔄 Retrying original request with new token:', originalRequest.url);
         console.log('🔍 Retry token preview:', access.substring(0, 30) + '...');
+        
+        // Verify token is in localStorage
+        const storedToken = TokenManager.getAccessToken();
+        console.log('🔍 Token in localStorage:', storedToken ? storedToken.substring(0, 30) + '...' : 'NOT FOUND');
+        
+        // CRITICAL: Reset the _retry flag so the request interceptor will attach the token
+        // But keep _isRetry to prevent infinite loops
+        delete originalRequest._retry;
+        
+        // CRITICAL: Remove the old Authorization header so the request interceptor adds the new one
+        if (originalRequest.headers) {
+          delete originalRequest.headers.Authorization;
+          delete originalRequest.headers.authorization;
+        }
+        
         console.log('🔍 Retry flags set:', { _retry: originalRequest._retry, _isRetry: originalRequest._isRetry });
-        console.log('🔍 Retry headers:', JSON.stringify(originalRequest.headers, null, 2));
 
         // Try the retry and log detailed error if it fails
         try {
