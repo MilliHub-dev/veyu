@@ -35,8 +35,16 @@ export const BuyDetail = ({ }) => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const { notify, commaInt, authUser, isAuthenticated, axios } = useContext(GlobalStore);
 
-  // Debug: Log the listingId
+  // Debug: Log the listingId and auth state
+  console.log('🔍 BuyDetail - Component mounted');
   console.log('🔍 BuyDetail - Listing ID from URL:', listingId);
+  console.log('🔍 BuyDetail - isAuthenticated:', isAuthenticated);
+  console.log('🔍 BuyDetail - authUser:', authUser);
+  console.log('🔍 BuyDetail - Tokens:', {
+    access: !!localStorage.getItem('veyu_access_token'),
+    refresh: !!localStorage.getItem('veyu_refresh_token'),
+    userData: !!localStorage.getItem('veyu_user_data')
+  });
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -132,12 +140,22 @@ export const BuyDetail = ({ }) => {
         setViewCount(Math.floor(Math.random() * 500) + 50); // Mock view count
       }
     } catch (error) {
-      console.error('Error fetching listing:', error);
+      console.error('❌ BuyDetail - Error fetching listing:', error);
+      console.error('❌ BuyDetail - Error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
 
       if (error.response?.status === 401) {
         // Check if we have any authentication data at all
         const newToken = localStorage.getItem('veyu_access_token');
         const oldAuthUser = localStorage.getItem('veyu-auth-user');
+
+        console.log('❌ BuyDetail - 401 Error, checking tokens:', {
+          hasNewToken: !!newToken,
+          hasOldAuth: !!oldAuthUser
+        });
 
         if (!newToken && !oldAuthUser) {
           console.log('🔍 No authentication found, user needs to login');
@@ -145,19 +163,33 @@ export const BuyDetail = ({ }) => {
             title: 'Login Required',
             body: 'Please log in to view listing details.',
             color: 'orange',
-            duration: 3000,
-            onClose: () => {
-              window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
-            }
-          });
-        } else {
-          console.log('🔍 Authentication exists but API returned 401, token may be invalid');
-          notify({
-            title: 'Session Issue',
-            body: 'There seems to be an issue with your session. Please try refreshing the page or logging in again.',
-            color: 'orange',
             duration: 5000
           });
+          
+          // Delay redirect to see logs
+          setTimeout(() => {
+            window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+          }, 2000);
+        } else {
+          console.log('🔍 Authentication exists but API returned 401, token may be invalid');
+          // The token refresh already happened in the API interceptor
+          // If we're still getting 401, the refresh token is likely invalid
+          notify({
+            title: 'Session Expired',
+            body: 'Your session has expired. Please log in again to continue.',
+            color: 'red',
+            duration: 5000
+          });
+          
+          // Delay redirect to see logs
+          setTimeout(() => {
+            // Clear all tokens and redirect to login
+            localStorage.removeItem('veyu_access_token');
+            localStorage.removeItem('veyu_refresh_token');
+            localStorage.removeItem('veyu_user_data');
+            localStorage.removeItem('veyu-auth-user');
+            window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+          }, 2000);
         }
       } else if (error.response?.status === 404) {
         notify({

@@ -107,7 +107,7 @@ const TokenManager = {
 
 // Request interceptor to add auth token and set Content-Type
 apiClient.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // Ensure headers object exists
     if (!config.headers) {
       config.headers = {};
@@ -147,15 +147,58 @@ apiClient.interceptors.request.use(
     );
 
     if (!isPublicEndpoint) {
-      const token = TokenManager.getAccessToken();
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        console.log(`🔑 API Request: ${config.method?.toUpperCase()} ${config.url} - Bearer token attached (${token.substring(0, 20)}...)`);
+      // CRITICAL FIX: For retry requests, use the token already in the Authorization header
+      // Don't fetch from localStorage or do proactive refresh - we just refreshed!
+      if (config._isRetry && config.headers.Authorization) {
+        console.log(`🔄 Retry request - using existing Authorization header`);
+        const existingToken = config.headers.Authorization.replace('Bearer ', '');
+        console.log(`🔑 API Request: ${config.method?.toUpperCase()} ${config.url} - Using retry token (${existingToken.substring(0, 20)}...)`);
       } else {
-        console.log(`🚫 API Request: ${config.method?.toUpperCase()} ${config.url} - No token found`);
-        console.log('🔍 Debug: Checking localStorage for tokens...');
-        console.log('veyu_access_token:', localStorage.getItem('veyu_access_token') ? 'EXISTS' : 'NOT FOUND');
-        console.log('veyu-auth-user:', localStorage.getItem('veyu-auth-user') ? 'EXISTS' : 'NOT FOUND');
+        let token = TokenManager.getAccessToken();
+        
+        // Check if token exists and is expired (only for non-retry requests)
+        if (token && TokenManager.isTokenExpired(token)) {
+          console.log('⚠️ Access token is expired - attempting proactive refresh before request');
+          
+          const refreshToken = TokenManager.getRefreshToken();
+          if (refreshToken && !TokenManager.isTokenExpired(refreshToken)) {
+            try {
+              // Use a separate axios instance to avoid interceptor loops
+              const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
+                refresh: refreshToken,
+              }, {
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              });
+
+              // Backend returns tokens in response.data.data (nested structure)
+              const tokenData = response.data.data || response.data;
+              const { access, refresh } = tokenData;
+              if (access) {
+                console.log('✅ Proactive token refresh successful');
+                TokenManager.setTokens(access, refresh || refreshToken);
+                token = access;
+              }
+            } catch (refreshError) {
+              console.error('❌ Proactive token refresh failed:', refreshError.message);
+              // Continue with expired token - the response interceptor will handle it
+            }
+          } else {
+            console.log('⚠️ Refresh token is missing or expired - request will likely fail with 401');
+          }
+        }
+        
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+          console.log(`🔑 API Request: ${config.method?.toUpperCase()} ${config.url} - Bearer token attached (${token.substring(0, 20)}...)`);
+        } else {
+          console.log(`🚫 API Request: ${config.method?.toUpperCase()} ${config.url} - No token found`);
+          console.log('🔍 Debug: Checking localStorage for tokens...');
+          console.log('veyu_access_token:', localStorage.getItem('veyu_access_token') ? 'EXISTS' : 'NOT FOUND');
+          console.log('veyu_refresh_token:', localStorage.getItem('veyu_refresh_token') ? 'EXISTS' : 'NOT FOUND');
+          console.log('veyu-auth-user:', localStorage.getItem('veyu-auth-user') ? 'EXISTS' : 'NOT FOUND');
+        }
       }
     } else {
       console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url} - Public endpoint (no token)`);
@@ -167,7 +210,7 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('Request interceptor error:', error);
+    console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -179,7 +222,7 @@ apiClient.interceptors.response.use(
     if (response.config.metadata) {
       const endTime = new Date();
       const duration = endTime - response.config.metadata.startTime;
-      console.log(`API Request: ${response.config.method?.toUpperCase()} ${response.config.url} - ${duration}ms`);
+      console.log(`✅ API Request: ${response.config.method?.toUpperCase()} ${response.config.url} - ${duration}ms`);
     }
 
     return response;
@@ -187,96 +230,239 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle 401 Unauthorized - Token expired
+    // Handle 401 Unauthorized - Token expired or invalid
+    // CRITICAL: Only attempt refresh once per request to prevent infinite loops
     if (error.response?.status === 401 && !originalRequest._retry) {
+      console.log('🔴 401 Unauthorized - Attempting to refresh token...');
+      console.log('🔍 Request URL:', originalRequest.url);
+      console.log('🔍 Request method:', originalRequest.method);
       originalRequest._retry = true;
+      originalRequest._isRetry = true; // Also set this flag for request interceptor
 
       try {
         const refreshToken = TokenManager.getRefreshToken();
-        if (refreshToken) {
-          console.log('🔄 Attempting token refresh...');
+        const accessToken = TokenManager.getAccessToken();
+        
+        console.log('🔍 Token status:', {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          accessTokenExpired: accessToken ? TokenManager.isTokenExpired(accessToken) : 'N/A'
+        });
 
-          const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
-            refresh: refreshToken,
-          });
-
-          const { access, refresh } = response.data;
-          TokenManager.setTokens(access, refresh);
-
-          // Retry original request with new token
-          // IMPORTANT: For FormData requests, we must preserve the Authorization header
-          // and prevent the interceptor from deleting Content-Type
-
-          // Mark this as a retry to skip Content-Type manipulation
-          originalRequest._isRetry = true;
-
-          // Update the Authorization header with the new token
-          if (!originalRequest.headers) {
-            originalRequest.headers = {};
-          }
-          originalRequest.headers.Authorization = `Bearer ${access}`;
-
-          console.log('✅ Token refreshed successfully, retrying request:', originalRequest.url);
-          console.log('🔍 Retry config:', {
-            hasAuth: !!originalRequest.headers.Authorization,
-            authHeader: originalRequest.headers.Authorization ? originalRequest.headers.Authorization.substring(0, 30) + '...' : 'MISSING',
-            hasContentType: !!originalRequest.headers['Content-Type'],
-            isFormData: originalRequest.data instanceof FormData,
-            isRetry: originalRequest._isRetry
-          });
-
-          return apiClient(originalRequest);
-        } else {
-          console.log('❌ No refresh token available, redirecting to login');
+        if (!refreshToken) {
+          console.log('❌ No refresh token available - clearing tokens and redirecting to login');
           TokenManager.clearTokens();
 
           // Show user-friendly notification
           if (window.notify) {
             window.notify({
               title: 'Session Expired',
-              description: 'Your session has expired. Please log in again.',
-              status: 'warning',
-              duration: 5000,
-              isClosable: true
+              body: 'Your session has expired. Please log in again.',
+              color: 'orange'
             });
           }
 
-          if (!window.location.pathname.includes('/login')) {
+          // Only redirect if we're not already on auth pages
+          if (!window.location.pathname.includes('/login') && 
+              !window.location.pathname.includes('/signup') &&
+              !window.location.pathname.includes('/forgot-password')) {
             setTimeout(() => {
               window.location.href = '/login?session_expired=true';
             }, 1000);
           }
           return Promise.reject(error);
         }
+
+        console.log('🔄 Attempting token refresh with refresh token...');
+        console.log('🔍 Refresh token preview:', refreshToken.substring(0, 30) + '...');
+        
+        // Decode and check the refresh token before using it
+        try {
+          const refreshPayload = JSON.parse(atob(refreshToken.split('.')[1]));
+          console.log('🔍 Refresh token payload:', {
+            exp: refreshPayload.exp,
+            expiresAt: new Date(refreshPayload.exp * 1000).toISOString(),
+            user_id: refreshPayload.user_id,
+            token_type: refreshPayload.token_type,
+            isExpired: TokenManager.isTokenExpired(refreshToken)
+          });
+        } catch (e) {
+          console.error('❌ Failed to decode refresh token:', e);
+        }
+
+        // Use a separate axios instance to avoid interceptor loops
+        const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
+          refresh: refreshToken,
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('🔍 Raw refresh response:', JSON.stringify(response.data, null, 2));
+        
+        // Backend returns tokens in response.data.data (nested structure)
+        const tokenData = response.data.data || response.data;
+        console.log('🔍 Token data extracted:', {
+          hasData: !!response.data.data,
+          hasFallback: !!response.data,
+          tokenData: tokenData
+        });
+        
+        const { access, refresh } = tokenData;
+        
+        if (!access) {
+          console.error('❌ No access token in refresh response:', response.data);
+          console.error('❌ Token data structure:', tokenData);
+          throw new Error('No access token received from refresh endpoint');
+        }
+        
+        console.log('✅ Received new access token from refresh endpoint');
+        console.log('🔍 New access token preview:', access.substring(0, 30) + '...');
+        console.log('🔍 Full refresh response:', response.data);
+        
+        // Decode and check the new token
+        try {
+          const payload = JSON.parse(atob(access.split('.')[1]));
+          console.log('🔍 New token payload:', {
+            exp: payload.exp,
+            expiresAt: new Date(payload.exp * 1000).toISOString(),
+            user_id: payload.user_id,
+            isExpired: TokenManager.isTokenExpired(access)
+          });
+        } catch (e) {
+          console.error('❌ Failed to decode new token:', e);
+        }
+
+        console.log('✅ Token refresh successful - storing new tokens');
+        TokenManager.setTokens(access, refresh || refreshToken);
+
+        // CRITICAL FIX: Verify the new token was actually stored
+        const verifyToken = TokenManager.getAccessToken();
+        if (verifyToken !== access) {
+          console.error('❌ Token storage verification failed!', {
+            expected: access.substring(0, 20),
+            actual: verifyToken ? verifyToken.substring(0, 20) : 'NULL'
+          });
+        } else {
+          console.log('✅ Token storage verified');
+        }
+
+        // Retry original request with new token
+        // CRITICAL FIX: Axios doesn't always preserve headers properly on retry
+        // We need to ensure the headers object exists and is properly formatted
+        
+        // Create a new headers object to avoid any axios internal issues
+        const retryHeaders = {
+          ...originalRequest.headers,
+          'Authorization': `Bearer ${access}`
+        };
+        
+        // Delete the common headers that axios adds automatically
+        delete retryHeaders.common;
+        delete retryHeaders.delete;
+        delete retryHeaders.get;
+        delete retryHeaders.head;
+        delete retryHeaders.post;
+        delete retryHeaders.put;
+        delete retryHeaders.patch;
+        
+        originalRequest.headers = retryHeaders;
+
+        console.log('🔄 Retrying original request with new token:', originalRequest.url);
+        console.log('🔍 Retry token preview:', access.substring(0, 30) + '...');
+        console.log('🔍 Retry flags set:', { _retry: originalRequest._retry, _isRetry: originalRequest._isRetry });
+        console.log('🔍 Retry headers:', JSON.stringify(originalRequest.headers, null, 2));
+
+        // Try the retry and log detailed error if it fails
+        try {
+          const retryResponse = await apiClient(originalRequest);
+          console.log('✅ Retry successful!');
+          return retryResponse;
+        } catch (retryError) {
+          console.error('❌ Retry failed after token refresh:', {
+            status: retryError.response?.status,
+            statusText: retryError.response?.statusText,
+            data: retryError.response?.data,
+            headers: retryError.response?.headers,
+            url: originalRequest.url,
+            requestHeaders: retryError.config?.headers
+          });
+          
+          // If retry fails with 401, it means the refreshed token is also invalid
+          // This is a critical issue - the backend refresh endpoint gave us a bad token
+          if (retryError.response?.status === 401) {
+            console.error('🚨 CRITICAL: Refreshed token was rejected by backend!');
+            console.error('🚨 This indicates the /token/refresh/ endpoint returned an invalid token');
+            
+            // Clear tokens and force re-login
+            TokenManager.clearTokens();
+            
+            if (window.notify) {
+              window.notify({
+                title: 'Authentication Error',
+                body: 'There was a problem with your session. Please log in again.',
+                color: 'red'
+              });
+            }
+            
+            if (!window.location.pathname.includes('/login') && 
+                !window.location.pathname.includes('/signup') &&
+                !window.location.pathname.includes('/forgot-password')) {
+              setTimeout(() => {
+                window.location.href = '/login?auth_error=true';
+              }, 1000);
+            }
+          }
+          
+          throw retryError;
+        }
       } catch (refreshError) {
-        console.error('❌ Token refresh failed:', refreshError);
+        console.error('❌ Token refresh failed:', {
+          error: refreshError.message,
+          status: refreshError.response?.status,
+          data: refreshError.response?.data,
+          fullError: refreshError
+        });
+
+        // CRITICAL DEBUG: Don't immediately logout, let's see what's happening
+        console.error('🚨 REFRESH ERROR DETAILS:');
+        console.error('  - Error message:', refreshError.message);
+        console.error('  - Response status:', refreshError.response?.status);
+        console.error('  - Response data:', JSON.stringify(refreshError.response?.data, null, 2));
+        console.error('  - Request URL:', refreshError.config?.url);
+        console.error('  - Request data:', refreshError.config?.data);
 
         // Check if refresh token itself is invalid/expired
-        const isRefreshTokenInvalid = refreshError.response?.status === 401;
+        const isRefreshTokenInvalid = refreshError.response?.status === 401 || 
+                                       refreshError.response?.status === 400;
 
         if (isRefreshTokenInvalid) {
-          console.log('❌ Refresh token is invalid or expired');
-        }
+          console.log('❌ Refresh token is invalid or expired - clearing all tokens');
+          
+          // Refresh failed, clear tokens and redirect to login
+          TokenManager.clearTokens();
 
-        // Refresh failed, clear tokens and redirect to login
-        TokenManager.clearTokens();
+          // Show user-friendly notification
+          if (window.notify) {
+            window.notify({
+              title: 'Session Expired',
+              body: 'Your session has expired. Please log in again to continue.',
+              color: 'red'
+            });
+          }
 
-        // Show user-friendly notification
-        if (window.notify) {
-          window.notify({
-            title: 'Session Expired',
-            description: 'Your session has expired. Please log in again to continue.',
-            status: 'error',
-            duration: 5000,
-            isClosable: true
-          });
-        }
-
-        // Only redirect if we're not already on the login page
-        if (!window.location.pathname.includes('/login')) {
-          setTimeout(() => {
-            window.location.href = '/login?session_expired=true';
-          }, 1000);
+          // Only redirect if we're not already on auth pages
+          if (!window.location.pathname.includes('/login') && 
+              !window.location.pathname.includes('/signup') &&
+              !window.location.pathname.includes('/forgot-password')) {
+            setTimeout(() => {
+              window.location.href = '/login?session_expired=true';
+            }, 1000);
+          }
+        } else {
+          // Some other error - don't logout, just log it
+          console.error('🚨 Refresh failed with non-auth error - NOT logging out');
         }
 
         return Promise.reject(refreshError);
@@ -284,7 +470,7 @@ apiClient.interceptors.response.use(
     }
 
     // Log error details for debugging
-    console.error('API Error:', {
+    console.error('❌ API Error:', {
       url: error.config?.url,
       method: error.config?.method,
       status: error.response?.status,
@@ -461,6 +647,68 @@ const createFormData = (data) => {
   return formData;
 };
 
+// Debug utility to check token status
+const debugTokenStatus = () => {
+  const accessToken = TokenManager.getAccessToken();
+  const refreshToken = TokenManager.getRefreshToken();
+  
+  console.log('🔍 Token Status Debug:', {
+    hasAccessToken: !!accessToken,
+    hasRefreshToken: !!refreshToken,
+    accessTokenPreview: accessToken ? `${accessToken.substring(0, 20)}...` : 'NONE',
+    refreshTokenPreview: refreshToken ? `${refreshToken.substring(0, 20)}...` : 'NONE',
+    accessTokenExpired: accessToken ? TokenManager.isTokenExpired(accessToken) : 'N/A',
+    refreshTokenExpired: refreshToken ? TokenManager.isTokenExpired(refreshToken) : 'N/A',
+    isAuthenticated: TokenManager.isAuthenticated(),
+    localStorage: {
+      veyu_access_token: !!localStorage.getItem('veyu_access_token'),
+      veyu_refresh_token: !!localStorage.getItem('veyu_refresh_token'),
+      veyu_user_data: !!localStorage.getItem('veyu_user_data'),
+      'veyu-auth-user': !!localStorage.getItem('veyu-auth-user')
+    }
+  });
+};
+
+// Test function to manually call refresh endpoint
+const testRefreshEndpoint = async () => {
+  const refreshToken = TokenManager.getRefreshToken();
+  if (!refreshToken) {
+    console.error('❌ No refresh token found');
+    return;
+  }
+  
+  console.log('🧪 Testing refresh endpoint...');
+  console.log('🔍 Using refresh token:', refreshToken.substring(0, 30) + '...');
+  
+  try {
+    const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
+      refresh: refreshToken,
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log('✅ Refresh endpoint response:', response);
+    console.log('📦 Response data:', JSON.stringify(response.data, null, 2));
+    console.log('📦 Response status:', response.status);
+    console.log('📦 Response headers:', response.headers);
+    
+    return response.data;
+  } catch (error) {
+    console.error('❌ Refresh endpoint error:', error);
+    console.error('❌ Error response:', error.response?.data);
+    console.error('❌ Error status:', error.response?.status);
+    throw error;
+  }
+};
+
+// Make debug functions available globally for troubleshooting
+if (typeof window !== 'undefined') {
+  window.debugTokenStatus = debugTokenStatus;
+  window.testRefreshEndpoint = testRefreshEndpoint;
+}
+
 // Export everything needed
 export {
   apiClient,
@@ -469,5 +717,6 @@ export {
   TokenManager,
   ApiError,
   createFormData,
-  API_BASE_URL
+  API_BASE_URL,
+  debugTokenStatus
 };

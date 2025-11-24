@@ -1132,6 +1132,14 @@ export const ListingItemCard = ({ listing, ...props }) => {
         return null;
     }
     
+    // Debug: Log listing ID fields
+    console.log('🔍 ListingItemCard - Listing ID fields:', {
+        uuid: listing?.uuid,
+        id: listing?.id,
+        listing_id: listing?.listing_id,
+        fullListing: listing
+    });
+    
     const vehicle = listing?.vehicle || {};
     const [image, setImage] = useState({});
     const [index, setIndex] = useState(0);
@@ -1210,98 +1218,98 @@ export const ListingItemCard = ({ listing, ...props }) => {
     };
 
     return(
-        <Box 
-            position="relative" 
-            as={motion.div}
-            whileHover={{ y: -8 }}
-            transition="0.3s ease"
-            {...props}
-        >
-            <Card 
-                shadow="xl" 
-                p={0} 
-                w="100%" 
-                borderRadius="2xl"
-                overflow="hidden"
-                borderWidth="2px"
-                borderColor="transparent"
-                bg="white"
-                _hover={{
-                    shadow: '2xl',
-                    borderColor: '#F4A950',
-                    transform: 'translateY(-4px)'
-                }}
-                transition="all 0.3s ease"
-                cursor="pointer"
+        <NavLink to={`/${type}/${listing?.uuid || listing?.id || listing?.listing_id}`} style={{ textDecoration: 'none' }}>
+            <Box 
+                position="relative" 
+                as={motion.div}
+                whileHover={{ y: -8 }}
+                transition="0.3s ease"
+                {...props}
             >
-                <CardHeader p={0} position="relative">
-                    {/* Gradient Overlay for better text visibility */}
-                    <Box
-                        position="absolute"
-                        top={0}
-                        left={0}
-                        right={0}
-                        height="80px"
-                        bgGradient="linear(to-b, blackAlpha.400, transparent)"
-                        zIndex={1}
-                        pointerEvents="none"
-                    />
+                <Card 
+                    shadow="xl" 
+                    p={0} 
+                    w="100%" 
+                    borderRadius="2xl"
+                    overflow="hidden"
+                    borderWidth="2px"
+                    borderColor="transparent"
+                    bg="white"
+                    _hover={{
+                        shadow: '2xl',
+                        borderColor: '#F4A950',
+                        transform: 'translateY(-4px)'
+                    }}
+                    transition="all 0.3s ease"
+                    cursor="pointer"
+                >
+                    <CardHeader p={0} position="relative">
+                        {/* Gradient Overlay for better text visibility */}
+                        <Box
+                            position="absolute"
+                            top={0}
+                            left={0}
+                            right={0}
+                            height="80px"
+                            bgGradient="linear(to-b, blackAlpha.400, transparent)"
+                            zIndex={1}
+                            pointerEvents="none"
+                        />
 
-                    {/* Condition Badge */}
-                    <Badge 
-                        position="absolute" 
-                        top={4} 
-                        right={4} 
-                        zIndex={3}
-                        bg="white"
-                        color="gray.800"
-                        px={4}
-                        py={2}
-                        borderRadius="full"
-                        fontWeight="bold"
-                        fontSize="xs"
-                        textTransform="uppercase"
-                        boxShadow="lg"
-                        border="1px solid"
-                        borderColor="gray.200"
-                    >
-                        {vehicle?.condition || 'New'}
-                    </Badge>
+                        {/* Condition Badge */}
+                        <Badge 
+                            position="absolute" 
+                            top={4} 
+                            right={4} 
+                            zIndex={3}
+                            bg="white"
+                            color="gray.800"
+                            px={4}
+                            py={2}
+                            borderRadius="full"
+                            fontWeight="bold"
+                            fontSize="xs"
+                            textTransform="uppercase"
+                            boxShadow="lg"
+                            border="1px solid"
+                            borderColor="gray.200"
+                        >
+                            {vehicle?.condition || 'New'}
+                        </Badge>
 
-                    {/* Heart Icon for Favorites */}
-                    <IconButton
-                        position="absolute"
-                        top={4}
-                        left={4}
-                        zIndex={3}
-                        icon={isFavorited ? <RiHeart2Fill /> : <RiHeart2Line />}
-                        size="md"
-                        bg="white"
-                        color={isFavorited ? "red.500" : "gray.600"}
-                        borderRadius="full"
-                        boxShadow="lg"
-                        border="1px solid"
-                        borderColor="gray.200"
-                        _hover={{ 
-                            bg: isFavorited ? 'red.50' : 'gray.50',
-                            color: isFavorited ? 'red.600' : 'red.500',
-                            transform: 'scale(1.1)',
-                            borderColor: isFavorited ? 'red.200' : 'red.300'
-                        }}
-                        _active={{ transform: 'scale(0.95)' }}
-                        onClick={handleFavoriteClick}
-                        aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
-                    />
+                        {/* Heart Icon for Favorites */}
+                        <IconButton
+                            position="absolute"
+                            top={4}
+                            left={4}
+                            zIndex={3}
+                            icon={isFavorited ? <RiHeart2Fill /> : <RiHeart2Line />}
+                            size="md"
+                            bg="white"
+                            color={isFavorited ? "red.500" : "gray.600"}
+                            borderRadius="full"
+                            boxShadow="lg"
+                            border="1px solid"
+                            borderColor="gray.200"
+                            _hover={{ 
+                                bg: isFavorited ? 'red.50' : 'gray.50',
+                                color: isFavorited ? 'red.600' : 'red.500',
+                                transform: 'scale(1.1)',
+                                borderColor: isFavorited ? 'red.200' : 'red.300'
+                            }}
+                            _active={{ transform: 'scale(0.95)' }}
+                            onClick={handleFavoriteClick}
+                            aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                        />
 
-                    {/* Main Image Container */}
-                    <Box
-                        width="100%"
-                        height="280px"
-                        position="relative"
-                        overflow="hidden"
-                        bg="gray.100"
-                    >
-                        <NavLink to={`/${type}/${listing?.uuid}`}>
+                        {/* Main Image Container */}
+                        <Box
+                            width="100%"
+                            height="280px"
+                            position="relative"
+                            overflow="hidden"
+                            bg="gray.100"
+                        >
                           <LinkBox
                             flex={1} 
                             w="100%" 
@@ -1368,7 +1376,6 @@ export const ListingItemCard = ({ listing, ...props }) => {
                                 </Flex>
                             )}
                           </LinkBox>
-                        </NavLink>
                         
                         {/* Image Navigation Arrows */}
                         {vehicle?.images?.length > 1 && (
@@ -1672,11 +1679,6 @@ export const ListingItemCard = ({ listing, ...props }) => {
                                 px={6}
                                 fontWeight="bold"
                                 fontSize="xs"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    // Handle quick action (e.g., add to cart, contact dealer)
-                                }}
                             >
                                 {listing?.listing_type === 'sale' ? 'View Details' : 'Book Now'}
                             </Button>
@@ -1748,6 +1750,7 @@ export const ListingItemCard = ({ listing, ...props }) => {
                 </CardBody>
             </Card>
         </Box>
+        </NavLink>
     )
 }
 

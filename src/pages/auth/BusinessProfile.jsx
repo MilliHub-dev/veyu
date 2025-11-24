@@ -333,7 +333,7 @@ function BusinessProfile({ onSubmit, ...props }) {
           // Pre-populate with user data from localStorage
           setBusinessProfile(prev => ({
             ...prev,
-            // Remove business_name from form state since it's from signup
+            business_name: user.business_name || prev.business_name,
             contact_email: getUserEmail(user) !== 'No email' ? getUserEmail(user) : prev.contact_email,
             contact_phone: getUserPhone(user) || prev.contact_phone,
           }));
@@ -1345,7 +1345,27 @@ function BusinessProfile({ onSubmit, ...props }) {
                         </Text>
                       </VStack>
 
-                      {/* Business name field removed - collected during signup */}
+                      {/* Business Name - Display from signup */}
+                      <FormControl>
+                        <FormLabel color="gray.700" fontWeight="semibold">
+                          {user_type === 'mechanic' ? 'Auto Shop Name' : 'Business Name'}
+                        </FormLabel>
+                        <Input
+                          value={businessProfile.business_name || getBusinessName()}
+                          isReadOnly
+                          size="lg"
+                          bg="gray.100"
+                          border="2px solid"
+                          borderColor={borderColor}
+                          color="gray.600"
+                          cursor="not-allowed"
+                          _hover={{ borderColor: 'gray.300' }}
+                        />
+                        <Text fontSize="xs" color="gray.500" mt={1}>
+                          Business name was set during signup. Contact support to change it.
+                        </Text>
+                      </FormControl>
+
                       <FormControl isRequired>
                         <FormLabel color="gray.700" fontWeight="semibold">
                           Business Headline
