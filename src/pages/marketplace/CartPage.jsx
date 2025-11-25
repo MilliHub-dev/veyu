@@ -58,20 +58,31 @@ export const CartPage = ({ props }) => {
     async function removeFromCart( item ){
         setLoading(true);
 
-        const res = await axios.post(`/accounts/cart/`, jsonifyObject({
-          item: item.uuid,
-          action: 'remove-from-cart',  
-        }));
-
-        const data = objectifyJSON(res.data);
-        if (res.status === 200){
-            notify({
-                title: 'Success',
-                message: `${item?.title} removed from your cart.`
+        try {
+            const res = await axios.post(`/accounts/cart/`, {
+                action: 'remove-from-cart',
+                item: item.uuid,
             });
-            getData();
+
+            const data = objectifyJSON(res.data);
+            if (res.status === 200){
+                notify({
+                    title: 'Success',
+                    body: `${item?.vehicle?.name || 'Item'} removed from your cart.`,
+                    color: 'green'
+                });
+                getData();
+            }
+        } catch (error) {
+            console.error('Remove from cart error:', error);
+            notify({
+                title: 'Error',
+                body: error?.response?.data?.message || 'Failed to remove item from cart',
+                color: 'red'
+            });
+        } finally {
+            setTimeout(() => setLoading(false), 1200);
         }
-        setTimeout(() => setLoading(false), 1200);
     }
 
     async function getData(){
@@ -272,7 +283,7 @@ export const CartPage = ({ props }) => {
 
                                                 <Flex gap={2} alignItems="center">
                                                 <Button px={4} colorScheme="red" onClick={() => removeFromCart(car)}>Remove</Button>
-                                                <NavLink to={`/checkout/?listingId=${car?.uuid}`}>
+                                                <NavLink to={`/checkout/pay?listingId=${car?.uuid}`}>
                                                     <Button px={4} bgColor="primary" colorScheme="blue">Pay Now</Button>
                                                 </NavLink>
                                                 </Flex>
@@ -303,7 +314,7 @@ export const CartPage = ({ props }) => {
                                                 
                                                 <Flex>
                                                     <Button bgColor="primary" px={4} colorScheme="red"> Remove </Button>
-                                                    <NavLink to={`/checkout/?listingId=${rental?.uuid}`}>
+                                                    <NavLink to={`/checkout/pay?listingId=${rental?.uuid}`}>
                                                         <Button bgColor="primary" px={4} colorScheme="blue"> Pay Now </Button>
                                                     </NavLink>
                                                 </Flex>

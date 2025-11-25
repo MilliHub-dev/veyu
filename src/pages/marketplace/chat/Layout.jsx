@@ -14,169 +14,347 @@ import {
   Badge,
   useMediaQuery,
   useColorModeValue,
+  Heading,
+  Flex,
+  Spinner,
+  Center,
 } from '@chakra-ui/react';
-import { Search, Phone, Send, Smile, Mic, MoreVertical, Check, PlayCircle } from 'lucide-react';
+import { Search, MessageCircle, MoreVertical, CheckCheck, Clock } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react';
-import {GlobalStore} from '../../../App';
-import {objectifyJSON} from '../../../utils';
-import {useParams, Outlet, Link} from 'react-router-dom';
-
+import { GlobalStore } from '../../../App';
+import { objectifyJSON } from '../../../utils';
+import { useParams, Outlet, Link } from 'react-router-dom';
+import { FaInbox } from 'react-icons/fa';
 
 function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const hoverBg = useColorModeValue('gray.50', 'gray.700');
+  const activeBg = useColorModeValue('blue.50', 'blue.900');
+
+  const filteredConversations = conversations.filter(conv =>
+    conv?.recipient?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const formatTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    } else if (diffInHours < 48) {
+      return 'Yesterday';
+    } else if (diffInHours < 168) {
+      return date.toLocaleDateString('en-US', { weekday: 'short' });
+    } else {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+  };
 
   return (
     <Box
-      w="300px"
+      w={{ base: '100%', md: '360px' }}
       borderRightWidth={1}
+      borderColor={borderColor}
       position="relative"
       h="100%"
       overflow="hidden"
+      bg={bgColor}
       {...props}
     >
-      <VStack spacing={3} align="stretch" px={4} py={4} borderBottomWidth={1} bg="white" position="sticky" top={0} zIndex={1}>
+      {/* Header */}
+      <VStack
+        spacing={4}
+        align="stretch"
+        px={5}
+        py={5}
+        borderBottomWidth={1}
+        borderColor={borderColor}
+        bg={bgColor}
+        position="sticky"
+        top={0}
+        zIndex={10}
+      >
         <HStack justify="space-between" align="center">
-          <Text fontSize="lg" fontWeight="bold">Messages</Text>
-          <Badge colorScheme="blue">{conversations?.length || 0}</Badge>
+          <Heading size="lg" color="gray.800">
+            Messages
+          </Heading>
+          <HStack spacing={2}>
+            <Badge
+              colorScheme="blue"
+              fontSize="sm"
+              px={3}
+              py={1}
+              borderRadius="full"
+            >
+              {conversations?.length || 0}
+            </Badge>
+            <IconButton
+              icon={<MoreVertical size={18} />}
+              size="sm"
+              variant="ghost"
+              borderRadius="full"
+            />
+          </HStack>
         </HStack>
 
-        <InputGroup size="sm">
-          <InputLeftElement>
-            <Search className="w-4 h-4 text-gray-400" />
+        {/* Search */}
+        <InputGroup size="md">
+          <InputLeftElement pointerEvents="none">
+            <Search size={18} color="gray" />
           </InputLeftElement>
-          <Input onInput={console.log} placeholder="Search conversations" borderRadius="full" />
+          <Input
+            placeholder="Search conversations..."
+            borderRadius="xl"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            bg={useColorModeValue('gray.50', 'gray.700')}
+            border="none"
+            _focus={{
+              bg: useColorModeValue('white', 'gray.600'),
+              boxShadow: 'sm',
+            }}
+          />
         </InputGroup>
       </VStack>
 
-      <Box overflowY="auto" h="calc(100% - 84px)">
-        <VStack spacing={0} align="stretch">
-          {(conversations || []).map((conversation) => {
-            const isActive = activeId === conversation.id;
-            const unread = conversation?.unread_count || 0;
-            return (
-              <Box
-                key={conversation.id}
-                px={4}
-                py={3}
-                cursor="pointer"
-                as={Link}
-                to={`${conversation.uuid}`}
-                bg={isActive ? 'blue.50' : 'transparent'}
-                _hover={{ bg: 'gray.50' }}
-                onClick={() => onSelect(conversation)}
-              >
-                <HStack spacing={3}>
-                  <Box position="relative">
-                    <Avatar
-                      size="md"
-                      name={conversation?.recipient?.name}
-                      src={conversation?.recipient?.image}
-                    />
-                    {conversation?.online && (
-                      <Badge
-                        position="absolute"
-                        bottom={0}
-                        right={0}
-                        colorScheme="green"
-                        borderRadius="full"
-                        boxSize="3"
+      {/* Conversations List */}
+      <Box overflowY="auto" h="calc(100% - 140px)">
+        {filteredConversations.length === 0 ? (
+          <Center h="300px">
+            <VStack spacing={3} color="gray.500">
+              <FaInbox size={48} />
+              <Text fontSize="sm" textAlign="center">
+                {searchQuery ? 'No conversations found' : 'No messages yet'}
+              </Text>
+              {!searchQuery && (
+                <Text fontSize="xs" color="gray.400" textAlign="center" px={8}>
+                  Start a conversation by messaging a dealer about a vehicle
+                </Text>
+              )}
+            </VStack>
+          </Center>
+        ) : (
+          <VStack spacing={0} align="stretch">
+            {filteredConversations.map((conversation) => {
+              const isActive = activeId === conversation.uuid;
+              const unread = conversation?.unread_count || 0;
+              const hasUnread = unread > 0;
+
+              return (
+                <Box
+                  key={conversation.id || conversation.uuid}
+                  as={Link}
+                  to={`${conversation.uuid}`}
+                  px={5}
+                  py={4}
+                  cursor="pointer"
+                  bg={isActive ? activeBg : 'transparent'}
+                  borderLeftWidth={isActive ? 3 : 0}
+                  borderLeftColor="blue.500"
+                  _hover={{ bg: isActive ? activeBg : hoverBg }}
+                  transition="all 0.2s"
+                  onClick={() => onSelect(conversation)}
+                >
+                  <HStack spacing={3} align="start">
+                    {/* Avatar with online status */}
+                    <Box position="relative" flexShrink={0}>
+                      <Avatar
+                        size="md"
+                        name={conversation?.recipient?.name || 'User'}
+                        src={conversation?.recipient?.image}
+                        border="2px"
+                        borderColor={hasUnread ? 'blue.500' : 'transparent'}
                       />
-                    )}
-                  </Box>
-                  <Box flex={1} minW={0}>
-                    <HStack justify="space-between" align="start">
-                      <Text fontWeight={unread ? 'bold' : 'medium'} noOfLines={1}>{conversation?.recipient?.name}</Text>
-                      <Text fontSize="xs" color="gray.500">{conversation?.last_message?.date}</Text>
-                    </HStack>
-                    <HStack justify="space-between" align="center">
-                      <Text fontSize="sm" color="gray.600" noOfLines={1}>
-                        {conversation?.last_message?.message}
-                      </Text>
-                      {unread > 0 && (
-                        <Badge colorScheme="blue" borderRadius="full">{unread}</Badge>
+                      {conversation?.recipient?.online && (
+                        <Box
+                          position="absolute"
+                          bottom={0}
+                          right={0}
+                          boxSize="12px"
+                          bg="green.500"
+                          borderRadius="full"
+                          border="2px solid white"
+                        />
                       )}
-                    </HStack>
-                  </Box>
-                </HStack>
-              </Box>
-            )
-          })}
-        </VStack>
+                    </Box>
+
+                    {/* Content */}
+                    <VStack flex={1} align="stretch" spacing={1} minW={0}>
+                      <HStack justify="space-between" align="start">
+                        <Text
+                          fontWeight={hasUnread ? 'bold' : 'semibold'}
+                          fontSize="md"
+                          noOfLines={1}
+                          color={hasUnread ? 'gray.900' : 'gray.700'}
+                        >
+                          {conversation?.recipient?.name || 'Unknown User'}
+                        </Text>
+                        <Text
+                          fontSize="xs"
+                          color={hasUnread ? 'blue.500' : 'gray.500'}
+                          fontWeight={hasUnread ? 'semibold' : 'normal'}
+                          flexShrink={0}
+                        >
+                          {formatTime(conversation?.last_message?.created_at || conversation?.last_message?.date)}
+                        </Text>
+                      </HStack>
+
+                      <HStack justify="space-between" align="center">
+                        <HStack spacing={1} flex={1} minW={0}>
+                          {conversation?.last_message?.is_read && (
+                            <CheckCheck size={14} color="#3182CE" />
+                          )}
+                          <Text
+                            fontSize="sm"
+                            color={hasUnread ? 'gray.700' : 'gray.500'}
+                            fontWeight={hasUnread ? 'medium' : 'normal'}
+                            noOfLines={1}
+                          >
+                            {conversation?.last_message?.message || 'No messages yet'}
+                          </Text>
+                        </HStack>
+                        {hasUnread && (
+                          <Badge
+                            colorScheme="blue"
+                            borderRadius="full"
+                            fontSize="xs"
+                            minW="20px"
+                            textAlign="center"
+                          >
+                            {unread > 99 ? '99+' : unread}
+                          </Badge>
+                        )}
+                      </HStack>
+                    </VStack>
+                  </HStack>
+                </Box>
+              );
+            })}
+          </VStack>
+        )}
       </Box>
     </Box>
-  )
+  );
 }
 
 function ChatLayout() {
-  const {room} = useParams();
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const [isMobile] = useMediaQuery('(max-width: 568px)')
-  const {authUser, axios, apiUrl, notify} = useContext(GlobalStore);
+  const { room } = useParams();
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const [isMobile] = useMediaQuery('(max-width: 768px)');
+  const { authUser, axios, notify } = useContext(GlobalStore);
   const [activeConversation, setActiveConversation] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [loading, setLoadingState] = useState(true);
 
-
-  async function getData(){
-    try{
+  async function getData() {
+    try {
       const res = await axios.get(`/chat/chats/`);
       const data = objectifyJSON(res.data);
       setConversations(Array.isArray(data?.data) ? data?.data : []);
-    }catch(err){
+    } catch (err) {
       console.error('Failed to load conversations:', err);
+      console.error('Error details:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+
+      // Show user-friendly error message
+      if (err.response?.status === 500) {
+        notify({
+          title: 'Server Error',
+          body: 'Unable to load conversations. The chat service is currently unavailable. Please try again later.',
+          color: 'red',
+          duration: 5000,
+        });
+      } else if (err.response?.status === 404) {
+        // No conversations yet - this is okay
+        console.log('No conversations found yet');
+      } else {
+        notify({
+          title: 'Error Loading Chats',
+          body: 'Failed to load your conversations. Please refresh the page.',
+          color: 'orange',
+          duration: 4000,
+        });
+      }
+
       setConversations([]);
     }
   }
 
-  function init(){
+  function init() {
     getData();
   }
 
   useEffect(() => {
     setLoadingState(true);
     init();
-    setTimeout(()=> setLoadingState(false), 500)
-  }, [])
+    setTimeout(() => setLoadingState(false), 500);
+  }, []);
 
   useEffect(() => {
     if (authUser?.token) {
       getData();
     }
-  }, [authUser?.token])
+  }, [authUser?.token]);
 
-  if (loading){
-    return null
+  if (loading) {
+    return (
+      <Center h="70vh">
+        <VStack spacing={4}>
+          <Spinner size="xl" color="blue.500" thickness="4px" />
+          <Text color="gray.600">Loading conversations...</Text>
+        </VStack>
+      </Center>
+    );
   }
 
   return (
-    <Box w="100%" bg="white">
-      <HStack spacing={0} align="stretch" minH={{ base: '70vh', md: '70vh' }}>
-      {room && isMobile ? null :
-        <ChatSidebar
-          conversations={conversations}
-          activeId={activeConversation}
-          onSelect={setActiveConversation}
-          width={isMobile ? '100%' : '300px'}
-        />
-      }
+    <Box w="100%" bg={bgColor} minH="70vh">
+      <Flex h={{ base: '80vh', md: '75vh' }} maxH="900px">
+        {/* Sidebar - Hide on mobile when room is selected */}
+        {room && isMobile ? null : (
+          <ChatSidebar
+            conversations={conversations}
+            activeId={room}
+            onSelect={setActiveConversation}
+          />
+        )}
 
-        <Box flex={1} w={room ? { base: '100%', md: 'calc(100% - 300px)' } : '100%'} h="100%" position="relative" bg="white">
-          {
-            room &&
+        {/* Chat Area */}
+        <Box
+          flex={1}
+          w={room ? { base: '100%', md: 'calc(100% - 360px)' } : '100%'}
+          h="100%"
+          position="relative"
+          bg={useColorModeValue('white', 'gray.800')}
+        >
+          {room ? (
             <Outlet />
-          }
+          ) : (
+            !isMobile && (
+              <Center h="100%">
+                <VStack spacing={4} color="gray.500">
+                  <MessageCircle size={64} strokeWidth={1.5} />
+                  <Heading size="md" color="gray.600">
+                    Select a conversation
+                  </Heading>
+                  <Text fontSize="sm" color="gray.500" textAlign="center" maxW="300px">
+                    Choose a conversation from the sidebar to start chatting
+                  </Text>
+                </VStack>
+              </Center>
+            )
+          )}
         </Box>
-
-        {(!room && !isMobile) && 
-          <Box flex={1} h="100%">
-            <VStack h="full" justify="center" spacing={4} color="gray.500">
-              <Text>Select a conversation to start chatting</Text>
-            </VStack>
-          </Box>
-        }
-      </HStack>
+      </Flex>
     </Box>
-  )
+  );
 }
 
-export default ChatLayout
-
+export default ChatLayout;

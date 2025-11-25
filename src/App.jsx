@@ -383,35 +383,61 @@ function App() {
                     <Fragment>
                       {/* Dealer Dashboard */}
                       {authUser.user_type === "dealer" ? (
-                        <Route element={<DealerDashboardLayout />}>
-                          <Route path="/dashboard" element={<DealerDashboard />} />
-                          <Route path="/orders" element={<OrderListAdmin />} />
-                          <Route path="/inventory" element={<Outlet />}>
-                            <Route path="edit/:listingId" element={<EditListingAdmin />} />
-                            <Route path="add" element={<CreateListingAdmin />} />
-                            <Route path="boost" element={<MyBoosts />} />
-                            <Route path="" element={<ListingsAdmin />} />
+                        <>
+                          <Route element={<DealerDashboardLayout />}>
+                            <Route path="/dashboard" element={<DealerDashboard />} />
+                            <Route path="/orders" element={<OrderListAdmin />} />
+                            <Route path="/inventory" element={<Outlet />}>
+                              <Route path="edit/:listingId" element={<EditListingAdmin />} />
+                              <Route path="add" element={<CreateListingAdmin />} />
+                              <Route path="boost" element={<MyBoosts />} />
+                              <Route path="" element={<ListingsAdmin />} />
+                            </Route>
+                            <Route path="/analytics" element={<AnalyticsDashboard />} />
+                            <Route path="/settings" element={<DealershipSettings />} />
+                            <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route path="/*" element={<Navigate to="/dashboard" />} />
                           </Route>
-                          <Route path="/analytics" element={<AnalyticsDashboard />} />
-                          <Route path="/settings" element={<DealershipSettings />} />
-                          <Route path="/notifications" element={<NotificationsPage />} />
-                          <Route path="/*" element={<Navigate to="/dashboard" />} />
-                        </Route>
+                          {/* Marketplace routes for dealers */}
+                          <Route element={<Layout />}>
+                            <Route path="/buy" element={<BuyListing />} />
+                            <Route path="/buy/:listingId" element={<BuyDetail />} />
+                            <Route path="/rent" element={<RentListing />} />
+                            <Route path="/rent/:listingId" element={<RentDetail />} />
+                            <Route path="/cart" element={<CartPage />} />
+                            <Route path="/checkout/pay" element={<CheckoutPage />} />
+                            <Route path="/checkout/docs" element={<DocumentSigningPage />} />
+                            <Route path="/checkout/inspection" element={<CheckoutWithInspection />} />
+                          </Route>
+                        </>
                       ) : authUser.user_type === "mechanic" ? (
                         /* Mechanic Dashboard */
-                        <Route element={<MechanicDashboardLayout />}>
-                          <Route path="/dashboard" element={<MechanicDashboard />} />
-                          <Route path="/bookings" element={<BookingsAdmin />} />
-                          <Route path="/analytics" element={<MechanicAnalytics />} />
-                          <Route path="/services" element={<Outlet />}>
-                            <Route path="edit/:serviceId" element={<ServiceOfferings />} />
-                            <Route path="add" element={<CreateServiceOffering />} />
-                            <Route path="" element={<ServiceOfferings />} />
+                        <>
+                          <Route element={<MechanicDashboardLayout />}>
+                            <Route path="/dashboard" element={<MechanicDashboard />} />
+                            <Route path="/bookings" element={<BookingsAdmin />} />
+                            <Route path="/analytics" element={<MechanicAnalytics />} />
+                            <Route path="/services" element={<Outlet />}>
+                              <Route path="edit/:serviceId" element={<ServiceOfferings />} />
+                              <Route path="add" element={<CreateServiceOffering />} />
+                              <Route path="" element={<ServiceOfferings />} />
+                            </Route>
+                            <Route path="/settings" element={<MechanicBusinessProfile />} />
+                            <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route path="/*" element={<Navigate to="/dashboard" />} />
                           </Route>
-                          <Route path="/settings" element={<MechanicBusinessProfile />} />
-                          <Route path="/notifications" element={<NotificationsPage />} />
-                          <Route path="/*" element={<Navigate to="/dashboard" />} />
-                        </Route>
+                          {/* Marketplace routes for mechanics */}
+                          <Route element={<Layout />}>
+                            <Route path="/buy" element={<BuyListing />} />
+                            <Route path="/buy/:listingId" element={<BuyDetail />} />
+                            <Route path="/rent" element={<RentListing />} />
+                            <Route path="/rent/:listingId" element={<RentDetail />} />
+                            <Route path="/cart" element={<CartPage />} />
+                            <Route path="/checkout/pay" element={<CheckoutPage />} />
+                            <Route path="/checkout/docs" element={<DocumentSigningPage />} />
+                            <Route path="/checkout/inspection" element={<CheckoutWithInspection />} />
+                          </Route>
+                        </>
                       ) : (
                         /* General Marketplace */
                         <Route element={<Layout />}>

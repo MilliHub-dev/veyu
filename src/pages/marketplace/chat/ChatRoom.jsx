@@ -1,18 +1,16 @@
 import {
   Box,
-  Container,
   VStack,
   HStack,
   Input,
-  InputGroup,
-  InputLeftElement,
   Avatar,
   Text,
-  Flex,
   Button,
   IconButton,
+  Flex,
   Divider,
   Badge,
+  Image,
   useColorModeValue,
 } from '@chakra-ui/react';
 import { Search, Phone, Send, Smile, Mic, MoreVertical, Check, PlayCircle } from 'lucide-react';
@@ -21,6 +19,7 @@ import {GlobalStore} from '../../../App';
 import {objectifyJSON} from '../../../utils';
 import {useParams, Link} from 'react-router-dom';
 import {ChevronLeftIcon, CloseIcon} from '@chakra-ui/icons';
+import { TokenManager } from '../../../services/api';
 
 
 function ChatRoom() {
@@ -40,9 +39,14 @@ function ChatRoom() {
       const res = await axios.get(`/chat/chats/${room}/`);
       const data = objectifyJSON(res.data);
 
+      console.log('Chat room data:', data?.data);
+      console.log('Participants:', data?.data?.participants || data?.data?.members);
+      
       setChatRoom(data?.data || {});
       setMessages(Array.isArray(data?.data?.messages) ? data?.data?.messages : []);
-      setMembers(Array.isArray(data?.data?.members) ? data?.data?.members : []);
+      // API might return 'participants' or 'members'
+      setMembers(Array.isArray(data?.data?.participants) ? data?.data?.participants : 
+                 Array.isArray(data?.data?.members) ? data?.data?.members : []);
     }catch(err){
       console.error('Failed to load chat room:', err);
       setChatRoom({});
@@ -54,9 +58,12 @@ function ChatRoom() {
   
   useEffect(() => {
     getData();
-    if (!room || !authUser?.token) return;
+    
+    // Get token from TokenManager instead of authUser
+    const token = TokenManager.getAccessToken();
+    if (!room || !token) return;
 
-    const chatSocket = new WebSocket(`${socketUrl}/chat/${room}/?token=${authUser?.token}`);
+    const chatSocket = new WebSocket(`${socketUrl}/chat/${room}/?token=${token}`);
     setSocket(chatSocket);
 
     chatSocket.onmessage = function (ev) {
@@ -90,6 +97,21 @@ function ChatRoom() {
 
   const currentUserEmail = authUser?.email || '';
   const otherPerson = members?.find(mem => mem?.email && mem.email !== currentUserEmail) || members?.[0] || null;
+  
+  // Determine display name and avatar based on user type
+  const getDisplayInfo = (person) => {
+    if (!person) return { name: 'Unknown', avatar: null, isDealer: false };
+    
+    const isDealer = person?.user_type === 'dealer' || person?.user_type === 'mechanic';
+    
+    return {
+      name: isDealer ? (person?.business_name || person?.name) : person?.name,
+      avatar: isDealer ? (person?.business_logo || person?.image) : person?.image,
+      isDealer
+    };
+  };
+  
+  const otherPersonInfo = getDisplayInfo(otherPerson);
 
   if (!room) {
     return (
@@ -99,7 +121,8 @@ function ChatRoom() {
     );
   }
 
-  if (!authUser?.token) {
+  // Check authentication using TokenManager instead of authUser.token
+  if (!authUser || !TokenManager.isAuthenticated()) {
     return (
       <VStack align="center" justify="center" h="60vh">
         <Text>You need to be signed in to use chat.</Text>
@@ -108,17 +131,56 @@ function ChatRoom() {
     );
   }
 
+  // Function to render message text with clickable links
+  const renderMessageWithLinks = (text) => {
+    if (!text) return null;
+    
+    // URL regex pattern
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlPattern);
+    
+    return parts.map((part, index) => {
+      if (part.match(urlPattern)) {
+        return (
+          <Text
+            key={index}
+            as="a"
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            textDecoration="underline"
+            color="blue.300"
+            _hover={{ color: 'blue.400' }}
+          >
+            {part}
+          </Text>
+        );
+      }
+      return <Text key={index} as="span">{part}</Text>;
+    });
+  };
+
   return (
-    <VStack position="fixed" h="calc(100vh - 65px)" left="0px" zIndex={1} bg="white" spacing={0} w="100%">
+    <VStack h="100%" bg="white" spacing={0} w="100%">
       {/* Chat Header */}
       <HStack w="full" px={5} py={3} borderBottomWidth={1} justify="space-between" bg="white" position="sticky" top={0} zIndex={2}>
         <HStack spacing={3}>
           <Button as={Link} to="/chat/" variant="ghost" size="sm">
             <CloseIcon />
           </Button>
-          <Avatar size="sm" name={otherPerson?.name} src={otherPerson?.image} />
+          {otherPersonInfo.isDealer && otherPersonInfo.avatar ? (
+            <Image 
+              src={otherPersonInfo.avatar} 
+              alt={otherPersonInfo.name}
+              boxSize="40px"
+              borderRadius="md"
+              objectFit="cover"
+            />
+          ) : (
+            <Avatar size="sm" name={otherPersonInfo.name} src={otherPersonInfo.avatar} />
+          )}
           <Box>
-            <Text textTransform="capitalize" fontWeight="600">{otherPerson?.name}</Text>
+            <Text textTransform="capitalize" fontWeight="600">{otherPersonInfo.name}</Text>
             <Text fontSize="xs" color="green.500">Online</Text>
           </Box>
         </HStack>
@@ -128,20 +190,73 @@ function ChatRoom() {
       </HStack>
 
       {/* Messages */}
-      <VStack flex={1} spacing={3} align="stretch" p={4} w="100%" overflowY="auto" maxH="calc(100vh - 126px)">
+      <VStack flex={1} spacing={3} align="stretch" p={4} w="100%" overflowY="auto">
         {messages?.map((msg, index) => {
-          const sent = (msg?.sender || msg?.from) === currentUserEmail;
+          // Handle different message formats
+          // msg.sender could be an email string OR an object with {id, name, email, user_type, business_name, business_logo}
+          const senderEmail = typeof msg?.sender === 'string' ? msg?.sender : 
+                             msg?.sender?.email || msg?.from;
+          const sent = senderEmail === currentUserEmail;
           const bubbleBg = sent ? 'primary' : 'gray.100';
           const bubbleColor = sent ? 'white' : 'gray.900';
+          
+          // Get sender info for displaying avatar/logo
+          let sender;
+          if (typeof msg?.sender === 'object' && msg?.sender !== null) {
+            // Sender is already an object with full info
+            sender = msg.sender;
+          } else {
+            // Sender is just an email, find in members
+            sender = members?.find(mem => mem?.email === senderEmail);
+          }
+          
+          const senderInfo = getDisplayInfo(sender);
+          
+          console.log('Message sender info:', { senderEmail, sent, senderInfo, sender });
+          
           return (
-            <Box key={index} alignSelf={sent ? 'flex-end' : 'flex-start'} maxW="70%">
-              <Box bg={bubbleBg} color={bubbleColor} px={4} py={2.5} fontSize="15px" borderRadius="lg">
-                {msg?.text || msg?.message || msg?.content}
+            <HStack key={index} alignSelf={sent ? 'flex-end' : 'flex-start'} maxW="70%" spacing={2}>
+              {!sent && (
+                senderInfo.isDealer && senderInfo.avatar ? (
+                  <Image 
+                    src={senderInfo.avatar} 
+                    alt={senderInfo.name}
+                    boxSize="32px"
+                    borderRadius="md"
+                    objectFit="cover"
+                    alignSelf="flex-end"
+                  />
+                ) : (
+                  <Avatar size="xs" name={senderInfo.name} src={senderInfo.avatar} alignSelf="flex-end" />
+                )
+              )}
+              <Box>
+                <Box bg={bubbleBg} color={bubbleColor} px={4} py={2.5} fontSize="15px" borderRadius="lg" wordBreak="break-word">
+                  {renderMessageWithLinks(msg?.text || msg?.message || msg?.content)}
+                </Box>
+                <HStack spacing={1} justify={sent ? 'flex-end' : 'flex-start'} fontSize="xs" color="gray.500" mt={1}>
+                  {sent && <Check size="12px" />}
+                </HStack>
               </Box>
-              <HStack spacing={1} justify={sent ? 'flex-end' : 'flex-start'} fontSize="xs" color="gray.500" mt={1}>
-                {sent && <Check size="12px" />}
-              </HStack>
-            </Box>
+              {sent && (
+                authUser?.user_type === 'dealer' || authUser?.user_type === 'mechanic' ? (
+                  authUser?.business_logo ? (
+                    <Image 
+                      src={authUser.business_logo} 
+                      alt={authUser.business_name}
+                      boxSize="32px"
+                      borderRadius="md"
+                      objectFit="cover"
+                      alignSelf="flex-end"
+                    />
+                  ) : (
+                    <Avatar size="xs" name={authUser?.business_name || authUser?.name} src={authUser?.image} alignSelf="flex-end" />
+                  )
+                ) : (
+                  <Avatar size="xs" name={authUser?.name} src={authUser?.image} alignSelf="flex-end" />
+                )
+              )}
+            </HStack>
           );
         })}
       </VStack>

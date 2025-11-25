@@ -10,7 +10,7 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import { useContext, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { GlobalStore } from "../../../App";
 import { ImageCarousel, LocationBreadcrumb, ListingItemCard } from "../../../components";
 import { ListingDetailSkeleton } from "../../../components/loaders";
@@ -26,12 +26,12 @@ import { BsCalendar3, BsGearFill } from 'react-icons/bs';
 
 export const BuyDetail = ({ }) => {
   const { listingId } = useParams();
+  const navigate = useNavigate();
   const [recommended, setRecommended] = useState([]);
   const [loading, setLoadingState] = useState(true);
   const [showPopup, setPopupState] = useState(false);
   const [listing, setListing] = useState({});
   const [isFavorited, setIsFavorited] = useState(false);
-  const [viewCount, setViewCount] = useState(0);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const { notify, commaInt, authUser, isAuthenticated, axios } = useContext(GlobalStore);
 
@@ -48,6 +48,30 @@ export const BuyDetail = ({ }) => {
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+
+  // Helper function to format date as "X days ago"
+  const getTimeAgo = (dateString) => {
+    if (!dateString) return 'Recently';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now - date;
+    const diffInSeconds = Math.floor(diffInMs / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    const diffInMonths = Math.floor(diffInDays / 30);
+    const diffInYears = Math.floor(diffInDays / 365);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
+    if (diffInHours < 24) return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+    if (diffInDays < 7) return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+    if (diffInWeeks < 4) return `${diffInWeeks} ${diffInWeeks === 1 ? 'week' : 'weeks'} ago`;
+    if (diffInMonths < 12) return `${diffInMonths} ${diffInMonths === 1 ? 'month' : 'months'} ago`;
+    return `${diffInYears} ${diffInYears === 1 ? 'year' : 'years'} ago`;
+  };
 
   // Helper function to get meaningful default values
   const getDisplayValue = (value, field) => {
@@ -97,47 +121,168 @@ export const BuyDetail = ({ }) => {
         }
       }
 
-      const res = await apiClient.get(`/listings/buy/${listingId}/`);
+      // Try to fetch listing - try multiple possible endpoints
+      console.log('🔍 Fetching listing with ID:', listingId);
+      
+      let res;
+      let endpointUsed = '';
+      
+      // Try different possible endpoints
+      const endpoints = [
+        `/listings/${listingId}/`,           // Generic listing endpoint
+        `/listings/buy/${listingId}/`,       // Buy-specific endpoint
+        `/listings/detail/${listingId}/`,    // Detail endpoint
+        `/marketplace/listings/${listingId}/` // Marketplace endpoint
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`🔍 Trying endpoint: ${endpoint}`);
+          res = await apiClient.get(endpoint);
+          if (res.status === 200) {
+            endpointUsed = endpoint;
+            console.log(`✅ Success with endpoint: ${endpoint}`);
+            break;
+          }
+        } catch (err) {
+          console.log(`❌ Failed with endpoint: ${endpoint}`, err.response?.status);
+          // Continue to next endpoint
+          if (endpoint === endpoints[endpoints.length - 1]) {
+            // Last endpoint failed, throw the error
+            throw err;
+          }
+        }
+      }
+      
+      // If all direct endpoints failed, try fetching from the list
+      if (!res || res.status !== 200) {
+        console.log('🔍 All direct endpoints failed, trying to fetch from list...');
+        try {
+          const listRes = await apiClient.get(`/listings/buy/`);
+          if (listRes.status === 200) {
+            const listData = objectifyJSON(listRes.data);
+            const listings = listData?.data?.results || listData?.results || [];
+            console.log(`🔍 Found ${listings.length} listings in list`);
+            
+            // Find the specific listing by ID
+            const foundListing = listings.find(l => 
+              l.uuid === listingId || 
+              l.id === listingId || 
+              l.listing_id === listingId
+            );
+            
+            if (foundListing) {
+              console.log('✅ Found listing in list:', foundListing);
+              res = { status: 200, data: { data: { listing: foundListing } } };
+              endpointUsed = '/listings/buy/ (from list)';
+            } else {
+              throw new Error(`Listing ${listingId} not found in list`);
+            }
+          }
+        } catch (listErr) {
+          console.error('❌ Failed to fetch from list:', listErr);
+          throw new Error('Could not fetch listing from any endpoint');
+        }
+      }
+      
+      console.log(`✅ Using endpoint: ${endpointUsed}`);
+      
       if (res.status === 200) {
         let data = objectifyJSON(res.data);
-        console.log('🔍 Raw API Response:', res.data);
-        console.log('🔍 Processed Data:', data);
-        console.log('🔍 Listing Data:', data.data?.listing);
-        console.log('🔍 Vehicle Data:', data.data?.listing?.vehicle);
+        console.log('🔍 Raw API Response:', JSON.stringify(res.data, null, 2));
+        console.log('🔍 Processed Data:', JSON.stringify(data, null, 2));
+        
+        // Try multiple possible data structures
+        const listingData = data.data?.listing || data.listing || data.data || data;
+        console.log('🔍 Extracted Listing Data:', JSON.stringify(listingData, null, 2));
+        
+        // Check if vehicle data exists at the top level or nested
+        const vehicleData = listingData.vehicle || listingData;
+        console.log('🔍 Vehicle Data:', JSON.stringify(vehicleData, null, 2));
+        
+        // More flexible data extraction - check all possible locations
+        const extractField = (fieldNames) => {
+          for (const field of fieldNames) {
+            // Check in vehicle object first
+            if (vehicleData[field] !== undefined && vehicleData[field] !== null && vehicleData[field] !== '') {
+              return vehicleData[field];
+            }
+            // Then check in listing data
+            if (listingData[field] !== undefined && listingData[field] !== null && listingData[field] !== '') {
+              return listingData[field];
+            }
+          }
+          return null;
+        };
 
-        // Process and normalize the listing data
-        const listingData = data.data?.listing || data.listing || data;
+        // Extract dealer info from multiple possible locations
+        const dealerData = vehicleData.dealer || listingData.dealer || listingData.user || listingData.owner || {};
+        console.log('🔍 Dealer Data:', JSON.stringify(dealerData, null, 2));
+
         const normalizedListing = {
           ...listingData,
+          title: listingData.title || listingData.name || vehicleData.name || vehicleData.title || 'Vehicle',
+          price: listingData.price || listingData.asking_price || listingData.sale_price || 0,
           vehicle: {
-            ...listingData.vehicle,
-            // Handle different possible field names and formats
-            mileage: listingData.vehicle?.mileage || listingData.vehicle?.odometer || listingData.mileage,
-            transmission: listingData.vehicle?.transmission || listingData.transmission,
-            fuel_system: listingData.vehicle?.fuel_system || listingData.vehicle?.fuel_type || listingData.fuel_system,
-            year: listingData.vehicle?.year || listingData.year,
-            color: listingData.vehicle?.color || listingData.color,
-            type: listingData.vehicle?.type || listingData.vehicle?.vehicle_type || listingData.type,
-            engine_size: listingData.vehicle?.engine_size || listingData.vehicle?.engine || listingData.engine_size,
-            power: listingData.vehicle?.power || listingData.vehicle?.horsepower || listingData.power,
-            doors: listingData.vehicle?.doors || listingData.doors,
-            seats: listingData.vehicle?.seats || listingData.seats,
-            drivetrain: listingData.vehicle?.drivetrain || listingData.drivetrain,
-            top_speed: listingData.vehicle?.top_speed || listingData.top_speed,
-            horse_power: listingData.vehicle?.horse_power || listingData.vehicle?.horsepower || listingData.horse_power,
-            condition: listingData.vehicle?.condition || listingData.condition,
+            ...vehicleData,
+            name: vehicleData.name || vehicleData.title || listingData.name || listingData.title,
+            make: extractField(['make', 'brand', 'manufacturer']),
+            model: extractField(['model', 'model_name']),
+            images: vehicleData.images || listingData.images || vehicleData.photos || listingData.photos || [],
+            mileage: extractField(['mileage', 'odometer', 'miles', 'kilometers', 'km']),
+            transmission: extractField(['transmission', 'transmission_type', 'gearbox']),
+            fuel_system: extractField(['fuel_system', 'fuel_type', 'fuel', 'fuel_kind']),
+            year: extractField(['year', 'model_year', 'manufacture_year', 'production_year']),
+            color: extractField(['color', 'exterior_color', 'paint_color']),
+            type: extractField(['type', 'vehicle_type', 'body_type', 'category', 'car_type']),
+            engine_size: extractField(['engine_size', 'engine', 'engine_capacity', 'displacement']),
+            power: extractField(['power', 'horsepower', 'horse_power', 'hp', 'bhp']),
+            doors: extractField(['doors', 'door_count', 'number_of_doors', 'num_doors']),
+            seats: extractField(['seats', 'seating_capacity', 'number_of_seats', 'num_seats', 'passenger_capacity']),
+            drivetrain: extractField(['drivetrain', 'drive_train', 'drive_type', 'drive']),
+            top_speed: extractField(['top_speed', 'max_speed', 'maximum_speed']),
+            horse_power: extractField(['horse_power', 'horsepower', 'power', 'hp', 'bhp']),
+            condition: extractField(['condition', 'vehicle_condition', 'state']),
+            custom_duty: extractField(['custom_duty', 'duty_paid', 'customs_cleared']),
             dealer: {
-              ...listingData.vehicle?.dealer,
-              location: listingData.vehicle?.dealer?.location || listingData.vehicle?.dealer?.address || listingData.location
+              ...dealerData,
+              business_name: dealerData.business_name || 
+                            dealerData.name ||
+                            dealerData.company_name ||
+                            dealerData.dealership_name ||
+                            (listingData.user || listingData.owner)?.business_name ||
+                            (listingData.user || listingData.owner)?.name ||
+                            'Dealer',
+              location: dealerData.location || 
+                       dealerData.address ||
+                       dealerData.city ||
+                       listingData.location ||
+                       listingData.address ||
+                       listingData.city ||
+                       'Location not specified',
+              logo: dealerData.logo ||
+                   dealerData.image ||
+                   dealerData.profile_image ||
+                   dealerData.avatar,
+              uuid: dealerData.uuid ||
+                   dealerData.id ||
+                   dealerData.dealer_id ||
+                   dealerData.user_id
             }
           }
         };
 
-        console.log('🔍 Normalized Listing:', normalizedListing);
+        console.log('🔍 Final Normalized Listing:', JSON.stringify(normalizedListing, null, 2));
+        console.log('🔍 Mileage value:', normalizedListing.vehicle.mileage);
+        console.log('🔍 Transmission value:', normalizedListing.vehicle.transmission);
+        console.log('🔍 Fuel system value:', normalizedListing.vehicle.fuel_system);
+        console.log('🔍 Year value:', normalizedListing.vehicle.year);
+        console.log('🔍 Views:', normalizedListing.total_views);
+        console.log('🔍 Reviews:', normalizedListing.total_reviews);
+        console.log('🔍 Rating:', normalizedListing.average_rating);
 
         setListing(normalizedListing);
         setRecommended(data.data?.recommended || data.recommended || []);
-        setViewCount(Math.floor(Math.random() * 500) + 50); // Mock view count
       }
     } catch (error) {
       console.error('❌ BuyDetail - Error fetching listing:', error);
@@ -285,10 +430,15 @@ export const BuyDetail = ({ }) => {
       console.log('🛒 Add to Cart - Listing ID:', listingId);
       console.log('🛒 Add to Cart - API endpoint: /accounts/cart/');
 
-      const res = await axios.post(`/accounts/cart/`, jsonifyObject({
-        item: listingId,
-        action: 'add-to-cart'
-      }));
+      const payload = {
+        action: 'add-to-cart',
+        listing_id: listingId
+      };
+      
+      console.log('🛒 Payload being sent:', payload);
+      console.log('🛒 Payload JSON:', JSON.stringify(payload));
+
+      const res = await axios.post(`/accounts/cart/`, payload);
 
       console.log('🛒 Add to Cart - Response:', res);
 
@@ -403,7 +553,7 @@ export const BuyDetail = ({ }) => {
             <Heading size={'xl'} color="gray.800" mb={2}>
               {listing?.title}
             </Heading>
-            <HStack spacing={4} mb={3}>
+            <HStack spacing={4} mb={3} flexWrap="wrap">
               <HStack spacing={1}>
                 <Icon as={MdLocationOn} color="#F4A950" />
                 <Text color="gray.600" fontSize="md">
@@ -413,13 +563,19 @@ export const BuyDetail = ({ }) => {
               <HStack spacing={1}>
                 <Icon as={FaEye} color="gray.500" />
                 <Text color="gray.600" fontSize="sm">
-                  {viewCount} views
+                  {listing?.total_views || 0} views
                 </Text>
               </HStack>
               <HStack spacing={1}>
                 <Icon as={BsCalendar3} color="gray.500" />
                 <Text color="gray.600" fontSize="sm">
-                  Listed 3 days ago
+                  Listed {getTimeAgo(listing?.date_listed)}
+                </Text>
+              </HStack>
+              <HStack spacing={1}>
+                <Icon as={FaStar} color={listing?.total_reviews > 0 ? "#F4A950" : "gray.300"} />
+                <Text color="gray.600" fontSize="sm">
+                  {listing?.average_rating?.toFixed(1) || '0.0'} ({listing?.total_reviews || 0} {listing?.total_reviews === 1 ? 'review' : 'reviews'})
                 </Text>
               </HStack>
             </HStack>
@@ -560,9 +716,9 @@ export const BuyDetail = ({ }) => {
                         </Text>
                       </HStack>
                       <HStack spacing={1} mt={1}>
-                        <Icon as={FaStar} color="#F4A950" size="14px" />
+                        <Icon as={FaStar} color={listing?.total_reviews > 0 ? "#F4A950" : "gray.300"} size="14px" />
                         <Text fontSize={'sm'} color="gray.600">
-                          4.8 (127 reviews)
+                          {listing?.average_rating?.toFixed(1) || '0.0'} ({listing?.total_reviews || 0} {listing?.total_reviews === 1 ? 'review' : 'reviews'})
                         </Text>
                       </HStack>
                     </Box>
@@ -620,16 +776,16 @@ export const BuyDetail = ({ }) => {
                         body: 'Please log in to proceed to checkout',
                         color: 'orange',
                         duration: 3000,
-                        onClose: () => {
-                          window.location.href = `/login?next=${encodeURIComponent(`/checkout?listingId=${listingId}`)}`;
-                        }
                       });
+                      setTimeout(() => {
+                        navigate(`/login?next=${encodeURIComponent(`/checkout/pay?listingId=${listingId}`)}`);
+                      }, 1000);
                       return;
                     }
                     console.log('🔍 Buy Now - Redirecting to checkout with listingId:', listingId);
-                    const checkoutUrl = `/checkout?listingId=${listingId}`;
+                    const checkoutUrl = `/checkout/pay?listingId=${listingId}`;
                     console.log('🔍 Buy Now - Checkout URL:', checkoutUrl);
-                    window.location.href = checkoutUrl;
+                    navigate(checkoutUrl);
                   }}
                   bg={'#F4A950'}
                   color="white"
@@ -672,10 +828,7 @@ export const BuyDetail = ({ }) => {
                   <Icon as={HiShieldCheck} color="green.500" />
                   <Text fontSize="sm" color="gray.600">Secure payment</Text>
                 </HStack>
-                <HStack spacing={2} w="100%">
-                  <Icon as={HiTruck} color="blue.500" />
-                  <Text fontSize="sm" color="gray.600">Free delivery available</Text>
-                </HStack>
+                
                 <HStack spacing={2} w="100%">
                   <Icon as={HiClock} color="orange.500" />
                   <Text fontSize="sm" color="gray.600">14-day return policy</Text>
@@ -691,6 +844,19 @@ export const BuyDetail = ({ }) => {
         onClose={() => setPopupState(false)}
         recipient_type="dealer"
         recipient_id={listing?.vehicle?.dealer?.uuid}
+        vehicleDetails={{
+          listing_id: listingId,
+          title: listing?.title,
+          price: listing?.price,
+          year: listing?.vehicle?.year,
+          make: listing?.vehicle?.make,
+          model: listing?.vehicle?.model,
+          mileage: listing?.vehicle?.mileage,
+          transmission: listing?.vehicle?.transmission,
+          fuel_system: listing?.vehicle?.fuel_system,
+          image: listing?.vehicle?.images?.[0]?.url,
+          url: window.location.href
+        }}
       />
 
       {/* Detailed Information Tabs */}

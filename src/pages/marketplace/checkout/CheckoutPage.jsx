@@ -232,10 +232,12 @@ function CheckoutPage({ props }) {
   const [searchParams] = useSearchParams();
   const listingId = searchParams.get('listingId');
   const redirect = useNavigate();
-  const {axios, authUser, commaInt} = useContext(GlobalStore);
+  const {axios, authUser, commaInt, notify} = useContext(GlobalStore);
   const [isMobile] = useMediaQuery('(max-width: 768px)');
   const [listing, setListing] = useState();
   const [order, setOrder] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [countryList, setCountryList] = useState([]);
   const [stateList, setStateList] = useState([]);
   const [cityList, setCityList] = useState([]);
@@ -298,13 +300,39 @@ function CheckoutPage({ props }) {
   }
 
   async function getData(){
-    const res = await axios.get(`/listings/checkout/${listingId}/`);
-    const data = objectifyJSON(res.data);
-    if(res.status === 200){
-      setListing(data.listing);
-      changeValue({amount: parseInt(data.listing.price)})
+    if (!listingId) {
+      setError('No listing ID provided');
+      setLoading(false);
+      notify({
+        title: 'Error',
+        body: 'No listing selected for checkout',
+        color: 'red'
+      });
+      setTimeout(() => redirect('/cart'), 2000);
+      return;
     }
-    setOrder(data.fees);
+
+    try {
+      const res = await axios.get(`/listings/checkout/${listingId}/`);
+      const data = objectifyJSON(res.data);
+      if(res.status === 200){
+        setListing(data.listing);
+        changeValue({amount: parseInt(data.listing.price)})
+        setOrder(data.fees);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Failed to load checkout data:', err);
+      setError(err?.response?.data?.message || 'Failed to load listing');
+      notify({
+        title: 'Error',
+        body: 'Failed to load checkout information. Please try again.',
+        color: 'red'
+      });
+      setTimeout(() => redirect('/cart'), 2000);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function onLocationChanged({ lat, lng, ...location }){
@@ -375,7 +403,7 @@ function CheckoutPage({ props }) {
 
   useEffect(() => {
     init();
-  }, []);
+  }, [listingId]);
 
   let total = 0.0;
   total += Number(listing?.price)
@@ -399,6 +427,42 @@ function CheckoutPage({ props }) {
     index: 0,
     count: steps.length,
   });
+
+  // Show loading state
+  if (loading) {
+    return (
+      <Box bg={bgGradient} minH="100vh">
+        <Container maxW="7xl" py={20}>
+          <VStack spacing={4}>
+            <Progress size="xs" isIndeterminate w="100%" colorScheme="blue" />
+            <Text fontSize="lg" color="gray.600">Loading checkout...</Text>
+          </VStack>
+        </Container>
+      </Box>
+    );
+  }
+
+  // Show error state
+  if (error || !listing) {
+    return (
+      <Box bg={bgGradient} minH="100vh">
+        <Container maxW="7xl" py={20}>
+          <VStack spacing={6}>
+            <Alert status="error" borderRadius="lg" maxW="md">
+              <AlertIcon />
+              <Box>
+                <Text fontWeight="bold">Unable to load checkout</Text>
+                <Text fontSize="sm">{error || 'Listing not found'}</Text>
+              </Box>
+            </Alert>
+            <Button as={Link} to="/cart" leftIcon={<ArrowLeft />} colorScheme="blue">
+              Return to Cart
+            </Button>
+          </VStack>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box bg={bgGradient} minH="100vh">

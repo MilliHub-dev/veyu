@@ -1132,12 +1132,17 @@ export const ListingItemCard = ({ listing, ...props }) => {
         return null;
     }
     
-    // Debug: Log listing ID fields
-    console.log('🔍 ListingItemCard - Listing ID fields:', {
+    // Debug: Log listing ID and location fields
+    console.log('🔍 ListingItemCard - Listing data:', {
         uuid: listing?.uuid,
         id: listing?.id,
         listing_id: listing?.listing_id,
-        fullListing: listing
+        location: listing?.location,
+        address: listing?.address,
+        city: listing?.city,
+        dealer_location: listing?.vehicle?.dealer?.location,
+        dealer_address: listing?.vehicle?.dealer?.address,
+        dealer_city: listing?.vehicle?.dealer?.city
     });
     
     const vehicle = listing?.vehicle || {};
@@ -1691,7 +1696,13 @@ export const ListingItemCard = ({ listing, ...props }) => {
                             <HStack spacing={2} fontSize="sm" color="gray.600" flex={1} minW={0}>
                                 <Icon as={LuMapPin} flexShrink={0} color="#F4A950" />
                                 <Text noOfLines={1} fontWeight="medium">
-                                    {vehicle?.dealer?.location || 'Abuja, Nigeria'}
+                                    {vehicle?.dealer?.location || 
+                                     vehicle?.dealer?.address || 
+                                     vehicle?.dealer?.city || 
+                                     listing?.location || 
+                                     listing?.address || 
+                                     listing?.city || 
+                                     'Location not specified'}
                                 </Text>
                             </HStack>
                             
