@@ -2,17 +2,10 @@ import {
   Box,
   Container,
   Heading,
-  VStack,
-  Select,
   Button,
   Text,
-  Grid,
-  Center,
-  HStack,
-  IconButton,
 } from '@chakra-ui/react'
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
-import { useState, useEffect, useContext } from 'react';
+import { useState, useContext } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {CalendarPicker, TimePicker} from '../../../components';
 import {jsonifyObject, objectifyJSON} from '../../../utils';
@@ -48,7 +41,9 @@ function CheckoutInspection() {
         body: `Inspection scheduled for ${date}`,
         level: 'green'
       }), 1000)
-      return redirect('/checkout/docs/?docType=inspection-slip')
+      // Redirect to inspection slip page with reference from response
+      const reference = data?.data?.reference || data?.reference || '';
+      return redirect(`/inspection/slip?reference=${reference}&listingId=${listing_id}`)
     }
 
     notify({

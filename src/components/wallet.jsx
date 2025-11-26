@@ -38,7 +38,7 @@ export const PaystackPaymentModal = ({
 	const {title, logo, description} = customizations;
 	const DEBUG = JSON.parse(import.meta.env.VITE_DEBUG);
 	// const PAYSTACK_LIVE_KEY = import.meta.env.VITE_PAYSTACK_LIVE_PUBLIC_KEY;
-	const PAYSTACK_LIVE_KEY = "pk_test_73e0d039b25449f1493d055ff5ed58a4b6c800f0";
+	const PAYSTACK_LIVE_KEY = "pk_test_b61ba0372b2ab11527ef2b9da625af0cfe4d3134";
 
 	const config = {
 		publicKey: PAYSTACK_LIVE_KEY,

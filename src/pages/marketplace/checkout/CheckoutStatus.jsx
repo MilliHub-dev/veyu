@@ -38,7 +38,7 @@ function Navbar() {
     >
       <Container maxW="7xl">
         <Flex h={16} alignItems="center" justify="space-between">
-          <Image src="/motaa-logo.svg" h={8} alt="Motaa" />
+          <Image src="/logo192.jpg" h={8} alt="Veyu" />
           <HStack spacing={4}>
             <Button leftIcon={<Icon as="span">💰</Icon>} colorScheme="blue">
               Wallet

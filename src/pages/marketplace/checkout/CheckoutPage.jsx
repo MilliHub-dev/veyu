@@ -132,7 +132,7 @@ const PaymentOptions = [
     icon: Shield, 
     label: 'Pay After Inspection', 
     value: 'pay-after-inspection',
-    description: 'Pay inspection fee now, full amount later',
+    description: 'Pay for inspection,then full amount',
     color: 'green'
   },
   { 
@@ -315,10 +315,12 @@ function CheckoutPage({ props }) {
     try {
       const res = await axios.get(`/listings/checkout/${listingId}/`);
       const data = objectifyJSON(res.data);
+      console.log('Checkout API Response:', data);
+      console.log('Fees:', data.fees);
       if(res.status === 200){
         setListing(data.listing);
         changeValue({amount: parseInt(data.listing.price)})
-        setOrder(data.fees);
+        setOrder(data.fees || {});
         setError(null);
       }
     } catch (err) {
@@ -368,7 +370,7 @@ function CheckoutPage({ props }) {
       color: 'green',
     });
     // Navigate to inspection slip page
-    redirect(`/inspection/slip?reference=${inspectionSlip.reference}&listingId=${listingId}`);
+    redirect(`/inspection/slip?reference=${inspectionSlip.reference || ''}&listingId=${listingId}`);
   };
 
   async function onSuccess(response){
@@ -406,10 +408,18 @@ function CheckoutPage({ props }) {
   }, [listingId]);
 
   let total = 0.0;
-  total += Number(listing?.price)
-  total += Number(order?.motaa_fee)
-  total += Number(order?.tax)
-  total += Number(order?.inspection_fee)
+  total += Number(listing?.price || 0);
+  total += Number(order?.service_fee || 0);
+  total += Number(order?.tax || 0);
+  total += Number(order?.inspection_fee || 0);
+  
+  console.log('Total calculation:', {
+    price: listing?.price,
+    service_fee: order?.service_fee,
+    tax: order?.tax,
+    inspection_fee: order?.inspection_fee,
+    total
+  });
 
 
   const bgGradient = useColorModeValue(
@@ -998,13 +1008,18 @@ function CheckoutPage({ props }) {
                     </HStack>
                     
                     <HStack justify="space-between">
-                      <Text color="gray.600">Service Fee (0.5%)</Text>
-                      <Text fontWeight="semibold">₦{commaInt(order?.motaa_fee + order?.tax)}</Text>
+                      <Text color="gray.600">Service Fee</Text>
+                      <Text fontWeight="semibold">₦{commaInt(order?.service_fee || 0)}</Text>
+                    </HStack>
+                    
+                    <HStack justify="space-between">
+                      <Text color="gray.600">Tax</Text>
+                      <Text fontWeight="semibold">₦{commaInt(order?.tax || 0)}</Text>
                     </HStack>
                     
                     <HStack justify="space-between">
                       <Text color="gray.600">Inspection Fee</Text>
-                      <Text fontWeight="semibold">₦{commaInt(order?.inspection_fee)}</Text>
+                      <Text fontWeight="semibold">₦{commaInt(order?.inspection_fee || 0)}</Text>
                     </HStack>
 
                     <Divider />
@@ -1039,7 +1054,7 @@ function CheckoutPage({ props }) {
              onSuccess={onSuccess}
              payload={checkoutPayload}
              customizations={{
-                title: "Motaa Checkout",
+                title: "Veyu Checkout",
                 logo: listing?.vehicle?.dealer?.logo,
                 description: `Payment for ${listing?.title}`,
              }}
