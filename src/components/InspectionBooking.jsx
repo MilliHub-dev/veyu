@@ -117,9 +117,15 @@ const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel
   const handlePaystackSuccess = async (response) => {
     console.log('Paystack payment successful:', response);
     setShowPaymentModal(false);
+    setIsProcessing(true);
     
-    // Process booking after successful payment
-    await processBooking(bookingData, 'card', response.reference);
+    try {
+      // Process booking after successful payment
+      await processBooking(bookingData, 'card', response.reference);
+    } catch (err) {
+      console.error('Error processing booking after payment:', err);
+      setIsProcessing(false);
+    }
   };
 
   const processBooking = async (booking, paymentMethodUsed = paymentMethod, paymentReference = null) => {
@@ -130,11 +136,15 @@ const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel
         payment_reference: paymentReference,
       };
 
+      console.log('Booking inspection with payload:', bookingPayload);
       const response = await inspectionService.bookInspection(bookingPayload);
+      console.log('Inspection booking response:', response);
       
-      if (response?.success) {
-        const inspectionSlip = response.data;
-        
+      // Handle both success formats
+      const isSuccess = response?.success || response?.status === 'success' || response?.data;
+      const inspectionSlip = response?.data || response;
+      
+      if (isSuccess && inspectionSlip) {
         toast({
           title: 'Inspection Booked Successfully',
           description: `Your inspection has been scheduled for ${preferredDate} at ${preferredTime}`,
@@ -145,17 +155,21 @@ const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel
 
         // Call parent callback with slip data
         if (onBookingComplete) {
+          console.log('Calling onBookingComplete with:', inspectionSlip);
           onBookingComplete(inspectionSlip);
+        } else {
+          console.warn('No onBookingComplete callback provided');
         }
       } else {
-        throw new Error(response?.message || 'Booking failed');
+        throw new Error(response?.message || 'Booking failed - no data returned');
       }
     } catch (err) {
       console.error('Process booking error:', err);
-      setError(err.message || 'Failed to complete booking. Please try again.');
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to complete booking. Please try again.';
+      setError(errorMessage);
       toast({
         title: 'Booking Failed',
-        description: err.message || 'Failed to complete booking',
+        description: errorMessage,
         status: 'error',
         duration: 5000,
         isClosable: true,

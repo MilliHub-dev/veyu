@@ -363,31 +363,67 @@ function CheckoutPage({ props }) {
   }
   
   const handleInspectionBookingComplete = (inspectionSlip) => {
+    console.log('Inspection booking completed:', inspectionSlip);
     onInspectionClose();
+    setShowInspectionBooking(false);
+    
     notify({
       title: 'Inspection Booked',
       body: 'Your inspection has been scheduled successfully',
       color: 'green',
     });
-    // Navigate to inspection slip page
-    redirect(`/inspection/slip?reference=${inspectionSlip.reference || ''}&listingId=${listingId}`);
+    
+    // Navigate to inspection slip page or dashboard
+    const reference = inspectionSlip?.reference || inspectionSlip?.slip_reference || '';
+    if (reference) {
+      redirect(`/inspection/slip?reference=${reference}&listingId=${listingId}`);
+    } else {
+      // Fallback to dashboard if no reference
+      redirect('/dashboard');
+    }
   };
 
   async function onSuccess(response){
-    const res = await axios.post(`/listings/checkout/${listingId}/`, JSON.stringify({
-      ...checkoutPayload
-    }));
-    const data = objectifyJSON(res.data);
-    if(res.status === 200){
-      if (checkoutPayload.payment_option === 'pay-after-inspection'){
+    try {
+      const res = await axios.post(`/listings/checkout/${listingId}/`, JSON.stringify({
+        ...checkoutPayload
+      }));
+      const data = objectifyJSON(res.data);
+      
+      if(res.status === 200){
+        // Close payment modal first
         onClose();
-        console.log("Time for Inspection")
-        // Show inspection booking modal instead of redirecting
-        setShowInspectionBooking(true);
-        onInspectionOpen();
-        return;
+        
+        if (checkoutPayload.payment_option === 'pay-after-inspection'){
+          console.log("Payment successful, opening inspection booking modal");
+          notify({
+            title: 'Payment Successful',
+            body: 'Please schedule your vehicle inspection',
+            color: 'green'
+          });
+          
+          // Show inspection booking modal
+          setShowInspectionBooking(true);
+          onInspectionOpen();
+          return;
+        }
+        
+        // For other payment options, redirect to home
+        notify({
+          title: 'Purchase Complete',
+          body: 'Your order has been placed successfully',
+          color: 'green'
+        });
+        return redirect('/');
       }
-      return redirect('/');
+    } catch (error) {
+      console.error('Checkout error:', error);
+      onClose();
+      notify({
+        title: 'Checkout Failed',
+        body: error?.response?.data?.message || 'Failed to complete checkout. Please try again.',
+        color: 'red'
+      });
     }
   }
 

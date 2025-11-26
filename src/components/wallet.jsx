@@ -202,26 +202,37 @@ export const WalletPaymentModal = ({
 
 	async function payUp(){
 		try{
-			const res = await axios.post('/wallet/pay');
+			const res = await axios.post('/wallet/pay', JSON.stringify({
+				amount: amount,
+				recipient: recipient?.id || recipient?.owner?.id,
+				pin: pin
+			}));
 			const data = objectifyJSON(res.data);
 
 			if (res.status === 200){
-				onSuccess({
-
-				})	
+				notify({
+					title: 'Payment Successful',
+					body: 'Payment completed successfully',
+					color: 'green'
+				});
+				onSuccess(data);
 			}else{
 				// insufficient funds / wrong pin
 				notify({
 					title: 'Error',
-					body: data?.message,
+					body: data?.message || 'Payment failed',
 					color: 'red'
 				})
 			}
 
 		}catch(err){
-			console.log("error paying up:", err)
+			console.log("error paying up:", err);
+			notify({
+				title: 'Payment Error',
+				body: err?.response?.data?.message || 'Failed to process payment',
+				color: 'red'
+			})
 		}
-		onSuccess(response)
 	}
 
 	return(
