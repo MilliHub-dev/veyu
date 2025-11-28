@@ -271,8 +271,16 @@ function CheckoutPage({ props }) {
       let payload = checkoutPayload;
       payload.payment_option = val;
       if (val === 'pay-after-inspection'){
-        payload.amount = order.inspection_fee
+        payload.amount = order.inspection_fee || 0;
+      } else {
+        // For other payment options, use the full total
+        const fullTotal = Number(listing?.price || 0) + 
+                         Number(order?.service_fee || 0) + 
+                         Number(order?.tax || 0) + 
+                         Number(order?.inspection_fee || 0);
+        payload.amount = fullTotal;
       }
+      console.log('Payment option changed to:', val, 'Amount:', payload.amount);
       setCheckoutPayload({...payload})
     },
   });
@@ -284,7 +292,6 @@ function CheckoutPage({ props }) {
     onOpen: onInspectionOpen,
     onClose: onInspectionClose
   } = useDisclosure();
-  const [showInspectionBooking, setShowInspectionBooking] = useState(false);
 
   function redeemCoupon(e){
     e.preventDefault();
@@ -341,31 +348,163 @@ function CheckoutPage({ props }) {
     console.log('Location', {lat, lng, ...location});
   }
   
-  function proceedToCheckout(e){
+  async function proceedToCheckout(e){
     e.preventDefault();
-    switch(checkoutPayload.payment_option){
-      case 'pay-after-inspection':{
-        // setCheckoutPayload({ ...checkoutPayload, amount: order.inspection_fee })
-        onOpen();
-        break;
-      }
-      case 'wallet':{
-        onOpen();
-        break;
-      }
-      default:{
-        onOpen();
-        break;
-      }
+    console.log('🚀 proceedToCheckout called with payment option:', checkoutPayload.payment_option);
+    console.log('📦 Checkout payload:', checkoutPayload);
+    
+    // For wallet payments, show wallet modal directly
+    if (checkoutPayload.payment_option === 'wallet') {
+      console.log('💰 Opening wallet payment modal');
+      onOpen();
+      return;
     }
-    console.table("Checking out with: ", checkoutPayload);
-    // onOpen();
+    
+    // For online payment and pay-after-inspection, call backend API
+    try {
+      console.log('📞 Calling checkout API...');
+      
+      const res = await axios.post(`/listings/checkout/${listingId}/`, JSON.stringify(checkoutPayload));
+      const data = objectifyJSON(res.data);
+      
+      console.log('✅ Checkout API response:', data);
+      
+      if(res.status === 200 || res.status === 201){
+        console.log('✅ Checkout successful! Status:', res.status);
+        
+        // Check if backend returned a payment URL (for Paystack)
+        if (data.payment_url || data.authorization_url || data.data?.authorization_url) {
+          const paymentUrl = data.payment_url || data.authorization_url || data.data?.authorization_url;
+          console.log('💳 Payment URL received:', paymentUrl);
+          console.log('🔄 Redirecting to Paystack...');
+          
+          // Redirect to Paystack payment page
+          window.location.href = paymentUrl;
+          return;
+        }
+        
+        // Check if this is pay-after-inspection (order created successfully)
+        if (checkoutPayload.payment_option === 'pay-after-inspection'){
+          console.log("✅ Order created for pay-after-inspection");
+          console.log("📋 Order data:", data.data);
+          
+          // Check if inspection slip reference is returned
+          if (data.inspection_slip_reference || data.data?.inspection_slip_reference) {
+            const slipRef = data.inspection_slip_reference || data.data.inspection_slip_reference;
+            console.log("✅ Inspection slip reference received:", slipRef);
+            
+            notify({
+              title: 'Order Created',
+              body: 'Redirecting to inspection slip...',
+              color: 'green'
+            });
+            
+            // Redirect to inspection slip page
+            setTimeout(() => {
+              redirect(`/inspection/slip?reference=${slipRef}&listingId=${listingId}`);
+            }, 1000);
+            
+            return;
+          }
+          
+          notify({
+            title: 'Order Created',
+            body: 'Please schedule your vehicle inspection',
+            color: 'green'
+          });
+          
+          // Show inspection booking modal
+          setTimeout(() => {
+            console.log('Opening inspection modal now...');
+            onInspectionOpen();
+          }, 300);
+          
+          return;
+        }
+        
+        // If no payment URL for online payment, show Paystack modal
+        if (checkoutPayload.payment_option === 'online-payment') {
+          console.log('💳 No payment URL from backend, showing Paystack modal');
+          onOpen();
+          return;
+        }
+        
+        // If no payment URL and not pay-after-inspection, check if payment is completed
+        if (data.status === 'success' || data.payment_status === 'paid' || data.error === false) {
+          console.log('✅ Payment completed successfully');
+          
+          // For other payment options, redirect to success page or home
+          notify({
+            title: 'Purchase Complete',
+            body: data.message || 'Your order has been placed successfully',
+            color: 'green'
+          });
+          return redirect('/');
+        }
+        
+        // If we get here, something unexpected happened
+        console.warn('⚠️ Unexpected response format:', data);
+        notify({
+          title: 'Checkout Completed',
+          body: 'Please check your orders',
+          color: 'blue'
+        });
+        return redirect('/dashboard');
+        
+      }
+    } catch (error) {
+      console.error('❌ Checkout error:', error);
+      console.error('Error response:', error?.response?.data);
+      
+      notify({
+        title: 'Checkout Failed',
+        body: error?.response?.data?.message || error?.message || 'Failed to complete checkout. Please try again.',
+        color: 'red'
+      });
+    }
   }
   
+  const onSuccess = async (paymentResponse) => {
+    console.log('💰 Payment successful:', paymentResponse);
+    
+    try {
+      // Verify payment with backend
+      const verifyPayload = {
+        ...checkoutPayload,
+        payment_reference: paymentResponse.reference || paymentResponse.trxref || paymentResponse.transaction,
+        payment_status: 'paid'
+      };
+      
+      const res = await axios.post(`/listings/checkout/${listingId}/verify/`, JSON.stringify(verifyPayload));
+      const data = objectifyJSON(res.data);
+      
+      if (res.status === 200) {
+        notify({
+          title: 'Payment Successful',
+          body: 'Your purchase has been completed',
+          color: 'green'
+        });
+        
+        onClose();
+        
+        // Redirect to success page or dashboard
+        setTimeout(() => {
+          redirect('/dashboard');
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('❌ Payment verification error:', error);
+      notify({
+        title: 'Verification Failed',
+        body: 'Payment received but verification failed. Please contact support.',
+        color: 'orange'
+      });
+    }
+  };
+
   const handleInspectionBookingComplete = (inspectionSlip) => {
     console.log('Inspection booking completed:', inspectionSlip);
     onInspectionClose();
-    setShowInspectionBooking(false);
     
     notify({
       title: 'Inspection Booked',
@@ -383,32 +522,76 @@ function CheckoutPage({ props }) {
     }
   };
 
-  async function onSuccess(response){
+  async function onSuccess(paystackResponse){
+    console.log('Payment success callback triggered with:', paystackResponse);
+    
     try {
-      const res = await axios.post(`/listings/checkout/${listingId}/`, JSON.stringify({
-        ...checkoutPayload
-      }));
+      // Add payment reference to checkout payload
+      const checkoutData = {
+        ...checkoutPayload,
+        payment_reference: paystackResponse?.reference || paystackResponse?.trxref,
+        payment_status: 'paid',
+      };
+      
+      console.log('Calling checkout API with:', checkoutData);
+      
+      const res = await axios.post(`/listings/checkout/${listingId}/`, JSON.stringify(checkoutData));
       const data = objectifyJSON(res.data);
       
+      console.log('Checkout API response:', data);
+      
       if(res.status === 200){
+        console.log('✅ Checkout successful! Status:', res.status);
+        console.log('Current payment option:', checkoutPayload.payment_option);
+        console.log('isInspectionOpen state before:', isInspectionOpen);
+        
         // Close payment modal first
         onClose();
+        console.log('Payment modal closed');
         
         if (checkoutPayload.payment_option === 'pay-after-inspection'){
-          console.log("Payment successful, opening inspection booking modal");
+          console.log("✅ Payment option is 'pay-after-inspection', opening inspection booking modal");
+          console.log('Listing ID:', listingId);
+          console.log('Listing type:', listing?.listing_type);
+          
+          // Check if inspection slip reference is returned
+          if (data.inspection_slip_reference || data.data?.inspection_slip_reference) {
+            const slipRef = data.inspection_slip_reference || data.data.inspection_slip_reference;
+            console.log("✅ Inspection slip reference received:", slipRef);
+            
+            notify({
+              title: 'Payment Successful',
+              body: 'Redirecting to inspection slip...',
+              color: 'green'
+            });
+            
+            // Redirect to inspection slip page
+            setTimeout(() => {
+              redirect(`/inspection/slip?reference=${slipRef}&listingId=${listingId}`);
+            }, 1000);
+            
+            return;
+          }
+          
           notify({
             title: 'Payment Successful',
             body: 'Please schedule your vehicle inspection',
             color: 'green'
           });
           
-          // Show inspection booking modal
-          setShowInspectionBooking(true);
-          onInspectionOpen();
+          // Show inspection booking modal with a small delay to ensure payment modal is closed
+          console.log('Calling onInspectionOpen...');
+          setTimeout(() => {
+            console.log('Opening inspection modal now...');
+            onInspectionOpen();
+            console.log('✅ onInspectionOpen called. Modal should be visible.');
+          }, 300);
+          
           return;
         }
         
         // For other payment options, redirect to home
+        console.log('Payment option is NOT pay-after-inspection, redirecting to home');
         notify({
           title: 'Purchase Complete',
           body: 'Your order has been placed successfully',
@@ -418,10 +601,11 @@ function CheckoutPage({ props }) {
       }
     } catch (error) {
       console.error('Checkout error:', error);
+      console.error('Error response:', error?.response?.data);
       onClose();
       notify({
         title: 'Checkout Failed',
-        body: error?.response?.data?.message || 'Failed to complete checkout. Please try again.',
+        body: error?.response?.data?.message || error?.message || 'Failed to complete checkout. Please try again.',
         color: 'red'
       });
     }
@@ -1078,51 +1262,68 @@ function CheckoutPage({ props }) {
           </Box>
         </SimpleGrid>
 
-        {
-          (listing && (
-            checkoutPayload?.payment_option === 'online-payment' || 
-            checkoutPayload?.payment_option === 'pay-after-inspection' 
-            )
-          ) ? ( isOpen &&
-            <PaystackPaymentModal
-             isOpen={isOpen}
-             onClose={onClose}
-             onSuccess={onSuccess}
-             payload={checkoutPayload}
-             customizations={{
-                title: "Veyu Checkout",
-                logo: listing?.vehicle?.dealer?.logo,
-                description: `Payment for ${listing?.title}`,
-             }}
-            />
-          ): checkoutPayload?.payment_option === 'wallet' ? ( isOpen &&
-            <WalletPaymentModal
-              payload={{amount: total, recipient: listing?.vehicle?.dealer}}
-              isOpen={isOpen}
-              onClose={onClose}
-              onSuccess={onSuccess}
-            />
-          ):(null)
-        }
+        {/* Payment Modals */}
+        {listing && checkoutPayload?.payment_option === 'online-payment' && isOpen && (
+          <PaystackPaymentModal
+            isOpen={isOpen}
+            onClose={onClose}
+            onSuccess={onSuccess}
+            payload={{
+              email: checkoutPayload.email,
+              amount: checkoutPayload.amount,
+            }}
+            customizations={{
+              title: "Veyu Checkout",
+              logo: listing?.vehicle?.dealer?.logo,
+              description: `Payment for ${listing?.title}`,
+            }}
+          />
+        )}
+        
+        {listing && checkoutPayload?.payment_option === 'wallet' && isOpen && (
+          <WalletPaymentModal
+            payload={{
+              amount: checkoutPayload.amount, 
+              recipient: listing?.vehicle?.dealer
+            }}
+            isOpen={isOpen}
+            onClose={onClose}
+            onSuccess={onSuccess}
+          />
+        )}
 
         {/* Inspection Booking Modal */}
-        {showInspectionBooking && (
-          <Modal isOpen={isInspectionOpen} onClose={onInspectionClose} size="xl">
-            <ModalOverlay />
-            <ModalContent>
-              <ModalHeader>Schedule Vehicle Inspection</ModalHeader>
-              <ModalCloseButton />
-              <ModalBody pb={6}>
+        {console.log('🔍 Rendering inspection modal. isInspectionOpen:', isInspectionOpen)}
+        <Modal 
+          isOpen={isInspectionOpen} 
+          onClose={onInspectionClose} 
+          size="xl"
+          closeOnOverlayClick={false}
+        >
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Schedule Vehicle Inspection</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody pb={6}>
+              {console.log('🔍 Inside modal body. isInspectionOpen:', isInspectionOpen, 'listingId:', listingId)}
+              {isInspectionOpen && listingId && listing ? (
                 <InspectionBooking
                   listingId={listingId}
                   listingType={listing?.listing_type === 'sale' ? 'buy' : 'rent'}
                   onBookingComplete={handleInspectionBookingComplete}
                   onCancel={onInspectionClose}
+                  alreadyPaid={true}
                 />
-              </ModalBody>
-            </ModalContent>
-          </Modal>
-        )}
+              ) : (
+                <Box>
+                  {console.log('❌ Modal conditions not met:', { isInspectionOpen, listingId, listing: !!listing })}
+                  <Text>Loading inspection form...</Text>
+                </Box>
+              )}
+            </ModalBody>
+          </ModalContent>
+        </Modal>
+        
 
       </Container>
     </Box>

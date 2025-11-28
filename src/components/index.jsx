@@ -2219,6 +2219,9 @@ export { MechanicCard } from './MechanicCard';
 // Export new inspection components
 export { default as InspectionBooking } from './InspectionBooking';
 export { default as InspectionSlip } from './InspectionSlip';
+export { default as CreateInspectionModal } from './inspections/CreateInspectionModal';
+export { default as InspectionPhotos } from './inspections/InspectionPhotos';
+export { default as InspectionData } from './inspections/InspectionData';
 
 // Export new inspection document components
 export { default as DocumentPreview } from './DocumentPreview';

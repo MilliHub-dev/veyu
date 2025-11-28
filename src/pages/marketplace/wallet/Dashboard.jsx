@@ -59,9 +59,9 @@ function WalletHomePage() {
 
   async function getWalletTransactions(){
     try{
-      const res = await axios.get('/wallet/transactions/');
+      const res = await axios.get('/wallet/transactions/?limit=10');
       const data = objectifyJSON(res.data);
-      setTransactions(data?.transactions);
+      setTransactions(data?.transactions || []);
     }catch(error){
       notify({
         title: "Oops! An error occurred.",

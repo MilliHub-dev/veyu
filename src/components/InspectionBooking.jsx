@@ -26,9 +26,10 @@ import { PaystackPaymentModal } from './wallet';
 
 /**
  * InspectionBooking Component
- * Allows customers to book and pay for inspections during checkout
+ * Allows customers to book inspections during checkout
+ * Note: Payment is already handled in the checkout flow
  */
-const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel }) => {
+const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel, alreadyPaid = true }) => {
   const { authUser } = useContext(GlobalStore);
   const toast = useToast();
 
@@ -49,6 +50,8 @@ const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel
   // Inspection pricing (could be fetched from API)
   const inspectionPrice = inspectionType === 'pre_purchase' ? 25000 : 20000;
 
+  console.log('InspectionBooking mounted with:', { listingId, listingType, alreadyPaid });
+
   // Get minimum date (tomorrow)
   const getMinDate = () => {
     const tomorrow = new Date();
@@ -57,9 +60,17 @@ const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel
   };
 
   const handleBookInspection = async () => {
+    console.log('handleBookInspection called');
+    
     // Validation
     if (!preferredDate || !preferredTime) {
       setError('Please select both date and time for the inspection');
+      toast({
+        title: 'Validation Error',
+        description: 'Please select both date and time for the inspection',
+        status: 'warning',
+        duration: 3000,
+      });
       return;
     }
 
@@ -74,7 +85,15 @@ const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel
         inspection_type: inspectionType,
       };
 
+      console.log('Booking data:', booking);
       setBookingData(booking);
+
+      // If already paid (from checkout), just book without payment
+      if (alreadyPaid) {
+        console.log('Already paid, booking directly...');
+        await processBooking(booking, 'prepaid', null);
+        return;
+      }
 
       // Handle payment based on selected method
       if (paymentMethod === 'wallet') {
@@ -228,27 +247,40 @@ const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel
 
         <Divider />
 
-        {/* Payment Method */}
-        <FormControl>
-          <FormLabel>Payment Method</FormLabel>
-          <RadioGroup value={paymentMethod} onChange={setPaymentMethod}>
-            <Stack direction="column" spacing={2}>
-              <Radio value="card">Card Payment (Paystack)</Radio>
-              <Radio value="wallet">Wallet</Radio>
-              <Radio value="bank_transfer">Bank Transfer</Radio>
-            </Stack>
-          </RadioGroup>
-        </FormControl>
+        {/* Payment Status or Payment Method */}
+        {alreadyPaid ? (
+          <Alert status="success" borderRadius="md">
+            <AlertIcon />
+            <VStack align="start" spacing={0}>
+              <Text fontWeight="semibold">Payment Already Completed</Text>
+              <Text fontSize="sm">Inspection fee was included in your purchase</Text>
+            </VStack>
+          </Alert>
+        ) : (
+          <>
+            {/* Payment Method */}
+            <FormControl>
+              <FormLabel>Payment Method</FormLabel>
+              <RadioGroup value={paymentMethod} onChange={setPaymentMethod}>
+                <Stack direction="column" spacing={2}>
+                  <Radio value="card">Card Payment (Paystack)</Radio>
+                  <Radio value="wallet">Wallet</Radio>
+                  <Radio value="bank_transfer">Bank Transfer</Radio>
+                </Stack>
+              </RadioGroup>
+            </FormControl>
 
-        {/* Price Summary */}
-        <Box bg="blue.50" p={4} borderRadius="md">
-          <HStack justify="space-between">
-            <Text fontWeight="bold">Total Amount:</Text>
-            <Text fontSize="xl" fontWeight="bold" color="blue.600">
-              ₦{inspectionPrice.toLocaleString()}
-            </Text>
-          </HStack>
-        </Box>
+            {/* Price Summary */}
+            <Box bg="blue.50" p={4} borderRadius="md">
+              <HStack justify="space-between">
+                <Text fontWeight="bold">Total Amount:</Text>
+                <Text fontSize="xl" fontWeight="bold" color="blue.600">
+                  ₦{inspectionPrice.toLocaleString()}
+                </Text>
+              </HStack>
+            </Box>
+          </>
+        )}
 
         {/* Error Alert */}
         {error && (
@@ -265,11 +297,11 @@ const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel
             colorScheme="blue"
             onClick={handleBookInspection}
             isLoading={isProcessing}
-            loadingText="Processing..."
+            loadingText={alreadyPaid ? "Scheduling..." : "Processing..."}
             isDisabled={!preferredDate || !preferredTime}
           >
             {isProcessing ? <Spinner size="sm" mr={2} /> : null}
-            Book & Pay
+            {alreadyPaid ? 'Schedule Inspection' : 'Book & Pay'}
           </Button>
           <Button
             flex={1}
@@ -284,7 +316,10 @@ const InspectionBooking = ({ listingId, listingType, onBookingComplete, onCancel
         {/* Info Alert */}
         <Alert status="info" borderRadius="md" fontSize="sm">
           <AlertIcon />
-          Your inspection will be scheduled after payment confirmation. You will receive an inspection slip with all details.
+          {alreadyPaid 
+            ? 'Select your preferred date and time for the inspection. You will receive an inspection slip with all details.'
+            : 'Your inspection will be scheduled after payment confirmation. You will receive an inspection slip with all details.'
+          }
         </Alert>
       </VStack>
 

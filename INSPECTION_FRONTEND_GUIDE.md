@@ -46,9 +46,8 @@ Step 8: DOWNLOAD SIGNED DOCUMENT
 
 ### Base URL
 ```
-Production: https://veyu.cc/api/v1
-Staging: https://staging.veyu.cc/api/v1
-```
+Production: https://dev.veyu.cc/api/v1
+
 
 ### Authentication
 All endpoints require JWT authentication:

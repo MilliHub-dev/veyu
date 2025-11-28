@@ -17,7 +17,7 @@ import {
 } from '@chakra-ui/react';
 // import {Zap} from '@chakra-ui/icons'
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
-import { usePaystackPayment } from 'react-paystack';
+import { PaystackButton } from 'react-paystack';
 import {PinField, CenteredLayout} from '.';
 import {EmptyWalletIcon,} from './icons';
 import {GlobalStore} from '../App';
@@ -40,32 +40,42 @@ export const PaystackPaymentModal = ({
 	// const PAYSTACK_LIVE_KEY = import.meta.env.VITE_PAYSTACK_LIVE_PUBLIC_KEY;
 	const PAYSTACK_LIVE_KEY = "pk_test_b61ba0372b2ab11527ef2b9da625af0cfe4d3134";
 
-	const config = {
-		publicKey: PAYSTACK_LIVE_KEY,
-		reference: (new Date()).getTime().toString(),
-		amount: amount * 100,
+	const componentProps = {
 		email: email,
+		amount: amount * 100,
+		publicKey: PAYSTACK_LIVE_KEY,
+		text: "Continue",
+		onSuccess: (reference) => {
+			console.log("✅ Paystack SUCCESS callback triggered");
+			console.log("📦 Success response:", reference);
+			onPaymentComplete(reference);
+		},
+		onClose: () => {
+			console.log("❌ Paystack CLOSE callback triggered");
+			onModalClose();
+		},
 	};
 
-	const handlePayment = usePaystackPayment(config);
-
-	function payUp(){
-		try{
-			console.log("Paying Up...");
-		  	handlePayment((res) => onPaymentComplete(res), onModalClose);
-		}catch(err){
-		  	console.log("error paying up:", err)
+	function onPaymentComplete(response){
+		console.log("🎉 Paystack payment completed:", response);
+		console.log("📞 Calling onSuccess callback with response...");
+		console.log("🔍 Response details:", JSON.stringify(response, null, 2));
+		
+		try {
+			const result = onSuccess(response);
+			console.log("✅ onSuccess callback completed:", result);
+			return result;
+		} catch (err) {
+			console.error("❌ Error in onSuccess callback:", err);
+			throw err;
 		}
 	}
 
-	function onPaymentComplete(response){
-		console.log("Paystack", response);
-		return onSuccess(response)
-	}
-
 	function onModalClose(){
-	// user cancelled the payment flow
-		console.log("User cancelled the transaction")
+		// user cancelled the payment flow
+		console.log("🚫 User cancelled the transaction");
+		console.log("🔒 Closing payment modal...");
+		onClose();
 	}
 
 
@@ -89,7 +99,21 @@ export const PaystackPaymentModal = ({
 	          	</Text>
 	          </Alert>
 	        </Box>
-	        <Button w="100%" bg="primary" colorScheme="blue" onClick={payUp}> Continue </Button>
+	        <PaystackButton 
+	        	{...componentProps} 
+	        	className="paystack-button"
+	        	style={{
+	        		width: '100%',
+	        		padding: '12px',
+	        		backgroundColor: '#3182CE',
+	        		color: 'white',
+	        		border: 'none',
+	        		borderRadius: '6px',
+	        		fontSize: '16px',
+	        		fontWeight: '500',
+	        		cursor: 'pointer'
+	        	}}
+	        />
 	      </ModalBody>
 	    </ModalContent>
 	  </Modal>

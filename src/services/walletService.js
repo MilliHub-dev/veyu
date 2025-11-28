@@ -31,6 +31,28 @@ class WalletService {
     }
   }
 
+  // Get transaction summary
+  async getTransactionSummary() {
+    try {
+      const response = await apiClient.get('/wallet/transactions/summary/');
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  // Get transaction analytics (admin only)
+  async getTransactionAnalytics(days = 30) {
+    try {
+      const response = await apiClient.get('/wallet/analytics/', { 
+        params: { days } 
+      });
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
   // Deposit funds
   async deposit(amount, paymentMethod, paymentReference = null) {
     try {

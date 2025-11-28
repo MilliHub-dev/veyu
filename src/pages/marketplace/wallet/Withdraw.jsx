@@ -1,79 +1,127 @@
 import {useState, useEffect, useContext, useRef} from 'react';
-import {Link, NavLink, Outlet} from 'react-router-dom';
 import {GlobalStore} from '../../../App';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import {
   Box,
-  Container,
-  Flex,
   VStack,
   Alert,
+  AlertIcon,
   HStack,
   Text,
   Heading,
   Button,
-  Avatar,
-  AvatarGroup,
-  Progress,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
   Select,
   Checkbox,
-  IconButton,
-  Menu,
-  MenuButton,
   SimpleGrid,
-  MenuList,
   FormControl,
   FormLabel,
-  MenuItem,
-  Badge,
   Input,
+  Spinner,
 } from '@chakra-ui/react'
-import { LayoutDashboard, Wallet, Clock, PiggyBank, BarChart2, HelpCircle, Settings, Share2, MoreVertical, TrendingUp } from 'lucide-react'
-import { RiCoinsFill, RiCoinsLine } from "react-icons/ri";
-import { LuChartLine } from "react-icons/lu";
-import { GiHomeGarage } from "react-icons/gi";
-import { AiOutlineTransaction } from "react-icons/ai";
-import { PiHandDepositBold, PiHandWithdrawBold } from "react-icons/pi";
-import {FlutterwavePaymentModal} from '../../../components/wallet';
-import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
+import { Wallet, Clock, Settings, Share2, CheckCircle } from 'lucide-react'
 import {CenteredLayout} from '../../../components';
 
 function WalletWithdrawalPage() {
-  const {axios, notify, authUser, commaInt, redirect} = useContext(GlobalStore);
-  const [currency, setCurrency] = useState({
+  const {axios, notify, commaInt, redirect} = useContext(GlobalStore);
+  const [currency] = useState({
       code: 'NGN',
       symbol: '₦'
   });
-  const [showDepositModal, setDepositModalVisibility] = useState(false);
   const [amount, setAmount] = useState(0);
   const [banks, setBanks] = useState([]);
+  const [wallet, setWallet] = useState(null);
   const [accept, setAccept] = useState(false);
   const [step, setStep] = useState(0);
   const [selectedBank, setSelectedBank] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verified, setVerified] = useState(false);
   const [loading, setLoadingState] = useState(false);
   const amountRef = useRef();
-  const DEBUG = JSON.parse(import.meta.env.VITE_DEBUG);
+
+  async function verifyAccount(){
+    if (!selectedBank || !accountNumber){
+      notify({ title: 'Please select bank and enter account number', color: 'red' });
+      return;
+    }
+
+    if (accountNumber.length !== 10){
+      notify({ title: 'Account number must be 10 digits', color: 'red' });
+      return;
+    }
+
+    try{
+      setVerifying(true);
+      setVerified(false);
+      setAccountName('');
+
+      const payload = {
+        account_number: accountNumber,
+        bank_code: selectedBank,
+      };
+
+      const res = await axios.post('/wallet/withdrawal-requests/verify-account/', jsonifyObject(payload));
+      const data = objectifyJSON(res.data);
+
+      if (data.verified){
+        setVerified(true);
+        setAccountName(data.data.account_name);
+        notify({ 
+          title: 'Account Verified', 
+          body: `Account Name: ${data.data.account_name}`,
+          color: 'green' 
+        });
+      }else{
+        setVerified(false);
+        notify({ 
+          title: 'Verification Failed', 
+          body: data.message || 'Invalid account number or bank code',
+          color: 'red' 
+        });
+      }
+    }catch(error){
+      setVerified(false);
+      notify({
+        title: "Verification Failed",
+        body: error?.response?.data?.message || error.message,
+        color: 'red'
+      })
+    }finally{
+      setVerifying(false);
+    }
+  }
 
   async function processWithdrawal(){
+    if (!verified){
+      notify({ title: 'Please verify your account first', color: 'red' });
+      return;
+    }
+
     try{
       setLoadingState(true);
+      
+      const selectedBankData = banks.find(b => b.code === selectedBank);
+      
       const payload = {
         amount: Number(amount),
-        bank_code: selectedBank,
+        account_name: accountName,
         account_number: accountNumber,
+        bank_name: selectedBankData?.name || '',
+        bank_code: selectedBank,
+        paystack_verified: true,
       };
-      const res = await axios.post('/wallet/withdraw/', jsonifyObject(payload));
+
+      const res = await axios.post('/wallet/withdrawal-requests/', jsonifyObject(payload));
       const data = objectifyJSON(res.data);
-      if (res.status === 200){
-        notify({ title: 'Withdrawal requested', color: 'blue' });
-        redirect('/wallet/', 500);
+
+      if (res.status === 200 || res.status === 201){
+        notify({ 
+          title: 'Withdrawal Request Submitted', 
+          body: 'Your withdrawal request will be reviewed by our team.',
+          color: 'green' 
+        });
+        redirect('/wallet/transactions', 1000);
       }else{
         notify({ title: data?.message || 'Withdrawal failed', color: 'red' });
       }
@@ -88,19 +136,30 @@ function WalletWithdrawalPage() {
     }
   }
 
-  // async func
-
-  async function init(){
+  async function getWallet(){
     try{
-      setLoadingState(true);
+      const res = await axios.get('/wallet/');
+      const data = objectifyJSON(res.data);
+      setWallet(data?.data);
+    }catch(error){
+      console.error('Error fetching wallet:', error);
+    }
+  }
+
+  async function getBanks(){
+    try{
       const res = await axios.get('/wallet/banks/');
       const data = objectifyJSON(res.data);
-      setBanks(data.data);
+      setBanks(data.data || []);
     }catch(error){
       notify({ title: 'Unable to load banks', body: error.message, color: 'red' });
-    }finally{
-      setLoadingState(false);
     }
+  }
+
+  async function init(){
+    setLoadingState(true);
+    await Promise.all([getWallet(), getBanks()]);
+    setLoadingState(false);
   }
 
   function handleSubmit(){
@@ -112,9 +171,21 @@ function WalletWithdrawalPage() {
       notify({ title: 'Enter a valid amount', color: 'red' });
       return;
     }
+    if (Number(amount) < 100){
+      notify({ title: 'Minimum withdrawal amount is ₦100', color: 'red' });
+      return;
+    }
+    if (wallet && Number(amount) > Number(wallet.balance)){
+      notify({ title: 'Insufficient balance', color: 'red' });
+      return;
+    }
     if (step === 1){
       if (!selectedBank || !accountNumber){
         notify({ title: 'Enter bank and account number', color: 'red' });
+        return;
+      }
+      if (!verified){
+        notify({ title: 'Please verify your account first', color: 'red' });
         return;
       }
       return processWithdrawal();
@@ -122,9 +193,31 @@ function WalletWithdrawalPage() {
     setStep(1);
   }
 
+  function handleBankChange(e){
+    setSelectedBank(e.target.value);
+    setVerified(false);
+    setAccountName('');
+  }
+
+  function handleAccountNumberChange(e){
+    const value = e.target.value.replace(/\D/g, '');
+    setAccountNumber(value);
+    setVerified(false);
+    setAccountName('');
+  }
+
   useEffect(() => {
     init();
   }, [])
+
+  if (loading){
+    return (
+      <Box textAlign="center" py={20}>
+        <Spinner size="xl" color="blue.500" />
+        <Text mt={4}>Loading...</Text>
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -137,7 +230,9 @@ function WalletWithdrawalPage() {
               {step === 0 ? (
                 <>
                   <Text color="gray.600">Enter the amount you want to withdraw.</Text>
-                  <Heading size="sm" color="primary">Available Balance: {currency.symbol}{commaInt(2000000)}</Heading>
+                  <Heading size="sm" color="primary">
+                    Available Balance: {currency.symbol}{wallet ? commaInt(wallet.balance) : '0'}
+                  </Heading>
 
                   <Heading
                    size="lg" w="100%"
@@ -181,14 +276,44 @@ function WalletWithdrawalPage() {
                     ></Text>
                   </Heading>
 
-                  <Button onClick={handleSubmit} isDisabled={Number(amount) < 50000 } bg="primary" colorScheme="blue" w="full" size="lg">Proceed</Button>
+                  <Alert status="info" borderRadius="lg">
+                    <AlertIcon />
+                    <Text fontSize="sm">Minimum withdrawal: ₦100</Text>
+                  </Alert>
+
+                  <Button 
+                    onClick={handleSubmit} 
+                    isDisabled={Number(amount) < 100 || (wallet && Number(amount) > Number(wallet.balance))} 
+                    bg="primary" 
+                    colorScheme="blue" 
+                    w="full" 
+                    size="lg"
+                  >
+                    Proceed
+                  </Button>
                 </>
               ) : (
                 <>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setStep(0)} 
+                    alignSelf="flex-start"
+                  >
+                    ← Back
+                  </Button>
+                  
                   <Text color="gray.600">Enter your bank details to receive your funds.</Text>
-                  <Box as={FormControl} isRequired w="full" mb={3}>
+                  
+                  <Box as={FormControl} isRequired w="full">
                     <Text as={FormLabel}>Bank Name</Text>
-                    <Select isRequired w="full" value={selectedBank} onChange={(e)=> setSelectedBank(e.target.value)}>
+                    <Select 
+                      placeholder="Select Bank"
+                      isRequired 
+                      w="full" 
+                      value={selectedBank} 
+                      onChange={handleBankChange}
+                    >
                       {banks?.map((bank) => (
                         <option key={bank?.code} value={bank?.code}>{bank.name}</option>
                       ))}
@@ -197,16 +322,79 @@ function WalletWithdrawalPage() {
 
                   <Box as={FormControl} isRequired w="full">
                     <Text as={FormLabel}>Account Number</Text>
-                    <Input isRequired py={4} w="full" type="tel" name="account-number" value={accountNumber} onChange={(e)=> setAccountNumber(e.target.value)} />
+                    <Input 
+                      isRequired 
+                      w="full" 
+                      type="tel" 
+                      maxLength={10}
+                      placeholder="Enter 10-digit account number"
+                      name="account-number" 
+                      value={accountNumber} 
+                      onChange={handleAccountNumberChange} 
+                    />
                   </Box>
 
-                  <Button onClick={handleSubmit} isLoading={loading} bg="primary" colorScheme="blue" w="full" size="lg">Submit</Button>
+                  <Button 
+                    onClick={verifyAccount} 
+                    isLoading={verifying}
+                    isDisabled={!selectedBank || accountNumber.length !== 10}
+                    colorScheme="blue"
+                    variant="outline"
+                    w="full"
+                  >
+                    {verifying ? 'Verifying...' : 'Verify Account'}
+                  </Button>
+
+                  {verified && accountName && (
+                    <Alert status="success" borderRadius="lg">
+                      <AlertIcon as={CheckCircle} />
+                      <Box flex="1">
+                        <Text fontWeight="600">Account Verified</Text>
+                        <Text fontSize="sm">{accountName}</Text>
+                      </Box>
+                    </Alert>
+                  )}
+
+                  {!verified && accountName === '' && accountNumber.length === 10 && selectedBank && (
+                    <Alert status="warning" borderRadius="lg">
+                      <AlertIcon />
+                      <Text fontSize="sm">Please verify your account before submitting</Text>
+                    </Alert>
+                  )}
+
+                  <Box as={FormControl} w="full">
+                    <Text as={FormLabel}>Account Name</Text>
+                    <Input 
+                      w="full" 
+                      value={accountName}
+                      isReadOnly
+                      bg="gray.50"
+                      placeholder="Will be filled after verification"
+                    />
+                  </Box>
+
+                  <Button 
+                    onClick={handleSubmit} 
+                    isLoading={loading} 
+                    isDisabled={!verified}
+                    bg="primary" 
+                    colorScheme="blue" 
+                    w="full" 
+                    size="lg"
+                  >
+                    Submit Withdrawal Request
+                  </Button>
                 </>
               )}
 
               <Alert colorScheme="blue" color="primary" gap={2} textAlign="left" borderRadius="lg" border="1px solid" borderColor="primary">
-                <Checkbox borderColor="primary" value={accept} onInput={e => setAccept(!accept)} isChecked={accept} style={{accentColor: 'primary'}} type="checkbox" name="i_accept" />
-                Veyu is not a bank.
+                <Checkbox 
+                  borderColor="primary" 
+                  onChange={(e) => setAccept(e.target.checked)} 
+                  isChecked={accept} 
+                  colorScheme="blue"
+                />
+                <Text fontSize="sm">I understand that Veyu is not a bank and withdrawal requests are subject to review.</Text>
               </Alert>
             </VStack>
           </Box>
@@ -220,15 +408,23 @@ function WalletWithdrawalPage() {
                   <Wallet size={18} />
                   <Box>
                     <Text fontWeight="600">Enter an amount</Text>
-                    <Text color="gray.600">We currently require a minimum of ₦50,000 per withdrawal.</Text>
+                    <Text color="gray.600" fontSize="sm">Minimum withdrawal is ₦100. Ensure you have sufficient balance.</Text>
                   </Box>
                 </HStack>
 
                 <HStack align="start" spacing={3}>
                   <Settings size={18} />
                   <Box>
-                    <Text fontWeight="600">Provide bank details</Text>
-                    <Text color="gray.600">Select your bank and input a valid 10-digit account number.</Text>
+                    <Text fontWeight="600">Verify bank details</Text>
+                    <Text color="gray.600" fontSize="sm">Select your bank and enter a valid 10-digit account number. We'll verify it with Paystack.</Text>
+                  </Box>
+                </HStack>
+
+                <HStack align="start" spacing={3}>
+                  <CheckCircle size={18} />
+                  <Box>
+                    <Text fontWeight="600">Account verification</Text>
+                    <Text color="gray.600" fontSize="sm">Your account name will be automatically retrieved and displayed after verification.</Text>
                   </Box>
                 </HStack>
 
@@ -236,7 +432,7 @@ function WalletWithdrawalPage() {
                   <Share2 size={18} />
                   <Box>
                     <Text fontWeight="600">Submit your request</Text>
-                    <Text color="gray.600">We’ll process your withdrawal to the provided bank account.</Text>
+                    <Text color="gray.600" fontSize="sm">Once verified, submit your withdrawal request for processing.</Text>
                   </Box>
                 </HStack>
 
@@ -244,23 +440,27 @@ function WalletWithdrawalPage() {
                   <Clock size={18} />
                   <Box>
                     <Text fontWeight="600">Processing time</Text>
-                    <Text color="gray.600">Transfers typically settle within minutes, but may take longer based on your bank.</Text>
+                    <Text color="gray.600" fontSize="sm">Requests are reviewed by our team. Approved transfers typically settle within minutes to hours.</Text>
                   </Box>
                 </HStack>
               </VStack>
 
               <Box borderTopWidth={1} pt={4}>
-                <Heading size="sm" mb={2}>Tips</Heading>
-                <VStack align="stretch" spacing={1} color="gray.600">
-                  <Text>- Ensure your account name matches your profile to avoid delays.</Text>
-                  <Text>- Double-check the account number to prevent failed transfers.</Text>
-                  <Text>- Keep your contact info up to date for notifications.</Text>
+                <Heading size="sm" mb={2}>Important Notes</Heading>
+                <VStack align="stretch" spacing={2} color="gray.600" fontSize="sm">
+                  <Text>• Account verification is required before submission</Text>
+                  <Text>• Ensure your account name matches your profile</Text>
+                  <Text>• Double-check the account number to prevent errors</Text>
+                  <Text>• All withdrawals require admin approval</Text>
+                  <Text>• Check transaction history for status updates</Text>
                 </VStack>
               </Box>
 
               <Box borderTopWidth={1} pt={4}>
                 <Heading size="sm" mb={2}>Need help?</Heading>
-                <Text color="gray.600">Contact support via chat or email if your withdrawal doesn’t reflect in time.</Text>
+                <Text color="gray.600" fontSize="sm">
+                  Contact support if you encounter any issues or if your withdrawal doesn't reflect in time.
+                </Text>
               </Box>
             </VStack>
           </Box>

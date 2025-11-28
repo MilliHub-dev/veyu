@@ -658,6 +658,54 @@ class InspectionService {
     }
   }
 
+  // ==================== Payment Integration ====================
+
+  /**
+   * Get inspection fee quote
+   * @param {Object} quoteData - Quote data
+   * @param {string} quoteData.inspection_type - pre_purchase|pre_rental|maintenance|insurance
+   * @param {number} quoteData.vehicle_id - Vehicle ID (optional)
+   */
+  async getInspectionQuote(quoteData) {
+    try {
+      const response = await apiClient.post('/inspections/quote/', quoteData);
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  /**
+   * Pay for inspection
+   * @param {string} inspectionId - Inspection ID
+   * @param {Object} paymentData - Payment data
+   * @param {string} paymentData.payment_method - wallet|bank
+   * @param {number} paymentData.amount - Amount to pay
+   */
+  async payForInspection(inspectionId, paymentData) {
+    try {
+      const response = await apiClient.post(`/inspections/${inspectionId}/pay/`, paymentData);
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  /**
+   * Verify Paystack payment for inspection
+   * @param {string} inspectionId - Inspection ID
+   * @param {Object} verificationData - Verification data
+   * @param {string} verificationData.reference - Paystack reference
+   */
+  async verifyInspectionPayment(inspectionId, verificationData) {
+    try {
+      const response = await apiClient.post(`/inspections/${inspectionId}/verify-payment/`, verificationData);
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
   // ==================== Helper Methods ====================
 
   // ==================== Inspection Booking (Checkout Integration) ====================
