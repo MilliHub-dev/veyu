@@ -94,13 +94,40 @@ function OrderDetail() {
     onOpen();
   }
 
+  async function handleWalletPayment() {
+    try {
+      setPaymentLoading(true);
+      const res = await axios.post(`/listings/my-orders/${orderId}/pay-with-wallet/`);
+      
+      if (res.status === 200) {
+        notify({
+          title: 'Payment Successful',
+          body: 'Payment completed successfully with wallet',
+          color: 'green',
+        });
+        onClose();
+        getOrderDetails();
+      }
+    } catch (error) {
+      console.error('Wallet payment error:', error);
+      notify({
+        title: 'Payment Failed',
+        body: error?.response?.data?.message || 'Failed to process wallet payment',
+        color: 'red',
+      });
+    } finally {
+      setPaymentLoading(false);
+    }
+  }
+
   async function onPaymentSuccess(response) {
     console.log('Payment successful:', response);
     
     try {
       // Verify payment with backend
-      const res = await axios.post(`/orders/${orderId}/verify-balance-payment/`, {
+      const res = await axios.post(`/listings/my-orders/${orderId}/verify-payment/`, {
         reference: response.reference || response.trxref,
+        payment_method: paymentMethod === 'wallet' ? 'wallet' : 'card',
       });
 
       if (res.status === 200) {
@@ -113,9 +140,10 @@ function OrderDetail() {
         getOrderDetails(); // Refresh order details
       }
     } catch (error) {
+      console.error('Payment verification error:', error);
       notify({
         title: 'Verification Failed',
-        body: 'Payment received but verification failed. Please contact support.',
+        body: error?.response?.data?.message || 'Payment received but verification failed. Please contact support.',
         color: 'orange',
       });
     }
@@ -149,7 +177,7 @@ function OrderDetail() {
 
   const vehicle = order?.order_item?.vehicle;
   const dealer = vehicle?.dealer;
-  const needsPayment = order?.order_status?.toLowerCase() === 'awaiting-final-payment' && !order?.paid;
+  const needsPayment = !order?.paid;
 
   return (
     <Container maxW="7xl" py={8}>
@@ -197,10 +225,10 @@ function OrderDetail() {
             <Box flex={1}>
               <Text fontWeight="600">Payment Required</Text>
               <Text fontSize="sm">
-                Your inspection is complete. Please pay the remaining balance to complete your order.
+                Please complete payment for this vehicle to proceed with your order.
               </Text>
             </Box>
-            <Button colorScheme="orange" size="sm" onClick={() => handlePayBalance('online-payment')}>
+            <Button colorScheme="orange" size="sm" onClick={() => handlePayBalance('card')}>
               Pay Now
             </Button>
           </Alert>
@@ -295,7 +323,8 @@ function OrderDetail() {
                       w="100%"
                       colorScheme="blue"
                       leftIcon={<CreditCard size={18} />}
-                      onClick={() => handlePayBalance('online-payment')}
+                      onClick={() => handlePayBalance('card')}
+                      isLoading={paymentLoading}
                     >
                       Pay with Card
                     </Button>
@@ -304,7 +333,8 @@ function OrderDetail() {
                       variant="outline"
                       colorScheme="purple"
                       leftIcon={<DollarSign size={18} />}
-                      onClick={() => handlePayBalance('wallet')}
+                      onClick={handleWalletPayment}
+                      isLoading={paymentLoading}
                     >
                       Pay with Wallet
                     </Button>
@@ -387,8 +417,8 @@ function OrderDetail() {
         </Card>
       </VStack>
 
-      {/* Payment Modals */}
-      {paymentMethod === 'online-payment' && (
+      {/* Payment Modal */}
+      {paymentMethod === 'card' && (
         <PaystackPaymentModal
           isOpen={isOpen}
           onClose={onClose}
@@ -398,20 +428,9 @@ function OrderDetail() {
             amount: order?.total || order?.sub_total,
           }}
           customizations={{
-            title: 'Complete Payment',
+            title: 'Complete Vehicle Payment',
             description: `Payment for ${vehicle?.name}`,
-          }}
-        />
-      )}
-
-      {paymentMethod === 'wallet' && (
-        <WalletPaymentModal
-          isOpen={isOpen}
-          onClose={onClose}
-          onSuccess={onPaymentSuccess}
-          payload={{
-            amount: order?.total || order?.sub_total,
-            recipient: dealer,
+            logo: '/app_icon.jpg',
           }}
         />
       )}

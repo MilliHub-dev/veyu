@@ -53,6 +53,10 @@ import {
   Calendar,
   DollarSign,
   FileText,
+  ClipboardCheck,
+  AlertCircle,
+  ExternalLink,
+  Car,
 } from 'lucide-react';
 
 function MyOrders() {
@@ -246,112 +250,246 @@ function MyOrders() {
             </CardBody>
           </Card>
         ) : (
-          <TableContainer borderWidth={1} borderRadius="lg" bg={cardBg} borderColor={borderCol}>
-            <Table variant="simple">
-              <Thead bg="gray.50">
-                <Tr>
-                  <Th>Vehicle</Th>
-                  <Th>Order Type</Th>
-                  <Th>Amount</Th>
-                  <Th>Status</Th>
-                  <Th>Date</Th>
-                  <Th>Actions</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {orders.map((order) => (
-                  <Tr key={order.uuid}>
-                    <Td>
-                      <HStack spacing={3}>
+          <VStack spacing={4} align="stretch">
+            {orders.map((order) => {
+              const vehicle = order?.order_item?.vehicle;
+              const dealer = vehicle?.dealer;
+              const hasInspection = order?.includes_inspection;
+              const inspectionScheduled = order?.inspection_scheduled;
+              const inspectionSlipRef = order?.inspection_slip_reference;
+              const purchaseType = order?.purchase_type || (hasInspection ? 'With Inspection' : 'Direct Purchase');
+
+              return (
+                <Card
+                  key={order.uuid}
+                  bg={cardBg}
+                  borderColor={borderCol}
+                  borderWidth={1}
+                  _hover={{ shadow: 'md', borderColor: 'blue.300' }}
+                  transition="all 0.2s"
+                  cursor="pointer"
+                  onClick={() => viewOrderDetails(order.uuid)}
+                >
+                  <CardBody>
+                    <Flex direction={{ base: 'column', lg: 'row' }} gap={6}>
+                      {/* Vehicle Image */}
+                      <Box flexShrink={0}>
                         <Image
-                          src={order?.order_item?.vehicle?.images?.[0]?.url}
-                          alt={order?.order_item?.vehicle?.name}
-                          w="80px"
-                          h="50px"
+                          src={vehicle?.images?.[0]?.url}
+                          alt={vehicle?.name}
+                          w={{ base: '100%', lg: '200px' }}
+                          h="150px"
                           objectFit="cover"
-                          borderRadius="md"
+                          borderRadius="lg"
                         />
-                        <Box>
-                          <Text fontWeight="600" fontSize="sm">
-                            {order?.order_item?.vehicle?.name}
-                          </Text>
-                          <HStack spacing={2} fontSize="xs" color="gray.500">
-                            <MapPin size={12} />
-                            <Text>{order?.order_item?.vehicle?.dealer?.location || 'N/A'}</Text>
+                      </Box>
+
+                      {/* Order Details */}
+                      <Flex flex={1} direction="column" gap={3}>
+                        {/* Header Row */}
+                        <Flex justify="space-between" align="start" flexWrap="wrap" gap={2}>
+                          <Box>
+                            <HStack spacing={2} mb={1}>
+                              <Car size={18} />
+                              <Heading size="md">{vehicle?.name}</Heading>
+                            </HStack>
+                            <Text fontSize="sm" color="gray.600">
+                              Order #{order?.id} • {order?.uuid}
+                            </Text>
+                          </Box>
+                          <Badge
+                            colorScheme={getStatusColor(order?.order_status)}
+                            fontSize="sm"
+                            px={3}
+                            py={1}
+                            borderRadius="full"
+                          >
+                            {getStatusIcon(order?.order_status)}
+                            <Text as="span" ml={1}>
+                              {order?.order_status || 'Pending'}
+                            </Text>
+                          </Badge>
+                        </Flex>
+
+                        {/* Info Grid */}
+                        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+                          {/* Purchase Type */}
+                          <Box>
+                            <Text fontSize="xs" color="gray.500" mb={1}>
+                              Purchase Type
+                            </Text>
+                            <HStack spacing={1}>
+                              {hasInspection ? (
+                                <ClipboardCheck size={14} color="blue" />
+                              ) : (
+                                <Package size={14} color="green" />
+                              )}
+                              <Text fontSize="sm" fontWeight="600">
+                                {purchaseType}
+                              </Text>
+                            </HStack>
+                          </Box>
+
+                          {/* Amount */}
+                          <Box>
+                            <Text fontSize="xs" color="gray.500" mb={1}>
+                              Total Amount
+                            </Text>
+                            <VStack align="start" spacing={0}>
+                              <Text fontSize="sm" fontWeight="700" color="green.600">
+                                ₦{commaInt(order?.total || order?.sub_total)}
+                              </Text>
+                              {order?.paid ? (
+                                <Badge colorScheme="green" size="xs">
+                                  Paid
+                                </Badge>
+                              ) : (
+                                <Badge colorScheme="red" size="xs">
+                                  Unpaid
+                                </Badge>
+                              )}
+                            </VStack>
+                          </Box>
+
+                          {/* Order Date */}
+                          <Box>
+                            <Text fontSize="xs" color="gray.500" mb={1}>
+                              Order Date
+                            </Text>
+                            <HStack spacing={1}>
+                              <Calendar size={14} />
+                              <Text fontSize="sm" fontWeight="600">
+                                {new Date(order?.date_created).toLocaleDateString()}
+                              </Text>
+                            </HStack>
+                          </Box>
+
+                          {/* Dealer */}
+                          <Box>
+                            <Text fontSize="xs" color="gray.500" mb={1}>
+                              Dealer
+                            </Text>
+                            <HStack spacing={1}>
+                              <MapPin size={14} />
+                              <Text fontSize="sm" fontWeight="600" noOfLines={1}>
+                                {dealer?.business_name || 'N/A'}
+                              </Text>
+                            </HStack>
+                          </Box>
+                        </SimpleGrid>
+
+                        <Divider />
+
+                        {/* Inspection Info & Actions */}
+                        <Flex
+                          justify="space-between"
+                          align="center"
+                          flexWrap="wrap"
+                          gap={3}
+                        >
+                          {/* Inspection Status */}
+                          {hasInspection && (
+                            <Box flex={1}>
+                              {inspectionScheduled && inspectionSlipRef ? (
+                                <HStack spacing={2}>
+                                  <CheckCircle size={16} color="green" />
+                                  <Text fontSize="sm" color="green.600" fontWeight="600">
+                                    Inspection Scheduled
+                                  </Text>
+                                  <Button
+                                    as={Link}
+                                    to={`/inspections/slip/${inspectionSlipRef}`}
+                                    size="xs"
+                                    colorScheme="blue"
+                                    variant="link"
+                                    rightIcon={<ExternalLink size={12} />}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    View Slip
+                                  </Button>
+                                </HStack>
+                              ) : (
+                                <HStack spacing={2}>
+                                  <AlertCircle size={16} color="orange" />
+                                  <Text fontSize="sm" color="orange.600" fontWeight="600">
+                                    Inspection Pending
+                                  </Text>
+                                  <Button
+                                    as={Link}
+                                    to={`/orders/${order.uuid}`}
+                                    size="xs"
+                                    colorScheme="orange"
+                                    variant="link"
+                                    rightIcon={<ExternalLink size={12} />}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    Schedule Now
+                                  </Button>
+                                </HStack>
+                              )}
+                            </Box>
+                          )}
+
+                          {/* Action Buttons */}
+                          <HStack spacing={2}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              leftIcon={<Eye size={16} />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                viewOrderDetails(order.uuid);
+                              }}
+                            >
+                              View Details
+                            </Button>
+                            <Menu>
+                              <MenuButton
+                                as={IconButton}
+                                icon={<MoreVertical size={16} />}
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <MenuList>
+                                <MenuItem
+                                  icon={<Download size={16} />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    downloadInvoice(order.uuid);
+                                  }}
+                                >
+                                  Download Invoice
+                                </MenuItem>
+                                <MenuItem
+                                  icon={<MessageCircle size={16} />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    contactDealer(order);
+                                  }}
+                                >
+                                  Contact Dealer
+                                </MenuItem>
+                                {hasInspection && inspectionSlipRef && (
+                                  <MenuItem
+                                    as={Link}
+                                    to={`/inspections/slip/${inspectionSlipRef}`}
+                                    icon={<FileText size={16} />}
+                                  >
+                                    View Inspection Slip
+                                  </MenuItem>
+                                )}
+                              </MenuList>
+                            </Menu>
                           </HStack>
-                        </Box>
-                      </HStack>
-                    </Td>
-                    <Td>
-                      <Badge colorScheme="blue" textTransform="capitalize">
-                        {order?.order_type || 'Purchase'}
-                      </Badge>
-                    </Td>
-                    <Td>
-                      <VStack align="start" spacing={0}>
-                        <Text fontWeight="600" color="green.600">
-                          ₦{commaInt(order?.sub_total)}
-                        </Text>
-                        {order?.paid ? (
-                          <Badge colorScheme="green" size="sm">Paid</Badge>
-                        ) : (
-                          <Badge colorScheme="red" size="sm">Unpaid</Badge>
-                        )}
-                      </VStack>
-                    </Td>
-                    <Td>
-                      <HStack>
-                        {getStatusIcon(order?.order_status)}
-                        <Badge colorScheme={getStatusColor(order?.order_status)}>
-                          {order?.order_status || 'Pending'}
-                        </Badge>
-                      </HStack>
-                    </Td>
-                    <Td>
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="sm">
-                          {new Date(order?.date_created).toLocaleDateString()}
-                        </Text>
-                        <Text fontSize="xs" color="gray.500">
-                          {new Date(order?.date_created).toLocaleTimeString()}
-                        </Text>
-                      </VStack>
-                    </Td>
-                    <Td>
-                      <Menu>
-                        <MenuButton
-                          as={IconButton}
-                          icon={<MoreVertical size={16} />}
-                          variant="ghost"
-                          size="sm"
-                        />
-                        <MenuList>
-                          <MenuItem
-                            icon={<Eye size={16} />}
-                            onClick={() => viewOrderDetails(order.uuid)}
-                          >
-                            View Details
-                          </MenuItem>
-                          <MenuItem
-                            icon={<Download size={16} />}
-                            onClick={() => downloadInvoice(order.uuid)}
-                          >
-                            Download Invoice
-                          </MenuItem>
-                          <MenuItem
-                            icon={<MessageCircle size={16} />}
-                            onClick={() => contactDealer(order)}
-                          >
-                            Contact Dealer
-                          </MenuItem>
-                        </MenuList>
-                      </Menu>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
+                        </Flex>
+                      </Flex>
+                    </Flex>
+                  </CardBody>
+                </Card>
+              );
+            })}
+          </VStack>
         )}
 
         {/* Help Section */}

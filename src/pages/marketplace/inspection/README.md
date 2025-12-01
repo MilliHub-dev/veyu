@@ -47,7 +47,7 @@ This directory contains the pages that integrate inspection components into the 
 ### Checkout with Inspection Flow
 1. Customer selects "Pay After Inspection" payment option in checkout
 2. Customer pays inspection fee
-3. InspectionBooking modal opens automatically
+3. ScheduleInspectionModal opens automatically (redesigned modal)
 4. Customer schedules inspection date/time
 5. System generates inspection slip
 6. Customer is redirected to InspectionSlipPage
@@ -64,7 +64,8 @@ This directory contains the pages that integrate inspection components into the 
 ## Components Used
 
 ### From `src/components/`:
-- `InspectionBooking`: Booking form with payment integration
+- `ScheduleInspectionModal`: Modern redesigned modal for booking inspections with payment integration
+- `InspectionBooking`: Legacy booking form (deprecated - use ScheduleInspectionModal)
 - `InspectionSlip`: Slip display with QR code
 - `InspectionForm`: Dynamic inspection form
 - `DocumentPreview`: Document viewer with controls
@@ -87,15 +88,16 @@ This directory contains the pages that integrate inspection components into the 
 ## CheckoutPage Modifications
 
 ### Added:
-1. Import for `InspectionBooking` component
+1. Import for `ScheduleInspectionModal` component (redesigned)
 2. State for inspection booking modal
 3. Handler for inspection booking completion
-4. Modal for inspection booking after payment
+4. Integrated modal for inspection booking after payment
 5. Redirect to inspection slip page after booking
 
 ### Modified:
 - `onSuccess` function now opens inspection booking modal for "pay-after-inspection" option
 - Added `handleInspectionBookingComplete` to handle successful booking
+- Replaced old `InspectionBooking` with new `ScheduleInspectionModal` for better UX
 
 ## API Endpoints Used
 

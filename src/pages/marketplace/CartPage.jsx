@@ -35,7 +35,23 @@ import { useSearchParams, NavLink, Link } from "react-router-dom";
 import { RiGasStationLine, RiHeart2Fill, RiHeart2Line, RiMessage2Line, RiSearch2Line } from 'react-icons/ri'
 import { motion } from "framer-motion";
 import { MechanicListSkeleton } from "../../components/loaders";
-import { ShoppingCart, Car, KeyRound, Wrench } from "lucide-react";
+import ScheduleInspectionModal from "../../components/ScheduleInspectionModal";
+import { 
+    ShoppingCart, 
+    Car, 
+    KeyRound, 
+    Wrench, 
+    ClipboardCheck, 
+    Package, 
+    AlertCircle, 
+    CheckCircle, 
+    ExternalLink,
+    Calendar,
+    MapPin,
+    DollarSign,
+    FileText,
+    CreditCard,
+} from "lucide-react";
 
 
 
@@ -48,7 +64,29 @@ export const CartPage = ({ props }) => {
         orders: [],
     });
     const [loading, setLoading] = useState(true);
+    const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
     const {axios, authUser, commaInt, notify, redirect, } = useContext(GlobalStore);
+
+    function openInspectionModal(order) {
+        setSelectedOrder(order);
+        setInspectionModalOpen(true);
+    }
+
+    function closeInspectionModal() {
+        setInspectionModalOpen(false);
+        setSelectedOrder(null);
+    }
+
+    function handleInspectionSuccess(inspectionSlip) {
+        notify({
+            title: 'Inspection Scheduled',
+            body: 'Your inspection has been scheduled successfully',
+            color: 'green'
+        });
+        closeInspectionModal();
+        getData(); // Refresh cart data
+    }
 
     function init(){
         getData();
@@ -204,95 +242,419 @@ export const CartPage = ({ props }) => {
 
                     <TabPanels>
                         <TabPanel>
-                            <List py="3" spacing={10}>
-                                {
-                                    cart?.orders?.map((order, idx) => 
-                                        <ListItem my={5}>
-                                            <Flex gap={4} flexWrap="wrap" justifyContent="space-between" alignItems="center">
-                                                <Flex gap={4} flex="1">
-                                                    <Box w="110px" h="75px" rounded="lg" overflow="hidden">
-                                                        <Image
-                                                            loading="eager"
-                                                            w="100%"
-                                                            h="100%"
-                                                            objectFit="cover"
-                                                            rounded="lg"
-                                                            src={order?.order_item?.vehicle?.images?.[0]?.url || "/placeholder.jpg"}
-                                                            alt={order?.order_item?.vehicle?.name || "Vehicle Image"}
-                                                        />
-                                                    </Box>
+                            <VStack spacing={4} align="stretch">
+                                {cart?.orders?.length === 0 ? (
+                                    <Card>
+                                        <CardBody>
+                                            <VStack spacing={4} py={8}>
+                                                <ShoppingCart size={48} color="gray" />
+                                                <Heading size="md" color="gray.600">No orders in cart</Heading>
+                                                <Text color="gray.500" textAlign="center">
+                                                    Your order cart is empty. Start shopping for vehicles!
+                                                </Text>
+                                            </VStack>
+                                        </CardBody>
+                                    </Card>
+                                ) : (
+                                    cart?.orders?.map((order, idx) => {
+                                        const vehicle = order?.order_item?.vehicle;
+                                        const hasInspection = order?.includes_inspection || order?.purchase_type === 'With Inspection';
+                                        const inspectionScheduled = order?.inspection_scheduled;
+                                        const inspectionSlipRef = order?.inspection_slip_reference;
+                                        const purchaseType = order?.purchase_type || (hasInspection ? 'With Inspection' : 'Direct Purchase');
+                                        const dealer = vehicle?.dealer;
 
-                                                    <Box flex="1">
-                                                        {order?.order_item?.vehicle?.condition && <Tag>{order?.order_item?.vehicle.condition}</Tag>}
-                                                        <Heading size="sm" my={1} display="flex" alignItems="center" gap={2}>
-                                                            {order?.order_item?.vehicle?.name} 
-                                                        </Heading>
-                                                        <Text my={1}>₦{commaInt(order?.order_item?.price)}</Text>
-                                                    </Box>
-                                                </Flex>
+                                        // Debug log
+                                        console.log('Order Debug:', {
+                                            orderId: order?.id,
+                                            includes_inspection: order?.includes_inspection,
+                                            purchase_type: order?.purchase_type,
+                                            hasInspection,
+                                            inspectionScheduled,
+                                            inspectionSlipRef,
+                                            order
+                                        });
 
-                                                <Flex gap={2} alignItems="center">
-                                                {order?.order_type === 'sale' && (
-                                                    order?.order_status === 'awaiting-inspection' || order?.order_status === 'inspecting' ?
-                                                    <>
-                                                     <Button as={Link} px={4} colorScheme="yellow" bg="tertiary" to={`/checkout/inspection/?listingId=${order?.order_item?.uuid}`}>Finish Inspection</Button>
-                                                    </>
-                                                    : 
-                                                    <Button px={4} bgColor="primary" colorScheme="blue">Pay Now {order?.order_status}</Button>
-                                                )}
+                                        return (
+                                            <Card 
+                                                key={order.uuid || idx}
+                                                borderWidth="1px"
+                                                borderColor="gray.200"
+                                                _hover={{ shadow: 'md', borderColor: 'blue.300' }}
+                                                transition="all 0.2s"
+                                            >
+                                                <CardBody>
+                                                    <Flex direction={{ base: 'column', lg: 'row' }} gap={6}>
+                                                        {/* Vehicle Image */}
+                                                        <Box flexShrink={0}>
+                                                            <Image
+                                                                src={vehicle?.images?.[0]?.url || "/placeholder.jpg"}
+                                                                alt={vehicle?.name || "Vehicle"}
+                                                                w={{ base: '100%', lg: '220px' }}
+                                                                h="160px"
+                                                                objectFit="cover"
+                                                                borderRadius="lg"
+                                                            />
+                                                        </Box>
 
-                                                {order?.order_type === 'rental' && (
-                                                    <Button px={4} colorScheme="red">Cancel Rental</Button>
-                                                )}
-                                                </Flex>
-                                            </Flex>
-                                        </ListItem>
+                                                        {/* Order Details */}
+                                                        <Flex flex={1} direction="column" gap={3}>
+                                                            {/* Header */}
+                                                            <Flex justify="space-between" align="start" flexWrap="wrap" gap={2}>
+                                                                <Box>
+                                                                    <HStack spacing={2} mb={1}>
+                                                                        <Car size={18} />
+                                                                        <Heading size="md">{vehicle?.name}</Heading>
+                                                                    </HStack>
+                                                                    {vehicle?.condition && (
+                                                                        <Badge colorScheme="purple" mr={2}>
+                                                                            {vehicle.condition}
+                                                                        </Badge>
+                                                                    )}
+                                                                    <Text fontSize="sm" color="gray.600" mt={1}>
+                                                                        Order #{order?.id}
+                                                                    </Text>
+                                                                </Box>
+                                                                <Badge
+                                                                    colorScheme={order?.order_status === 'completed' ? 'green' : 'yellow'}
+                                                                    fontSize="sm"
+                                                                    px={3}
+                                                                    py={1}
+                                                                    borderRadius="full"
+                                                                >
+                                                                    {order?.order_status || 'Pending'}
+                                                                </Badge>
+                                                            </Flex>
 
-                                    )
-                                }
-                            </List>
+                                                            {/* Info Grid */}
+                                                            <Stack direction={{ base: 'column', md: 'row' }} spacing={4}>
+                                                                {/* Purchase Type */}
+                                                                <Box flex={1}>
+                                                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                                                        Purchase Type
+                                                                    </Text>
+                                                                    <HStack spacing={1}>
+                                                                        {hasInspection ? (
+                                                                            <ClipboardCheck size={16} color="blue" />
+                                                                        ) : (
+                                                                            <Package size={16} color="green" />
+                                                                        )}
+                                                                        <Text fontSize="sm" fontWeight="600">
+                                                                            {purchaseType}
+                                                                        </Text>
+                                                                    </HStack>
+                                                                </Box>
+
+                                                                {/* Amount */}
+                                                                <Box flex={1}>
+                                                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                                                        Total Amount
+                                                                    </Text>
+                                                                    <HStack spacing={1}>
+                                                                        <DollarSign size={16} color="green" />
+                                                                        <Text fontSize="sm" fontWeight="700" color="green.600">
+                                                                            ₦{commaInt(order?.total || order?.sub_total || order?.order_item?.price)}
+                                                                        </Text>
+                                                                    </HStack>
+                                                                    {order?.paid ? (
+                                                                        <Badge colorScheme="green" size="xs" mt={1}>
+                                                                            Paid
+                                                                        </Badge>
+                                                                    ) : (
+                                                                        <Badge colorScheme="red" size="xs" mt={1}>
+                                                                            Unpaid
+                                                                        </Badge>
+                                                                    )}
+                                                                </Box>
+
+                                                                {/* Dealer */}
+                                                                <Box flex={1}>
+                                                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                                                        Dealer
+                                                                    </Text>
+                                                                    <HStack spacing={1}>
+                                                                        <MapPin size={16} />
+                                                                        <Text fontSize="sm" fontWeight="600" noOfLines={1}>
+                                                                            {dealer?.business_name || 'N/A'}
+                                                                        </Text>
+                                                                    </HStack>
+                                                                </Box>
+                                                            </Stack>
+
+                                                            {/* Inspection Status */}
+                                                            {hasInspection && (
+                                                                <Box
+                                                                    bg={inspectionScheduled ? 'green.50' : 'orange.50'}
+                                                                    borderWidth="1px"
+                                                                    borderColor={inspectionScheduled ? 'green.200' : 'orange.200'}
+                                                                    borderRadius="md"
+                                                                    p={3}
+                                                                >
+                                                                    <HStack spacing={2}>
+                                                                        {inspectionScheduled ? (
+                                                                            <>
+                                                                                <CheckCircle size={18} color="green" />
+                                                                                <Text fontSize="sm" color="green.700" fontWeight="600" flex={1}>
+                                                                                    Inspection Scheduled
+                                                                                </Text>
+                                                                                {inspectionSlipRef && (
+                                                                                    <Button
+                                                                                        as={Link}
+                                                                                        to={`/inspections/slip/${inspectionSlipRef}`}
+                                                                                        size="sm"
+                                                                                        colorScheme="green"
+                                                                                        variant="outline"
+                                                                                        rightIcon={<ExternalLink size={14} />}
+                                                                                    >
+                                                                                        View Slip
+                                                                                    </Button>
+                                                                                )}
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <AlertCircle size={18} color="orange" />
+                                                                                <Text fontSize="sm" color="orange.700" fontWeight="600" flex={1}>
+                                                                                    Inspection Not Scheduled
+                                                                                </Text>
+                                                                                <Button
+                                                                                    onClick={() => openInspectionModal(order)}
+                                                                                    size="sm"
+                                                                                    colorScheme="orange"
+                                                                                    rightIcon={<Calendar size={14} />}
+                                                                                >
+                                                                                    Schedule Now
+                                                                                </Button>
+                                                                            </>
+                                                                        )}
+                                                                    </HStack>
+                                                                </Box>
+                                                            )}
+
+                                                            {/* Action Buttons */}
+                                                            <Flex gap={2} flexWrap="wrap" pt={2}>
+                                                                {/* Inspection Slip Button - Always show if inspection is included */}
+                                                                {hasInspection && inspectionScheduled && inspectionSlipRef && (
+                                                                    <Button
+                                                                        as={Link}
+                                                                        to={`/inspections/slip/${inspectionSlipRef}`}
+                                                                        colorScheme="teal"
+                                                                        leftIcon={<FileText size={18} />}
+                                                                        flex={{ base: '1', md: 'initial' }}
+                                                                    >
+                                                                        View Inspection Slip
+                                                                    </Button>
+                                                                )}
+
+                                                                {/* Schedule Inspection Button - Show if inspection included but not scheduled */}
+                                                                {hasInspection && !inspectionScheduled && (
+                                                                    <Button
+                                                                        onClick={() => openInspectionModal(order)}
+                                                                        colorScheme="orange"
+                                                                        leftIcon={<Calendar size={18} />}
+                                                                        flex={{ base: '1', md: 'initial' }}
+                                                                    >
+                                                                        Schedule Inspection
+                                                                    </Button>
+                                                                )}
+
+                                                                {/* Add Inspection Button - Show for direct purchase orders */}
+                                                                {!hasInspection && order?.order_type === 'sale' && (
+                                                                    <Button
+                                                                        onClick={() => openInspectionModal(order)}
+                                                                        colorScheme="purple"
+                                                                        variant="outline"
+                                                                        leftIcon={<ClipboardCheck size={18} />}
+                                                                        flex={{ base: '1', md: 'initial' }}
+                                                                    >
+                                                                        Add Inspection
+                                                                    </Button>
+                                                                )}
+
+                                                                {order?.order_type === 'sale' && (
+                                                                    <>
+                                                                        {order?.order_status === 'awaiting-inspection' || order?.order_status === 'inspecting' ? (
+                                                                            <Button
+                                                                                as={Link}
+                                                                                to={`/checkout/inspection/?listingId=${order?.order_item?.uuid}`}
+                                                                                colorScheme="yellow"
+                                                                                leftIcon={<ClipboardCheck size={18} />}
+                                                                                flex={{ base: '1', md: 'initial' }}
+                                                                            >
+                                                                                Finish Inspection
+                                                                            </Button>
+                                                                        ) : !order?.paid ? (
+                                                                            <Button
+                                                                                as={Link}
+                                                                                to={`/orders/${order.uuid}`}
+                                                                                colorScheme="blue"
+                                                                                leftIcon={<CreditCard size={18} />}
+                                                                                flex={{ base: '1', md: 'initial' }}
+                                                                            >
+                                                                                Pay Now
+                                                                            </Button>
+                                                                        ) : (
+                                                                            <Button
+                                                                                as={Link}
+                                                                                to={`/orders/${order.uuid}`}
+                                                                                colorScheme="green"
+                                                                                variant="outline"
+                                                                                leftIcon={<FileText size={18} />}
+                                                                                flex={{ base: '1', md: 'initial' }}
+                                                                            >
+                                                                                View Order
+                                                                            </Button>
+                                                                        )}
+                                                                    </>
+                                                                )}
+
+                                                                {order?.order_type === 'rental' && (
+                                                                    <Button
+                                                                        colorScheme="red"
+                                                                        variant="outline"
+                                                                        flex={{ base: '1', md: 'initial' }}
+                                                                    >
+                                                                        Cancel Rental
+                                                                    </Button>
+                                                                )}
+                                                            </Flex>
+                                                        </Flex>
+                                                    </Flex>
+                                                </CardBody>
+                                            </Card>
+                                        );
+                                    })
+                                )}
+                            </VStack>
                         </TabPanel>
 
                         <TabPanel>
-                            <List py="3" spacing={10}>
-                                {
-                                    cart?.cars?.map((car, idx) => 
-                                        <ListItem my={5}>
-                                            <Flex gap={4} flexWrap="wrap" justifyContent="space-between" alignItems="center">
-                                                <Flex gap={4} flex="1">
-                                                    <Box w="110px" h="75px" rounded="lg" overflow="hidden">
-                                                        <Image
-                                                            loading="eager"
-                                                            w="100%"
-                                                            h="100%"
-                                                            objectFit="cover"
-                                                            rounded="lg"
-                                                            src={car?.vehicle?.images?.[0]?.url || "/placeholder.jpg"}
-                                                            alt={car?.vehicle?.name || "Vehicle Image"}
-                                                        />
-                                                    </Box>
+                            <VStack spacing={4} align="stretch">
+                                {cart?.cars?.length === 0 ? (
+                                    <Card>
+                                        <CardBody>
+                                            <VStack spacing={4} py={8}>
+                                                <Car size={48} color="gray" />
+                                                <Heading size="md" color="gray.600">No cars in cart</Heading>
+                                                <Text color="gray.500" textAlign="center">
+                                                    Your car cart is empty. Browse our inventory!
+                                                </Text>
+                                                <Button as={Link} to="/buy" colorScheme="blue">
+                                                    Browse Cars
+                                                </Button>
+                                            </VStack>
+                                        </CardBody>
+                                    </Card>
+                                ) : (
+                                    cart?.cars?.map((car, idx) => {
+                                        const vehicle = car?.vehicle;
+                                        const dealer = vehicle?.dealer;
 
-                                                    <Box flex="1">
-                                                        {car?.vehicle?.condition && <Tag>{car.vehicle.condition}</Tag>}
-                                                        <Heading size="sm" my={1} display="flex" alignItems="center" gap={2}>
-                                                            {car?.vehicle?.name} 
-                                                        </Heading>
-                                                        <Text my={1}>₦{commaInt(car?.price)}</Text>
-                                                    </Box>
-                                                </Flex>
+                                        return (
+                                            <Card 
+                                                key={car.uuid || idx}
+                                                borderWidth="1px"
+                                                borderColor="gray.200"
+                                                _hover={{ shadow: 'md', borderColor: 'blue.300' }}
+                                                transition="all 0.2s"
+                                            >
+                                                <CardBody>
+                                                    <Flex direction={{ base: 'column', lg: 'row' }} gap={6}>
+                                                        {/* Vehicle Image */}
+                                                        <Box flexShrink={0}>
+                                                            <Image
+                                                                src={vehicle?.images?.[0]?.url || "/placeholder.jpg"}
+                                                                alt={vehicle?.name || "Vehicle"}
+                                                                w={{ base: '100%', lg: '220px' }}
+                                                                h="160px"
+                                                                objectFit="cover"
+                                                                borderRadius="lg"
+                                                            />
+                                                        </Box>
 
-                                                <Flex gap={2} alignItems="center">
-                                                <Button px={4} colorScheme="red" onClick={() => removeFromCart(car)}>Remove</Button>
-                                                <NavLink to={`/checkout/pay?listingId=${car?.uuid}`}>
-                                                    <Button px={4} bgColor="primary" colorScheme="blue">Pay Now</Button>
-                                                </NavLink>
-                                                </Flex>
-                                            </Flex>
-                                        </ListItem>
+                                                        {/* Car Details */}
+                                                        <Flex flex={1} direction="column" gap={3}>
+                                                            {/* Header */}
+                                                            <Box>
+                                                                <HStack spacing={2} mb={1}>
+                                                                    <Car size={18} />
+                                                                    <Heading size="md">{vehicle?.name}</Heading>
+                                                                </HStack>
+                                                                {vehicle?.condition && (
+                                                                    <Badge colorScheme="purple">
+                                                                        {vehicle.condition}
+                                                                    </Badge>
+                                                                )}
+                                                            </Box>
 
-                                    )
-                                }
-                            </List>
+                                                            {/* Info Grid */}
+                                                            <Stack direction={{ base: 'column', md: 'row' }} spacing={4}>
+                                                                {/* Price */}
+                                                                <Box flex={1}>
+                                                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                                                        Price
+                                                                    </Text>
+                                                                    <HStack spacing={1}>
+                                                                        <DollarSign size={16} color="green" />
+                                                                        <Text fontSize="lg" fontWeight="700" color="green.600">
+                                                                            ₦{commaInt(car?.price)}
+                                                                        </Text>
+                                                                    </HStack>
+                                                                </Box>
+
+                                                                {/* Dealer */}
+                                                                <Box flex={1}>
+                                                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                                                        Dealer
+                                                                    </Text>
+                                                                    <HStack spacing={1}>
+                                                                        <MapPin size={16} />
+                                                                        <Text fontSize="sm" fontWeight="600" noOfLines={1}>
+                                                                            {dealer?.business_name || 'N/A'}
+                                                                        </Text>
+                                                                    </HStack>
+                                                                </Box>
+
+                                                                {/* Location */}
+                                                                {dealer?.location && (
+                                                                    <Box flex={1}>
+                                                                        <Text fontSize="xs" color="gray.500" mb={1}>
+                                                                            Location
+                                                                        </Text>
+                                                                        <Text fontSize="sm" fontWeight="600" noOfLines={1}>
+                                                                            {dealer.location}
+                                                                        </Text>
+                                                                    </Box>
+                                                                )}
+                                                            </Stack>
+
+                                                            {/* Action Buttons */}
+                                                            <Flex gap={2} flexWrap="wrap" pt={2}>
+                                                                <Button
+                                                                    colorScheme="red"
+                                                                    variant="outline"
+                                                                    onClick={() => removeFromCart(car)}
+                                                                    flex={{ base: '1', md: 'initial' }}
+                                                                >
+                                                                    Remove
+                                                                </Button>
+                                                                <Button
+                                                                    as={NavLink}
+                                                                    to={`/checkout/pay?listingId=${car?.uuid}`}
+                                                                    colorScheme="blue"
+                                                                    leftIcon={<CreditCard size={18} />}
+                                                                    flex={{ base: '1', md: 'initial' }}
+                                                                >
+                                                                    Proceed to Checkout
+                                                                </Button>
+                                                            </Flex>
+                                                        </Flex>
+                                                    </Flex>
+                                                </CardBody>
+                                            </Card>
+                                        );
+                                    })
+                                )}
+                            </VStack>
                         </TabPanel>
 
                         <TabPanel>
@@ -359,6 +721,22 @@ export const CartPage = ({ props }) => {
                 </Tabs>
 
             </Container>
+
+            {/* Inspection Scheduling Modal */}
+            {selectedOrder && (
+                <ScheduleInspectionModal
+                    isOpen={inspectionModalOpen}
+                    onClose={closeInspectionModal}
+                    listingId={selectedOrder?.order_item?.uuid}
+                    listingType="buy"
+                    vehicleInfo={{
+                        name: selectedOrder?.order_item?.vehicle?.name,
+                        condition: selectedOrder?.order_item?.vehicle?.condition,
+                    }}
+                    alreadyPaid={selectedOrder?.paid}
+                    onSuccess={handleInspectionSuccess}
+                />
+            )}
         </Box>
     )
 }
