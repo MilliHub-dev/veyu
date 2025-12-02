@@ -31,7 +31,8 @@ import {
   Collapse,
   useDisclosure,
 } from '@chakra-ui/react';
-import { Calendar, Clock, CreditCard, Wallet, Building2, CheckCircle2, Info } from 'lucide-react';
+import { Calendar, Clock, CreditCard, Wallet, Building2, CheckCircle2, Info, CheckCircle, FileText, Package } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { GlobalStore } from '../App';
 import inspectionService from '../services/inspectionService';
 import walletService from '../services/walletService';
@@ -51,6 +52,7 @@ const ScheduleInspectionModal = ({
   onSuccess 
 }) => {
   const { authUser } = useContext(GlobalStore);
+  const navigate = useNavigate();
   const toast = useToast();
   const { isOpen: showDetails, onToggle: toggleDetails } = useDisclosure({ defaultIsOpen: true });
 
@@ -192,37 +194,103 @@ const ScheduleInspectionModal = ({
 
   const processBooking = async (booking, paymentMethodUsed = paymentMethod, paymentReference = null) => {
     try {
-      // API expects separate date and time fields
+      // Convert date from YYYY-MM-DD to DD/MM/YYYY format
+      const convertDateFormat = (dateStr) => {
+        const [year, month, day] = dateStr.split('-');
+        return `${day}/${month}/${year}`;
+      };
+
+      // API expects separate date and time fields in DD/MM/YYYY format
       const bookingPayload = {
         listing_id: booking.listing_id,
         inspection_type: booking.inspection_type,
-        scheduled_date: booking.preferred_date,
+        scheduled_date: convertDateFormat(booking.preferred_date),
         scheduled_time: booking.preferred_time,
         payment_method: paymentMethodUsed,
         payment_reference: paymentReference,
       };
 
+      console.log('📤 Booking payload:', bookingPayload);
       const response = await inspectionService.bookInspection(bookingPayload);
+      console.log('📥 Booking response:', response);
       
-      const isSuccess = response?.success || response?.status === 'success' || response?.data;
-      const inspectionSlip = response?.data || response;
+      // More flexible response handling
+      const inspectionSlip = response?.data || response?.inspection_slip || response;
+      const slipReference = response?.slip_reference || response?.inspection_slip_reference || response?.reference;
+      const isSuccess = response?.success !== false && response?.status !== 'error';
       
-      if (isSuccess && inspectionSlip) {
-        toast({
+      if (isSuccess) {
+        // Show success message with action button
+        const toastId = toast({
           title: 'Inspection Scheduled Successfully',
-          description: `Your inspection has been scheduled for ${preferredDate} at ${preferredTime}`,
+          description: slipReference 
+            ? `Your inspection has been scheduled for ${preferredDate} at ${preferredTime}. Click to view your inspection slip.`
+            : `Your inspection has been scheduled for ${preferredDate} at ${preferredTime}. Check your orders page for details.`,
           status: 'success',
-          duration: 5000,
+          duration: 8000,
           isClosable: true,
+          position: 'top',
+          render: ({ onClose: closeToast }) => (
+            <Box
+              bg="green.500"
+              color="white"
+              p={4}
+              borderRadius="md"
+              boxShadow="lg"
+            >
+              <VStack align="start" spacing={2}>
+                <HStack>
+                  <Icon as={CheckCircle} boxSize={5} />
+                  <Text fontWeight="bold">Inspection Scheduled Successfully</Text>
+                </HStack>
+                <Text fontSize="sm">
+                  Your inspection has been scheduled for {preferredDate} at {preferredTime}
+                </Text>
+                <HStack spacing={2} pt={2}>
+                  {slipReference ? (
+                    <Button
+                      onClick={() => {
+                        closeToast();
+                        navigate(`/inspections/slip/${slipReference}`);
+                      }}
+                      size="sm"
+                      colorScheme="whiteAlpha"
+                      leftIcon={<Icon as={FileText} />}
+                    >
+                      View Inspection Slip
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => {
+                        closeToast();
+                        navigate('/orders');
+                      }}
+                      size="sm"
+                      colorScheme="whiteAlpha"
+                      leftIcon={<Icon as={Package} />}
+                    >
+                      View My Orders
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={closeToast}>
+                    Close
+                  </Button>
+                </HStack>
+              </VStack>
+            </Box>
+          ),
         });
 
         if (onSuccess) {
-          onSuccess(inspectionSlip);
+          onSuccess({
+            ...inspectionSlip,
+            slip_reference: slipReference,
+          });
         }
         
         onClose();
       } else {
-        throw new Error(response?.message || 'Booking failed - no data returned');
+        throw new Error(response?.message || 'Booking failed - please try again');
       }
     } catch (err) {
       console.error('Process booking error:', err);

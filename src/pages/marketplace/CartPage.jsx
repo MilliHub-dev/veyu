@@ -51,6 +51,7 @@ import {
     DollarSign,
     FileText,
     CreditCard,
+    Download,
 } from "lucide-react";
 
 
@@ -86,6 +87,40 @@ export const CartPage = ({ props }) => {
         });
         closeInspectionModal();
         getData(); // Refresh cart data
+    }
+
+    async function downloadInspectionSlip(slipReference) {
+        try {
+            setLoading(true);
+            const response = await axios.get(`/inspections/slips/${slipReference}/download/`, {
+                responseType: 'blob'
+            });
+
+            // Create a download link
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `inspection-slip-${slipReference}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+            notify({
+                title: 'Download Started',
+                body: 'Your inspection slip is being downloaded',
+                color: 'green'
+            });
+        } catch (error) {
+            console.error('Download error:', error);
+            notify({
+                title: 'Download Failed',
+                body: error?.response?.data?.message || 'Failed to download inspection slip',
+                color: 'red'
+            });
+        } finally {
+            setLoading(false);
+        }
     }
 
     function init(){
@@ -432,17 +467,29 @@ export const CartPage = ({ props }) => {
 
                                                             {/* Action Buttons */}
                                                             <Flex gap={2} flexWrap="wrap" pt={2}>
-                                                                {/* Inspection Slip Button - Always show if inspection is included */}
+                                                                {/* Inspection Slip Buttons - Always show if inspection is included and scheduled */}
                                                                 {hasInspection && inspectionScheduled && inspectionSlipRef && (
-                                                                    <Button
-                                                                        as={Link}
-                                                                        to={`/inspections/slip/${inspectionSlipRef}`}
-                                                                        colorScheme="teal"
-                                                                        leftIcon={<FileText size={18} />}
-                                                                        flex={{ base: '1', md: 'initial' }}
-                                                                    >
-                                                                        View Inspection Slip
-                                                                    </Button>
+                                                                    <>
+                                                                        <Button
+                                                                            as={Link}
+                                                                            to={`/inspections/slip/${inspectionSlipRef}`}
+                                                                            colorScheme="teal"
+                                                                            leftIcon={<FileText size={18} />}
+                                                                            flex={{ base: '1', md: 'initial' }}
+                                                                        >
+                                                                            View Inspection Slip
+                                                                        </Button>
+                                                                        <Button
+                                                                            onClick={() => downloadInspectionSlip(inspectionSlipRef)}
+                                                                            colorScheme="green"
+                                                                            variant="outline"
+                                                                            leftIcon={<Download size={18} />}
+                                                                            flex={{ base: '1', md: 'initial' }}
+                                                                            isLoading={loading}
+                                                                        >
+                                                                            Download Slip
+                                                                        </Button>
+                                                                    </>
                                                                 )}
 
                                                                 {/* Schedule Inspection Button - Show if inspection included but not scheduled */}
