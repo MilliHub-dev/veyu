@@ -755,6 +755,34 @@ class InspectionService {
     }
   }
 
+  /**
+   * Verify inspection slip (for dealers)
+   * @param {Object} verificationData - Verification data
+   * @param {string} verificationData.slip_number - Slip number to verify
+   * @param {string} verificationData.qr_code_data - QR code data (alternative to slip_number)
+   */
+  async verifyInspectionSlip(verificationData) {
+    try {
+      const response = await apiClient.post('/inspections/slips/verify/', verificationData);
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  /**
+   * Regenerate inspection slip
+   * @param {string} inspectionId - Inspection ID
+   */
+  async regenerateInspectionSlip(inspectionId) {
+    try {
+      const response = await apiClient.post(`/inspections/${inspectionId}/regenerate-slip/`);
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
   // ==================== Helper Methods ====================
 
   /**

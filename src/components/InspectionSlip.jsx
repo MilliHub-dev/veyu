@@ -27,30 +27,61 @@ const InspectionSlip = ({ slipData, onDownload, onProceed }) => {
   const toast = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Handle both old and new data structures
   const {
     reference,
+    inspection_number,
+    slip_reference,
     listingId,
+    listing_id,
     inspectionType,
+    inspection_type,
     scheduledDate,
+    scheduled_date,
     scheduledTime,
+    scheduled_time,
     customerName,
+    customer_name,
     customerEmail,
+    customer_email,
+    customer_phone,
     vehicleDetails,
+    vehicle,
     paymentStatus,
+    payment_status,
     amount,
+    inspection_fee,
     createdAt,
+    created_at,
+    payment_method,
+    payment_reference,
+    dealer,
+    status,
   } = slipData;
+
+  // Normalize data
+  const slipReference = inspection_number || slip_reference || reference;
+  const inspType = inspection_type || inspectionType;
+  const schedDate = scheduled_date || scheduledDate;
+  const schedTime = scheduled_time || scheduledTime;
+  const custName = customer_name || customerName;
+  const custEmail = customer_email || customerEmail;
+  const custPhone = customer_phone;
+  const vehicleInfo = vehicle || vehicleDetails;
+  const payStatus = payment_status || paymentStatus;
+  const paidAmount = inspection_fee || amount;
+  const createdDate = created_at || createdAt;
 
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const blob = await inspectionService.downloadInspectionSlip(reference);
+      const blob = await inspectionService.downloadInspectionSlip(slipReference);
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `inspection-slip-${reference}.pdf`;
+      link.download = `inspection-slip-${slipReference}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -121,14 +152,14 @@ const InspectionSlip = ({ slipData, onDownload, onProceed }) => {
           Vehicle Inspection Slip
         </Heading>
         <Badge
-          colorScheme={paymentStatus === 'paid' ? 'green' : 'yellow'}
+          colorScheme={payStatus === 'paid' ? 'green' : 'yellow'}
           fontSize="md"
           px={3}
           py={1}
           borderRadius="full"
         >
           <Icon as={CheckCircleIcon} mr={1} />
-          {paymentStatus === 'paid' ? 'Payment Confirmed' : 'Payment Pending'}
+          {payStatus === 'paid' ? 'Payment Confirmed' : 'Payment Pending'}
         </Badge>
       </VStack>
 
@@ -138,17 +169,17 @@ const InspectionSlip = ({ slipData, onDownload, onProceed }) => {
       <Flex justify="space-between" align="start" mb={6} flexWrap="wrap" gap={4}>
         <Box flex={1}>
           <Text fontSize="sm" color="gray.600" mb={1}>
-            Reference Number
+            Slip Number
           </Text>
           <Text fontSize="2xl" fontWeight="bold" color="blue.600">
-            {reference}
+            {slipReference}
           </Text>
           <Text fontSize="xs" color="gray.500" mt={2}>
-            Generated on {formatDate(createdAt)}
+            Generated on {formatDate(createdDate)}
           </Text>
         </Box>
         <Box textAlign="center">
-          <QRCodeSVG value={reference} size={120} />
+          <QRCodeSVG value={`VEYU-INSPECTION:${slipReference}:${slipData.id || ''}`} size={120} />
           <Text fontSize="xs" color="gray.500" mt={2}>
             Scan for verification
           </Text>
@@ -169,7 +200,7 @@ const InspectionSlip = ({ slipData, onDownload, onProceed }) => {
               Inspection Type
             </Text>
             <Text fontWeight="semibold">
-              {getInspectionTypeLabel(inspectionType)}
+              {getInspectionTypeLabel(inspType)}
             </Text>
           </GridItem>
           
@@ -178,7 +209,7 @@ const InspectionSlip = ({ slipData, onDownload, onProceed }) => {
               Amount Paid
             </Text>
             <Text fontWeight="semibold" color="green.600">
-              ₦{amount?.toLocaleString() || 'N/A'}
+              ₦{paidAmount?.toLocaleString() || 'N/A'}
             </Text>
           </GridItem>
           
@@ -186,15 +217,37 @@ const InspectionSlip = ({ slipData, onDownload, onProceed }) => {
             <Text fontSize="sm" color="gray.600">
               Scheduled Date
             </Text>
-            <Text fontWeight="semibold">{formatDate(scheduledDate)}</Text>
+            <Text fontWeight="semibold">{formatDate(schedDate)}</Text>
           </GridItem>
           
           <GridItem>
             <Text fontSize="sm" color="gray.600">
               Scheduled Time
             </Text>
-            <Text fontWeight="semibold">{scheduledTime || 'N/A'}</Text>
+            <Text fontWeight="semibold">{schedTime || 'N/A'}</Text>
           </GridItem>
+
+          {payment_method && (
+            <GridItem>
+              <Text fontSize="sm" color="gray.600">
+                Payment Method
+              </Text>
+              <Text fontWeight="semibold" textTransform="capitalize">
+                {payment_method}
+              </Text>
+            </GridItem>
+          )}
+
+          {status && (
+            <GridItem>
+              <Text fontSize="sm" color="gray.600">
+                Status
+              </Text>
+              <Badge colorScheme="blue">
+                {status.replace('_', ' ').toUpperCase()}
+              </Badge>
+            </GridItem>
+          )}
         </Grid>
       </VStack>
 
@@ -211,22 +264,31 @@ const InspectionSlip = ({ slipData, onDownload, onProceed }) => {
             <Text fontSize="sm" color="gray.600">
               Customer Name
             </Text>
-            <Text fontWeight="semibold">{customerName || 'N/A'}</Text>
+            <Text fontWeight="semibold">{custName || 'N/A'}</Text>
           </GridItem>
           
           <GridItem>
             <Text fontSize="sm" color="gray.600">
               Email Address
             </Text>
-            <Text fontWeight="semibold">{customerEmail || 'N/A'}</Text>
+            <Text fontWeight="semibold">{custEmail || 'N/A'}</Text>
           </GridItem>
+
+          {custPhone && (
+            <GridItem>
+              <Text fontSize="sm" color="gray.600">
+                Phone Number
+              </Text>
+              <Text fontWeight="semibold">{custPhone}</Text>
+            </GridItem>
+          )}
         </Grid>
       </VStack>
 
       <Divider mb={6} />
 
       {/* Vehicle Details */}
-      {vehicleDetails && (
+      {vehicleInfo && (
         <>
           <VStack spacing={4} align="stretch" mb={6}>
             <Heading size="md" color="gray.700">
@@ -234,39 +296,90 @@ const InspectionSlip = ({ slipData, onDownload, onProceed }) => {
             </Heading>
             
             <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-              {vehicleDetails.brand && (
+              {(vehicleInfo.brand || vehicleInfo.make) && (
                 <GridItem>
                   <Text fontSize="sm" color="gray.600">
                     Brand
                   </Text>
-                  <Text fontWeight="semibold">{vehicleDetails.brand}</Text>
+                  <Text fontWeight="semibold">{vehicleInfo.brand || vehicleInfo.make}</Text>
                 </GridItem>
               )}
               
-              {vehicleDetails.model && (
+              {vehicleInfo.model && (
                 <GridItem>
                   <Text fontSize="sm" color="gray.600">
                     Model
                   </Text>
-                  <Text fontWeight="semibold">{vehicleDetails.model}</Text>
+                  <Text fontWeight="semibold">{vehicleInfo.model}</Text>
                 </GridItem>
               )}
               
-              {vehicleDetails.year && (
+              {vehicleInfo.year && (
                 <GridItem>
                   <Text fontSize="sm" color="gray.600">
                     Year
                   </Text>
-                  <Text fontWeight="semibold">{vehicleDetails.year}</Text>
+                  <Text fontWeight="semibold">{vehicleInfo.year}</Text>
                 </GridItem>
               )}
               
-              {vehicleDetails.vin && (
+              {vehicleInfo.vin && (
                 <GridItem>
                   <Text fontSize="sm" color="gray.600">
                     VIN
                   </Text>
-                  <Text fontWeight="semibold">{vehicleDetails.vin}</Text>
+                  <Text fontWeight="semibold">{vehicleInfo.vin}</Text>
+                </GridItem>
+              )}
+
+              {vehicleInfo.name && (
+                <GridItem colSpan={2}>
+                  <Text fontSize="sm" color="gray.600">
+                    Vehicle Name
+                  </Text>
+                  <Text fontWeight="semibold">{vehicleInfo.name}</Text>
+                </GridItem>
+              )}
+            </Grid>
+          </VStack>
+          
+          <Divider mb={6} />
+        </>
+      )}
+
+      {/* Dealer Details */}
+      {dealer && (
+        <>
+          <VStack spacing={4} align="stretch" mb={6}>
+            <Heading size="md" color="gray.700">
+              Dealer Information
+            </Heading>
+            
+            <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+              {dealer.business_name && (
+                <GridItem>
+                  <Text fontSize="sm" color="gray.600">
+                    Business Name
+                  </Text>
+                  <Text fontWeight="semibold">{dealer.business_name}</Text>
+                </GridItem>
+              )}
+              
+              {dealer.location && (
+                <GridItem>
+                  <Text fontSize="sm" color="gray.600">
+                    Location
+                  </Text>
+                  <Text fontWeight="semibold">{dealer.location}</Text>
+                </GridItem>
+              )}
+              
+              {dealer.phone && (
+                <GridItem>
+                  <Text fontSize="sm" color="gray.600">
+                    Phone
+                  </Text>
+                  <Text fontWeight="semibold">{dealer.phone}</Text>
                 </GridItem>
               )}
             </Grid>

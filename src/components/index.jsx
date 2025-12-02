@@ -2242,3 +2242,6 @@ export { InlineError, EmptyStateError, FullPageError, ErrorToast } from './Error
 
 // Export BusinessLogo component
 export { BusinessLogo } from './BusinessLogo';
+
+// Export dealer verification component (new)
+export { default as DealerInspectionVerification } from './DealerInspectionVerification';

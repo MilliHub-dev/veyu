@@ -45,10 +45,16 @@ const CheckoutWithInspection = lazy(() => import("./pages/marketplace/checkout/C
 const DocumentSigningPage = lazy(() => import("./pages/marketplace/checkout/DocumentSigningPage"));
 const NotificationsPage = lazy(() => import("./pages/marketplace/Notifications"));
 
+// Support Pages
+const TicketList = lazy(() => import("./pages/support/TicketList"));
+const CreateTicket = lazy(() => import("./pages/support/CreateTicket"));
+const TicketDetail = lazy(() => import("./pages/support/TicketDetail"));
+
 // Inspection Pages
 const InspectionSlipPage = lazy(() => import("./pages/marketplace/inspection/InspectionSlipPage"));
 const InspectionFormPage = lazy(() => import("./pages/marketplace/inspection/InspectionFormPage"));
 const DocumentPreviewPage = lazy(() => import("./pages/marketplace/inspection/DocumentPreviewPage"));
+const InspectionDetailPage = lazy(() => import("./pages/marketplace/InspectionDetailPage"));
 
 // Mechanic Dashboard
 const MechanicDashboardLayout = lazy(() => import("./pages/dashboard/mechanic/Layout"));
@@ -70,6 +76,7 @@ const OrderListAdmin = lazy(() => import("./pages/dashboard/dealer/orders/OrderL
 const AnalyticsDashboard = lazy(() => import("./pages/dashboard/dealer/analytics/AnalyticsOverview"));
 const DealershipSettings = lazy(() => import("./pages/dashboard/dealer/settings/Settings"));
 const MyBoosts = lazy(() => import("./pages/dashboard/dealer/boost/MyBoosts"));
+const VerifyInspectionPage = lazy(() => import("./pages/dashboard/dealer/VerifyInspectionPage"));
 
 // Wallet
 const WalletLayout = lazy(() => import("./pages/marketplace/wallet/Layout"));
@@ -394,8 +401,12 @@ function App() {
                               <Route path="" element={<ListingsAdmin />} />
                             </Route>
                             <Route path="/analytics" element={<AnalyticsDashboard />} />
+                            <Route path="/verify-inspection" element={<VerifyInspectionPage />} />
                             <Route path="/settings" element={<DealershipSettings />} />
                             <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route path="/support" element={<TicketList />} />
+                            <Route path="/support/create" element={<CreateTicket />} />
+                            <Route path="/support/tickets/:id" element={<TicketDetail />} />
                             <Route path="/*" element={<Navigate to="/dashboard" />} />
                           </Route>
                           {/* Marketplace routes for dealers */}
@@ -408,6 +419,8 @@ function App() {
                             <Route path="/checkout/pay" element={<CheckoutPage />} />
                             <Route path="/checkout/docs" element={<DocumentSigningPage />} />
                             <Route path="/checkout/inspection" element={<CheckoutWithInspection />} />
+                            <Route path="/inspections/:inspectionId" element={<InspectionDetailPage />} />
+                            <Route path="/inspections/slip/:slipReference" element={<InspectionSlipPage />} />
                           </Route>
                         </>
                       ) : authUser.user_type === "mechanic" ? (
@@ -424,6 +437,9 @@ function App() {
                             </Route>
                             <Route path="/settings" element={<MechanicBusinessProfile />} />
                             <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route path="/support" element={<TicketList />} />
+                            <Route path="/support/create" element={<CreateTicket />} />
+                            <Route path="/support/tickets/:id" element={<TicketDetail />} />
                             <Route path="/*" element={<Navigate to="/dashboard" />} />
                           </Route>
                           {/* Marketplace routes for mechanics */}
@@ -436,6 +452,8 @@ function App() {
                             <Route path="/checkout/pay" element={<CheckoutPage />} />
                             <Route path="/checkout/docs" element={<DocumentSigningPage />} />
                             <Route path="/checkout/inspection" element={<CheckoutWithInspection />} />
+                            <Route path="/inspections/:inspectionId" element={<InspectionDetailPage />} />
+                            <Route path="/inspections/slip/:slipReference" element={<InspectionSlipPage />} />
                           </Route>
                         </>
                       ) : (
@@ -456,9 +474,14 @@ function App() {
                           <Route path="/inspection/slip" element={<InspectionSlipPage />} />
                           <Route path="/inspection/form" element={<InspectionFormPage />} />
                           <Route path="/inspection/document" element={<DocumentPreviewPage />} />
+                          <Route path="/inspections/:inspectionId" element={<InspectionDetailPage />} />
+                          <Route path="/inspections/slip/:slipReference" element={<InspectionSlipPage />} />
                           <Route path="/search/cars" element={<CarSearchPage />} />
                           <Route path="/search/mechanics" element={<MechanicSearchPage />} />
                           <Route path="/notifications" element={<NotificationsPage />} />
+                          <Route path="/support" element={<TicketList />} />
+                          <Route path="/support/create" element={<CreateTicket />} />
+                          <Route path="/support/tickets/:id" element={<TicketDetail />} />
                           <Route path="/home" element={<HomePage />} />
                           <Route path="/*" element={<Navigate to="/home" />} />
                         </Route>
@@ -503,6 +526,7 @@ function App() {
                       <Route path="/services" element={<ServicesPage />} />
                       <Route path="/contact" element={<ContactPage />} />
                       <Route path="/profile" element={<PublicProfilePage />} />
+                      <Route path="/support" element={<Navigate to="/login" />} />
                       <Route path="/login" element={<LoginView />} />
                       <Route path="/signup" element={<SignupView />} />
                       <Route path="/signup/business" element={<BusinessSignupView />} />

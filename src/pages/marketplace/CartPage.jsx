@@ -67,6 +67,8 @@ export const CartPage = ({ props }) => {
     const [loading, setLoading] = useState(true);
     const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [inspections, setInspections] = useState([]);
+    const [inspectionsLoading, setInspectionsLoading] = useState(false);
     const {axios, authUser, commaInt, notify, redirect, } = useContext(GlobalStore);
 
     function openInspectionModal(order) {
@@ -123,8 +125,31 @@ export const CartPage = ({ props }) => {
         }
     }
 
+    async function fetchInspections() {
+        setInspectionsLoading(true);
+        try {
+            const res = await axios.get('/inspections/');
+            const data = objectifyJSON(res.data);
+            
+            if (res.status === 200) {
+                console.log("Inspections Data:", data.data);
+                setInspections(data?.data?.results || data?.data || []);
+            }
+        } catch (error) {
+            console.error('Fetch inspections error:', error);
+            notify({
+                title: 'Error',
+                body: error?.response?.data?.message || 'Failed to fetch inspections',
+                color: 'red'
+            });
+        } finally {
+            setInspectionsLoading(false);
+        }
+    }
+
     function init(){
         getData();
+        fetchInspections();
         setTimeout(() => setLoading(false), 2500);
     }
 
@@ -272,6 +297,21 @@ export const CartPage = ({ props }) => {
                           </Badge>
                         </HStack>
                     </Tab>
+                    <Tab
+                      className="subtitle"
+                      px={3}
+                      py={2}
+                      borderRadius="full"
+                      _selected={{ bg: 'white', border: '1px solid', borderColor: 'blue.200', boxShadow: 'sm' }}
+                    >
+                        <HStack spacing={2} align="center">
+                          <ClipboardCheck size={16} />
+                          <Text as="span">Inspections</Text>
+                          <Badge borderRadius="30px" className="subtitle" px="2" color="primary">
+                            {inspections?.length || 0}
+                          </Badge>
+                        </HStack>
+                    </Tab>
                     </TabList>
 
 
@@ -295,9 +335,11 @@ export const CartPage = ({ props }) => {
                                         const vehicle = order?.order_item?.vehicle;
                                         const hasInspection = order?.includes_inspection || order?.purchase_type === 'With Inspection';
                                         const inspectionScheduled = order?.inspection_scheduled;
-                                        const inspectionSlipRef = order?.inspection_slip_reference;
+                                        const inspectionSlipRef = order?.inspection_slip_reference || order?.inspection_reference;
+                                        const inspectionId = order?.inspection_id || order?.inspection;
                                         const purchaseType = order?.purchase_type || (hasInspection ? 'With Inspection' : 'Direct Purchase');
                                         const dealer = vehicle?.dealer;
+                                        const isAwaitingInspection = order?.order_status === 'awaiting-inspection' || order?.order_status === 'inspecting';
 
                                         // Debug log
                                         console.log('Order Debug:', {
@@ -307,6 +349,8 @@ export const CartPage = ({ props }) => {
                                             hasInspection,
                                             inspectionScheduled,
                                             inspectionSlipRef,
+                                            inspectionId,
+                                            isAwaitingInspection,
                                             order
                                         });
 
@@ -417,31 +461,31 @@ export const CartPage = ({ props }) => {
                                                             </Stack>
 
                                                             {/* Inspection Status */}
-                                                            {hasInspection && (
+                                                            {(hasInspection || isAwaitingInspection) && (
                                                                 <Box
-                                                                    bg={inspectionScheduled ? 'green.50' : 'orange.50'}
+                                                                    bg={inspectionScheduled || isAwaitingInspection ? 'green.50' : 'orange.50'}
                                                                     borderWidth="1px"
-                                                                    borderColor={inspectionScheduled ? 'green.200' : 'orange.200'}
+                                                                    borderColor={inspectionScheduled || isAwaitingInspection ? 'green.200' : 'orange.200'}
                                                                     borderRadius="md"
                                                                     p={3}
                                                                 >
                                                                     <HStack spacing={2}>
-                                                                        {inspectionScheduled ? (
+                                                                        {inspectionScheduled || isAwaitingInspection ? (
                                                                             <>
                                                                                 <CheckCircle size={18} color="green" />
                                                                                 <Text fontSize="sm" color="green.700" fontWeight="600" flex={1}>
                                                                                     Inspection Scheduled
                                                                                 </Text>
-                                                                                {inspectionSlipRef && (
+                                                                                {(inspectionId || inspectionSlipRef) && (
                                                                                     <Button
                                                                                         as={Link}
-                                                                                        to={`/inspections/slip/${inspectionSlipRef}`}
+                                                                                        to={inspectionId ? `/inspections/${inspectionId}` : `/inspections/slip/${inspectionSlipRef}`}
                                                                                         size="sm"
                                                                                         colorScheme="green"
                                                                                         variant="outline"
                                                                                         rightIcon={<ExternalLink size={14} />}
                                                                                     >
-                                                                                        View Slip
+                                                                                        View Details
                                                                                     </Button>
                                                                                 )}
                                                                             </>
@@ -504,8 +548,8 @@ export const CartPage = ({ props }) => {
                                                                     </Button>
                                                                 )}
 
-                                                                {/* Add Inspection Button - Show for direct purchase orders */}
-                                                                {!hasInspection && order?.order_type === 'sale' && (
+                                                                {/* Add Inspection Button - Show for direct purchase orders that are NOT awaiting inspection */}
+                                                                {!hasInspection && !isAwaitingInspection && order?.order_type === 'sale' && (
                                                                     <Button
                                                                         onClick={() => openInspectionModal(order)}
                                                                         colorScheme="purple"
@@ -519,16 +563,44 @@ export const CartPage = ({ props }) => {
 
                                                                 {order?.order_type === 'sale' && (
                                                                     <>
-                                                                        {order?.order_status === 'awaiting-inspection' || order?.order_status === 'inspecting' ? (
-                                                                            <Button
-                                                                                as={Link}
-                                                                                to={`/checkout/inspection/?listingId=${order?.order_item?.uuid}`}
-                                                                                colorScheme="yellow"
-                                                                                leftIcon={<ClipboardCheck size={18} />}
-                                                                                flex={{ base: '1', md: 'initial' }}
-                                                                            >
-                                                                                Finish Inspection
-                                                                            </Button>
+                                                                        {isAwaitingInspection ? (
+                                                                            inspectionId ? (
+                                                                                <Button
+                                                                                    as={Link}
+                                                                                    to={`/inspections/${inspectionId}`}
+                                                                                    colorScheme="blue"
+                                                                                    leftIcon={<FileText size={18} />}
+                                                                                    flex={{ base: '1', md: 'initial' }}
+                                                                                >
+                                                                                    View Inspection Details
+                                                                                </Button>
+                                                                            ) : inspectionSlipRef ? (
+                                                                                <Button
+                                                                                    as={Link}
+                                                                                    to={`/inspections/slip/${inspectionSlipRef}`}
+                                                                                    colorScheme="blue"
+                                                                                    leftIcon={<FileText size={18} />}
+                                                                                    flex={{ base: '1', md: 'initial' }}
+                                                                                >
+                                                                                    View Inspection Slip
+                                                                                </Button>
+                                                                            ) : (
+                                                                                <Button
+                                                                                    onClick={() => {
+                                                                                        notify({
+                                                                                            title: 'Inspection Scheduled',
+                                                                                            body: 'Your inspection has been scheduled. Check the Inspections tab to view details.',
+                                                                                            color: 'blue'
+                                                                                        });
+                                                                                    }}
+                                                                                    colorScheme="blue"
+                                                                                    variant="outline"
+                                                                                    leftIcon={<ClipboardCheck size={18} />}
+                                                                                    flex={{ base: '1', md: 'initial' }}
+                                                                                >
+                                                                                    View Inspection Details
+                                                                                </Button>
+                                                                            )
                                                                         ) : !order?.paid ? (
                                                                             <Button
                                                                                 as={Link}
@@ -763,6 +835,213 @@ export const CartPage = ({ props }) => {
                                     )
                                 }
                             </List>
+                        </TabPanel>
+
+                        <TabPanel>
+                            <VStack spacing={4} align="stretch">
+                                {inspectionsLoading ? (
+                                    <MechanicListSkeleton />
+                                ) : inspections?.length === 0 ? (
+                                    <Card>
+                                        <CardBody>
+                                            <VStack spacing={4} py={8}>
+                                                <ClipboardCheck size={48} color="gray" />
+                                                <Heading size="md" color="gray.600">No inspections found</Heading>
+                                                <Text color="gray.500" textAlign="center">
+                                                    You haven't scheduled any inspections yet.
+                                                </Text>
+                                                <Button as={Link} to="/buy" colorScheme="blue">
+                                                    Browse Vehicles
+                                                </Button>
+                                            </VStack>
+                                        </CardBody>
+                                    </Card>
+                                ) : (
+                                    inspections?.map((inspection, idx) => {
+                                        const vehicle = inspection?.vehicle;
+                                        const statusColors = {
+                                            draft: 'gray',
+                                            in_progress: 'blue',
+                                            completed: 'green',
+                                            signed: 'purple',
+                                            archived: 'orange'
+                                        };
+                                        const typeLabels = {
+                                            pre_purchase: 'Pre-Purchase',
+                                            pre_rental: 'Pre-Rental',
+                                            maintenance: 'Maintenance',
+                                            insurance: 'Insurance'
+                                        };
+
+                                        return (
+                                            <Card 
+                                                key={inspection.id || idx}
+                                                borderWidth="1px"
+                                                borderColor="gray.200"
+                                                _hover={{ shadow: 'md', borderColor: 'blue.300' }}
+                                                transition="all 0.2s"
+                                            >
+                                                <CardBody>
+                                                    <Flex direction={{ base: 'column', lg: 'row' }} gap={6}>
+                                                        {/* Vehicle Image */}
+                                                        {vehicle?.images?.[0]?.url && (
+                                                            <Box flexShrink={0}>
+                                                                <Image
+                                                                    src={vehicle.images[0].url}
+                                                                    alt={vehicle?.name || "Vehicle"}
+                                                                    w={{ base: '100%', lg: '220px' }}
+                                                                    h="160px"
+                                                                    objectFit="cover"
+                                                                    borderRadius="lg"
+                                                                />
+                                                            </Box>
+                                                        )}
+
+                                                        {/* Inspection Details */}
+                                                        <Flex flex={1} direction="column" gap={3}>
+                                                            {/* Header */}
+                                                            <Flex justify="space-between" align="start" flexWrap="wrap" gap={2}>
+                                                                <Box>
+                                                                    <HStack spacing={2} mb={1}>
+                                                                        <ClipboardCheck size={18} />
+                                                                        <Heading size="md">
+                                                                            {vehicle?.name || 'Vehicle Inspection'}
+                                                                        </Heading>
+                                                                    </HStack>
+                                                                    <Text fontSize="sm" color="gray.600">
+                                                                        Inspection #{inspection?.id || inspection?.reference_number}
+                                                                    </Text>
+                                                                </Box>
+                                                                <Badge
+                                                                    colorScheme={statusColors[inspection?.status] || 'gray'}
+                                                                    fontSize="sm"
+                                                                    px={3}
+                                                                    py={1}
+                                                                    borderRadius="full"
+                                                                >
+                                                                    {inspection?.status?.replace('_', ' ').toUpperCase() || 'PENDING'}
+                                                                </Badge>
+                                                            </Flex>
+
+                                                            {/* Info Grid */}
+                                                            <Stack direction={{ base: 'column', md: 'row' }} spacing={4}>
+                                                                {/* Type */}
+                                                                <Box flex={1}>
+                                                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                                                        Inspection Type
+                                                                    </Text>
+                                                                    <Text fontSize="sm" fontWeight="600">
+                                                                        {typeLabels[inspection?.inspection_type] || inspection?.inspection_type || 'N/A'}
+                                                                    </Text>
+                                                                </Box>
+
+                                                                {/* Date */}
+                                                                {inspection?.scheduled_date && (
+                                                                    <Box flex={1}>
+                                                                        <Text fontSize="xs" color="gray.500" mb={1}>
+                                                                            Scheduled Date
+                                                                        </Text>
+                                                                        <HStack spacing={1}>
+                                                                            <Calendar size={16} />
+                                                                            <Text fontSize="sm" fontWeight="600">
+                                                                                {new Date(inspection.scheduled_date).toLocaleDateString()}
+                                                                            </Text>
+                                                                        </HStack>
+                                                                    </Box>
+                                                                )}
+
+                                                                {/* Inspector */}
+                                                                {inspection?.inspector_name && (
+                                                                    <Box flex={1}>
+                                                                        <Text fontSize="xs" color="gray.500" mb={1}>
+                                                                            Inspector
+                                                                        </Text>
+                                                                        <Text fontSize="sm" fontWeight="600" noOfLines={1}>
+                                                                            {inspection.inspector_name}
+                                                                        </Text>
+                                                                    </Box>
+                                                                )}
+                                                            </Stack>
+
+                                                            {/* Overall Condition */}
+                                                            {inspection?.overall_condition && (
+                                                                <Box
+                                                                    bg={
+                                                                        inspection.overall_condition === 'excellent' ? 'green.50' :
+                                                                        inspection.overall_condition === 'good' ? 'blue.50' :
+                                                                        inspection.overall_condition === 'fair' ? 'yellow.50' : 'red.50'
+                                                                    }
+                                                                    borderWidth="1px"
+                                                                    borderColor={
+                                                                        inspection.overall_condition === 'excellent' ? 'green.200' :
+                                                                        inspection.overall_condition === 'good' ? 'blue.200' :
+                                                                        inspection.overall_condition === 'fair' ? 'yellow.200' : 'red.200'
+                                                                    }
+                                                                    borderRadius="md"
+                                                                    p={3}
+                                                                >
+                                                                    <HStack spacing={2}>
+                                                                        <CheckCircle size={18} />
+                                                                        <Text fontSize="sm" fontWeight="600" flex={1}>
+                                                                            Overall Condition: {inspection.overall_condition.toUpperCase()}
+                                                                        </Text>
+                                                                    </HStack>
+                                                                </Box>
+                                                            )}
+
+                                                            {/* Action Buttons */}
+                                                            <Flex gap={2} flexWrap="wrap" pt={2}>
+                                                                <Button
+                                                                    as={Link}
+                                                                    to={`/inspections/${inspection?.id || inspection?.reference_number}`}
+                                                                    colorScheme="blue"
+                                                                    leftIcon={<FileText size={18} />}
+                                                                    flex={{ base: '1', md: 'initial' }}
+                                                                >
+                                                                    View Details
+                                                                </Button>
+
+                                                                {inspection?.status === 'completed' && (
+                                                                    <Button
+                                                                        colorScheme="green"
+                                                                        variant="outline"
+                                                                        leftIcon={<Download size={18} />}
+                                                                        flex={{ base: '1', md: 'initial' }}
+                                                                        onClick={async () => {
+                                                                            try {
+                                                                                const response = await axios.get(
+                                                                                    `/inspections/${inspection.id}/generate-document/`,
+                                                                                    { responseType: 'blob' }
+                                                                                );
+                                                                                const url = window.URL.createObjectURL(new Blob([response.data]));
+                                                                                const link = document.createElement('a');
+                                                                                link.href = url;
+                                                                                link.setAttribute('download', `inspection-${inspection.id}.pdf`);
+                                                                                document.body.appendChild(link);
+                                                                                link.click();
+                                                                                link.remove();
+                                                                                window.URL.revokeObjectURL(url);
+                                                                            } catch (error) {
+                                                                                notify({
+                                                                                    title: 'Error',
+                                                                                    body: 'Failed to download inspection report',
+                                                                                    color: 'red'
+                                                                                });
+                                                                            }
+                                                                        }}
+                                                                    >
+                                                                        Download Report
+                                                                    </Button>
+                                                                )}
+                                                            </Flex>
+                                                        </Flex>
+                                                    </Flex>
+                                                </CardBody>
+                                            </Card>
+                                        );
+                                    })
+                                )}
+                            </VStack>
                         </TabPanel>
                     </TabPanels>
                 </Tabs>

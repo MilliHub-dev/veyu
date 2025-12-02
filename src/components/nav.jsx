@@ -335,6 +335,7 @@ export const CustomerNavbar = ({ props }) => {
   const isLoggedIn = Boolean(authUser);
   const navBg = useColorModeValue('white', 'gray.900');
   const navColor = useColorModeValue('black', 'white');
+  const navigate = useNavigate();
 
   window.onscroll = (ev) => {
     const navbar = document.getElementById('navbar');
@@ -449,7 +450,7 @@ export const CustomerNavbar = ({ props }) => {
                       </Box>
 
                       <Button my={1} as={MenuItem} display={'flex'} justifyContent={'space-between'} onClick={logout} variant={'ghost'} w={'100%'} color="black"> Sign Out  <RiLogoutBoxRLine className='icon' /> </Button>
-                      <Button my={1} as={MenuItem} display={'flex'} justifyContent={'space-between'} variant={'ghost'} w={'100%'} color="black"> Contact Support <RiHeadphoneLine className='icon' />  </Button>
+                      <Button my={1} as={MenuItem} display={'flex'} justifyContent={'space-between'} onClick={() => navigate('/support')} variant={'ghost'} w={'100%'} color="black"> Contact Support <RiHeadphoneLine className='icon' />  </Button>
                     </MenuList>
                   </Fragment>
                 }
@@ -487,6 +488,7 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
   const { authUser, onLogout, logout } = useContext(GlobalStore);
   const [isMobile] = useMediaQuery('(max-width: 768px)');
   const isLoggedIn = Boolean(authUser);
+  const navigate = useNavigate();
 
   window.onscroll = (ev) => {
     if (window.scrollY > 1000) {
@@ -896,6 +898,7 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
   const { authUser, onLogout, logout } = useContext(GlobalStore);
   const [isMobile] = useMediaQuery('(max-width: 768px)');
   const isLoggedIn = Boolean(authUser);
+  const navigate = useNavigate();
 
   window.onscroll = (ev) => {
     if (window.scrollY > 1000) {
@@ -1271,7 +1274,7 @@ export const Sidebar = ({ show, onClose, }) => {
           {isLoggedIn &&
             <Button display={'flex'} justifyContent={'space-between'} onClick={logout} variant={'ghost'} w={'100%'}> Sign Out  <RiLogoutBoxRLine className='icon' /> </Button>
           }
-          <Button display={'flex'} justifyContent={'space-between'} variant={'ghost'} w={'100%'}> Contact Support <RiHeadphoneLine className='icon' />  </Button>
+          <Button display={'flex'} justifyContent={'space-between'} onClick={() => navigate('/support')} variant={'ghost'} w={'100%'}> Contact Support <RiHeadphoneLine className='icon' />  </Button>
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
@@ -1305,7 +1308,7 @@ export const Footer = ({ props }) => {
         { label: 'Blog', url: '/blog' },
         { label: 'Newsletter', url: '/bad' },
         { label: 'Events', },
-        { label: 'Help centre', url: '/help' }
+        { label: 'Help centre', url: '/support' }
       ],
     },
     {
@@ -1518,6 +1521,40 @@ export const Footer = ({ props }) => {
                 </Button>
               </HStack>
             </Flex>
+          </Box>
+
+          {/* Support Ticket CTA */}
+          <Box
+            bg="whiteAlpha.100"
+            borderRadius="xl"
+            p={{ base: 6, md: 8 }}
+            mb={8}
+            textAlign="center"
+          >
+            <VStack spacing={4}>
+              <Icon as={RiHeadphoneLine} boxSize={12} color="primary" />
+              <VStack spacing={2}>
+                <Heading size="md" color="white">
+                  Need Help?
+                </Heading>
+                <Text fontSize="sm" color="gray.400" maxW="md">
+                  Our support team is here to help. Create a ticket and we'll get back to you as soon as possible.
+                </Text>
+              </VStack>
+              <Button
+                as={RLink}
+                to="/support"
+                size="lg"
+                colorScheme="orange"
+                bg="primary"
+                leftIcon={<RiHeadphoneLine />}
+                _hover={{ bg: 'orange.600', transform: 'translateY(-2px)' }}
+                transition="all 0.2s"
+                px={8}
+              >
+                Create Support Ticket
+              </Button>
+            </VStack>
           </Box>
 
           {/* Bottom Bar */}
