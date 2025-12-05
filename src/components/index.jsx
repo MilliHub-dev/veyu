@@ -1522,29 +1522,132 @@ export const ListingItemCard = ({ listing, ...props }) => {
 
                         {/* Vehicle Specs */}
                         {listing?.listing_type === 'sale' ? (
-                            <SimpleGrid columns={3} spacing={3} fontSize="sm">
-                                <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
-                                    <Icon as={RxTimer} color="#F4A950" boxSize={4} />
-                                    <Text color="gray.600" fontSize="xs" textAlign="center">Mileage</Text>
-                                    <Text fontWeight="bold" fontSize="xs" textAlign="center">
-                                        {commaInt(vehicle?.mileage) || 0}mi
-                                    </Text>
-                                </VStack>
-                                <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
-                                    <Icon as={TbManualGearbox} color="#F4A950" boxSize={4} />
-                                    <Text color="gray.600" fontSize="xs" textAlign="center">Trans.</Text>
-                                    <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
-                                        {vehicle?.transmission || 'Auto'}
-                                    </Text>
-                                </VStack>
-                                <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
-                                    <Icon as={RiGasStationLine} color="#F4A950" boxSize={4} />
-                                    <Text color="gray.600" fontSize="xs" textAlign="center">Fuel</Text>
-                                    <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
-                                        {vehicle?.fuel_system || 'Petrol'}
-                                    </Text>
-                                </VStack>
-                            </SimpleGrid>
+                            vehicle?.kind === 'uav' ? (
+                                // UAV-specific specs
+                                <SimpleGrid columns={3} spacing={3} fontSize="sm">
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">🕐</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Flight Time</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center">
+                                            {vehicle?.max_flight_time || 0} min
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">📏</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Range</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.max_range || 0} km
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">📷</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Camera</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.camera_resolution || 'N/A'}
+                                        </Text>
+                                    </VStack>
+                                </SimpleGrid>
+                            ) : vehicle?.kind === 'plane' ? (
+                                // Aircraft-specific specs
+                                <SimpleGrid columns={3} spacing={3} fontSize="sm">
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">✈️</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Type</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.aircraft_type || 'N/A'}
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">📏</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Range</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.range || 0} km
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">💺</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Seats</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center">
+                                            {vehicle?.seats || 0}
+                                        </Text>
+                                    </VStack>
+                                </SimpleGrid>
+                            ) : vehicle?.kind === 'boat' ? (
+                                // Boat-specific specs
+                                <SimpleGrid columns={3} spacing={3} fontSize="sm">
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">⚓</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Hull</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.hull_material || 'N/A'}
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">📏</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Length</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.length || 0} ft
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">🔧</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Engines</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center">
+                                            {vehicle?.engine_count || 1}
+                                        </Text>
+                                    </VStack>
+                                </SimpleGrid>
+                            ) : vehicle?.kind === 'bike' ? (
+                                // Motorcycle-specific specs
+                                <SimpleGrid columns={3} spacing={3} fontSize="sm">
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">🏍️</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Type</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.bike_type || 'N/A'}
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Text fontSize="lg">⚙️</Text>
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Engine</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.engine_capacity || 0} cc
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Icon as={RiGasStationLine} color="#F4A950" boxSize={4} />
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Fuel</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.fuel_system || 'Petrol'}
+                                        </Text>
+                                    </VStack>
+                                </SimpleGrid>
+                            ) : (
+                                // Default car specs
+                                <SimpleGrid columns={3} spacing={3} fontSize="sm">
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Icon as={RxTimer} color="#F4A950" boxSize={4} />
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Mileage</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center">
+                                            {commaInt(vehicle?.mileage) || 0}mi
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Icon as={TbManualGearbox} color="#F4A950" boxSize={4} />
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Trans.</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.transmission || 'Auto'}
+                                        </Text>
+                                    </VStack>
+                                    <VStack spacing={1} align="center" p={3} bg="gray.50" borderRadius="lg">
+                                        <Icon as={RiGasStationLine} color="#F4A950" boxSize={4} />
+                                        <Text color="gray.600" fontSize="xs" textAlign="center">Fuel</Text>
+                                        <Text fontWeight="bold" fontSize="xs" textAlign="center" noOfLines={1}>
+                                            {vehicle?.fuel_system || 'Petrol'}
+                                        </Text>
+                                    </VStack>
+                                </SimpleGrid>
+                            )
                         ) : (
                             <VStack spacing={3} p={4} bg="gradient-to-br from-orange-50 to-yellow-50" borderRadius="xl" border="1px" borderColor="orange.100">
                                 {/* Host Rating and Status */}

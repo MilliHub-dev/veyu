@@ -239,10 +239,17 @@ const BuyListing = ({ }) => {
         // Filter by vehicle category
         if (vehicleCategory !== 'all') {
             filtered = filtered.filter((listing) => {
-                const vehicleType = listing?.vehicle?.type?.toLowerCase() || listing?.vehicle?.category?.toLowerCase() || '';
-                return vehicleType.includes(vehicleCategory) ||
-                    (vehicleCategory === 'motorcycles' && (vehicleType.includes('bike') || vehicleType.includes('motorcycle'))) ||
-                    (vehicleCategory === 'uavs' && (vehicleType.includes('uav') || vehicleType.includes('drone')));
+                // Use vehicle.kind as per API documentation
+                const vehicleKind = listing?.vehicle?.kind?.toLowerCase() || '';
+                
+                // Map category IDs to API vehicle kinds
+                if (vehicleCategory === 'cars') return vehicleKind === 'car';
+                if (vehicleCategory === 'motorcycles') return vehicleKind === 'bike';
+                if (vehicleCategory === 'boats') return vehicleKind === 'boat';
+                if (vehicleCategory === 'aircraft') return vehicleKind === 'plane';
+                if (vehicleCategory === 'uavs') return vehicleKind === 'uav';
+                
+                return false;
             });
         }
 
@@ -481,13 +488,21 @@ const BuyListing = ({ }) => {
                                         {vehicleCategories.map((category) => {
                                             const IconComponent = category.icon;
                                             const isActive = vehicleCategory === category.id;
+                                            
                                             const categoryCount = category.id === 'all'
                                                 ? listings?.length || 0
                                                 : listings?.filter(l => {
-                                                    const vehicleType = l?.vehicle?.type?.toLowerCase() || l?.vehicle?.category?.toLowerCase() || '';
-                                                    return vehicleType.includes(category.id) ||
-                                                        (category.id === 'motorcycles' && (vehicleType.includes('bike') || vehicleType.includes('motorcycle'))) ||
-                                                        (category.id === 'uavs' && (vehicleType.includes('uav') || vehicleType.includes('drone')));
+                                                    // Use vehicle.kind as per API documentation
+                                                    const vehicleKind = l?.vehicle?.kind?.toLowerCase() || '';
+                                                    
+                                                    // Map category IDs to API vehicle kinds
+                                                    if (category.id === 'cars') return vehicleKind === 'car';
+                                                    if (category.id === 'motorcycles') return vehicleKind === 'bike';
+                                                    if (category.id === 'boats') return vehicleKind === 'boat';
+                                                    if (category.id === 'aircraft') return vehicleKind === 'plane';
+                                                    if (category.id === 'uavs') return vehicleKind === 'uav';
+                                                    
+                                                    return false;
                                                 }).length || 0;
 
                                             return (
