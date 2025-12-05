@@ -37,9 +37,8 @@ import { LuChartLine } from "react-icons/lu";
 import { GiHomeGarage } from "react-icons/gi";
 import { AiOutlineTransaction } from "react-icons/ai";
 import { PiHandDepositBold, PiHandWithdrawBold } from "react-icons/pi";
-import {FlutterwavePaymentModal} from '../../../components/wallet';
+import {PaystackPaymentModal} from '../../../components/wallet';
 import { usePaystackPayment } from 'react-paystack';
-import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import {CenteredLayout} from '../../../components';
 
 function WalletDepositPage() {

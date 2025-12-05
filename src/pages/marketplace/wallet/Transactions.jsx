@@ -49,7 +49,7 @@ import { LuChartLine } from "react-icons/lu";
 import { GiHomeGarage } from "react-icons/gi";
 import { AiOutlineTransaction } from "react-icons/ai";
 import { PiHandDepositBold, PiHandWithdrawBold } from "react-icons/pi";
-import {FlutterwavePaymentModal} from '../../../components/wallet';
+import {PaystackPaymentModal} from '../../../components/wallet';
 
 function WalletTransactionsPage() {
   const {axios, notify, authUser, commaInt} = useContext(GlobalStore);

@@ -734,7 +734,8 @@ class InspectionService {
   async getInspectionSlip(slipReference) {
     try {
       const response = await apiClient.get(`/inspections/slips/${slipReference}/`);
-      return handleApiResponse(response);
+      // Return full response to preserve success flag
+      return response.data;
     } catch (error) {
       handleApiError(error);
     }

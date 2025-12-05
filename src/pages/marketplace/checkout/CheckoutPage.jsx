@@ -3,7 +3,6 @@ import {motion} from "framer-motion";
 import {useParams, useSearchParams, Link, useNavigate} from 'react-router-dom';
 import {GlobalStore} from "../../../App";
 import {objectifyJSON, jsonifyObject} from "../../../utils";
-import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import {
   Box,
   Container,
@@ -92,7 +91,6 @@ import { TbManualGearbox } from 'react-icons/tb';
 import { BsFillPatchCheckFill } from 'react-icons/bs';
 import { Country, State, City }  from 'country-state-city';
 import {
-  FlutterwavePaymentModal,
   WalletPaymentModal,
   PaystackPaymentModal,
 } from '../../../components/wallet';

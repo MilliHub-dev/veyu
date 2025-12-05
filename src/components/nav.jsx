@@ -416,7 +416,7 @@ export const CustomerNavbar = ({ props }) => {
           <Flex flex={isMobile ? 1 : 'unset'} flexWrap={'nowrap'} justifyContent={{ base: 'space-evenly', lg: 'flex-start' }} className='' gap={isMobile ? 3 : 5} alignItems={'center'}>
 
             {isMobile &&
-              <Button onClick={toggleSearch} variant="unstyled"><Icon viewBox='45' className='icon'><TbSearch /></Icon></Button>
+              <Button onClick={toggleSearch} variant="unstyled"><Icon viewBox='0 0 24 24' className='icon'><TbSearch /></Icon></Button>
             }
 
             {!isMobile &&
@@ -433,15 +433,15 @@ export const CustomerNavbar = ({ props }) => {
               >{"Wallet"}</Button>
             }
 
-            <RLink to={'/chat'}><Icon viewBox='45' className='icon' color={navColor}><MessageCircleIcon size={18} /></Icon></RLink>
-            <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color={navColor}><BellIcon size={18} /></Icon></RLink>
-            <RLink to={'/cart'}><Icon viewBox='45' className='icon' color={navColor}><ShoppingCartIcon size={18} /></Icon></RLink>
+            <RLink to={'/chat'}><Icon viewBox='0 0 24 24' className='icon' color={navColor}><MessageCircleIcon size={18} /></Icon></RLink>
+            <RLink to={'/notifications'}><Icon viewBox='0 0 24 24' className='icon' color={navColor}><BellIcon size={18} /></Icon></RLink>
+            <RLink to={'/cart'}><Icon viewBox='0 0 24 24' className='icon' color={navColor}><ShoppingCartIcon size={18} /></Icon></RLink>
             {!isLaptop &&
               <Menu to={`/dashboard`}>
                 {({ isOpen, onClose }) =>
                   <Fragment>
-                    <MenuButton onClose={onClose} isOpen={isOpen}>
-                      <Icon viewBox='45' className='icon' color={navColor}><UserIcon size={18} /></Icon>
+                    <MenuButton onClose={onClose}>
+                      <Icon viewBox='0 0 24 24' className='icon' color={navColor}><UserIcon size={18} /></Icon>
                     </MenuButton>
                     <MenuList px={2}>
                       <Box my={3} placeItems="center">
@@ -978,8 +978,8 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
             >Wallet</Button>
           )
           }
-          <RLink to={'/chat'}><Icon viewBox='45' className='icon' color="black"><MessageCircleIcon size={18} /></Icon></RLink>
-          <RLink to={'/notifications'}><Icon viewBox='45' className='icon' color="black"><BellIcon size={18} /></Icon></RLink>
+          <RLink to={'/chat'}><Icon viewBox='0 0 24 24' className='icon' color="black"><MessageCircleIcon size={18} /></Icon></RLink>
+          <RLink to={'/notifications'}><Icon viewBox='0 0 24 24' className='icon' color="black"><BellIcon size={18} /></Icon></RLink>
           <Menu zIndex={2} display="block">
             <MenuButton
               as={IconButton}

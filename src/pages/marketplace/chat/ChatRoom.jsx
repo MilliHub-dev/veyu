@@ -23,7 +23,7 @@ import { TokenManager } from '../../../services/api';
 
 
 function ChatRoom() {
-  const DEBUG = JSON.parse(import.meta.env.VITE_DEBUG) || false;
+  const DEBUG = import.meta.env.VITE_DEBUG === 'true' || false;
   const [chatRoom, setChatRoom] = useState({});
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);

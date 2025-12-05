@@ -23,6 +23,19 @@ const CreateTicket = () => {
   });
 
   useEffect(() => {
+    // Check if user is allowed to create tickets
+    if (authUser && authUser.user_type !== 'customer') {
+      console.log('⚠️ User type:', authUser.user_type, '- Backend only allows customers to create tickets');
+      toast({
+        title: 'Access Restricted',
+        description: `Support tickets can only be created by customers. Your account type is: ${authUser.user_type}`,
+        status: 'warning',
+        duration: 5000,
+        isClosable: true
+      });
+      // Optionally redirect back to support list
+      // navigate('/support');
+    }
     fetchMetadata();
   }, []);
 
@@ -54,12 +67,29 @@ const CreateTicket = () => {
 
     try {
       setLoading(true);
+      
+      // Start with minimal required fields
       const payload = {
-        subject: formData.subject,
-        severity_level: formData.severity_level,
-        ...(formData.category_id && { category_id: parseInt(formData.category_id) }),
-        ...(formData.tag_ids.length > 0 && { tag_ids: formData.tag_ids })
+        subject: formData.subject.trim(),
+        severity_level: formData.severity_level
       };
+      
+      // Add optional fields only if they have valid values
+      // Note: category_id and tag_ids might be causing the 500 error if they reference non-existent records
+      if (formData.category_id && formData.category_id !== '') {
+        const categoryId = parseInt(formData.category_id);
+        if (!isNaN(categoryId)) {
+          payload.category_id = categoryId;
+        }
+      }
+      
+      if (formData.tag_ids && formData.tag_ids.length > 0) {
+        payload.tag_ids = formData.tag_ids;
+      }
+      
+      console.log('📤 Creating ticket with payload:', JSON.stringify(payload, null, 2));
+      console.log('📤 Available categories:', categories.map(c => ({ id: c.id, name: c.name })));
+      console.log('📤 Available tags:', tags.map(t => ({ id: t.id, name: t.name })));
 
       const ticket = await supportService.createTicket(payload);
       
@@ -72,11 +102,24 @@ const CreateTicket = () => {
       
       navigate(`/support/tickets/${ticket.id}`);
     } catch (error) {
+      console.error('❌ Create ticket error:', error);
+      
+      // Extract error message from various possible formats
+      let errorMessage = 'Failed to create ticket';
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Error creating ticket',
-        description: error.response?.data?.message || 'Failed to create ticket',
+        description: errorMessage,
         status: 'error',
-        duration: 3000
+        duration: 5000,
+        isClosable: true
       });
     } finally {
       setLoading(false);

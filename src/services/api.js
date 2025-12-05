@@ -149,7 +149,7 @@ apiClient.interceptors.request.use(
     if (!isPublicEndpoint) {
       // Get token from localStorage
       let token = TokenManager.getAccessToken();
-      
+
       if (config._isRetry) {
         // For retry requests after token refresh, use the fresh token from storage
         console.log(`🔄 Retry request after token refresh - using fresh token from storage`);
@@ -158,7 +158,7 @@ apiClient.interceptors.request.use(
         // Check if token exists and is expired (only for non-retry requests)
         if (token && TokenManager.isTokenExpired(token)) {
           console.log('⚠️ Access token is expired - attempting proactive refresh before request');
-          
+
           const refreshToken = TokenManager.getRefreshToken();
           if (refreshToken && !TokenManager.isTokenExpired(refreshToken)) {
             try {
@@ -188,7 +188,7 @@ apiClient.interceptors.request.use(
           }
         }
       }
-      
+
       // Attach token to request (for both retry and normal requests)
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -242,7 +242,7 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = TokenManager.getRefreshToken();
         const accessToken = TokenManager.getAccessToken();
-        
+
         console.log('🔍 Token status:', {
           hasAccessToken: !!accessToken,
           hasRefreshToken: !!refreshToken,
@@ -263,9 +263,9 @@ apiClient.interceptors.response.use(
           }
 
           // Only redirect if we're not already on auth pages
-          if (!window.location.pathname.includes('/login') && 
-              !window.location.pathname.includes('/signup') &&
-              !window.location.pathname.includes('/forgot-password')) {
+          if (!window.location.pathname.includes('/login') &&
+            !window.location.pathname.includes('/signup') &&
+            !window.location.pathname.includes('/forgot-password')) {
             setTimeout(() => {
               window.location.href = '/login?session_expired=true';
             }, 1000);
@@ -275,7 +275,7 @@ apiClient.interceptors.response.use(
 
         console.log('🔄 Attempting token refresh with refresh token...');
         console.log('🔍 Refresh token preview:', refreshToken.substring(0, 30) + '...');
-        
+
         // Decode and check the refresh token before using it
         try {
           const refreshPayload = JSON.parse(atob(refreshToken.split('.')[1]));
@@ -300,7 +300,7 @@ apiClient.interceptors.response.use(
         });
 
         console.log('🔍 Raw refresh response:', JSON.stringify(response.data, null, 2));
-        
+
         // Backend returns tokens in response.data.data (nested structure)
         const tokenData = response.data.data || response.data;
         console.log('🔍 Token data extracted:', {
@@ -308,19 +308,19 @@ apiClient.interceptors.response.use(
           hasFallback: !!response.data,
           tokenData: tokenData
         });
-        
+
         const { access, refresh } = tokenData;
-        
+
         if (!access) {
           console.error('❌ No access token in refresh response:', response.data);
           console.error('❌ Token data structure:', tokenData);
           throw new Error('No access token received from refresh endpoint');
         }
-        
+
         console.log('✅ Received new access token from refresh endpoint');
         console.log('🔍 New access token preview:', access.substring(0, 30) + '...');
         console.log('🔍 Full refresh response:', response.data);
-        
+
         // Decode and check the new token
         try {
           const payload = JSON.parse(atob(access.split('.')[1]));
@@ -353,22 +353,24 @@ apiClient.interceptors.response.use(
         // The request interceptor will pick up the new token from localStorage
         console.log('🔄 Retrying original request with new token:', originalRequest.url);
         console.log('🔍 Retry token preview:', access.substring(0, 30) + '...');
-        
+
         // Verify token is in localStorage
         const storedToken = TokenManager.getAccessToken();
         console.log('🔍 Token in localStorage:', storedToken ? storedToken.substring(0, 30) + '...' : 'NOT FOUND');
-        
-        // CRITICAL: Reset the _retry flag so the request interceptor will attach the token
-        // But keep _isRetry to prevent infinite loops
-        delete originalRequest._retry;
-        
-        // CRITICAL: Remove the old Authorization header so the request interceptor adds the new one
-        if (originalRequest.headers) {
-          delete originalRequest.headers.Authorization;
-          delete originalRequest.headers.authorization;
+
+        // CRITICAL: Keep _retry flag set to prevent infinite loops
+        // The _retry flag must stay true so if this retry fails with 401, we don't try to refresh again
+        // originalRequest._retry is already set to true above
+
+        // CRITICAL: Explicitly set the new Authorization header with the refreshed token
+        // Don't rely on the request interceptor - set it directly here
+        if (!originalRequest.headers) {
+          originalRequest.headers = {};
         }
-        
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+
         console.log('🔍 Retry flags set:', { _retry: originalRequest._retry, _isRetry: originalRequest._isRetry });
+        console.log('🔍 Authorization header explicitly set with new token');
 
         // Try the retry and log detailed error if it fails
         try {
@@ -384,16 +386,16 @@ apiClient.interceptors.response.use(
             url: originalRequest.url,
             requestHeaders: retryError.config?.headers
           });
-          
+
           // If retry fails with 401, it means the refreshed token is also invalid
           // This is a critical issue - the backend refresh endpoint gave us a bad token
           if (retryError.response?.status === 401) {
             console.error('🚨 CRITICAL: Refreshed token was rejected by backend!');
             console.error('🚨 This indicates the /token/refresh/ endpoint returned an invalid token');
-            
+
             // Clear tokens and force re-login
             TokenManager.clearTokens();
-            
+
             if (window.notify) {
               window.notify({
                 title: 'Authentication Error',
@@ -401,17 +403,19 @@ apiClient.interceptors.response.use(
                 color: 'red'
               });
             }
-            
-            if (!window.location.pathname.includes('/login') && 
-                !window.location.pathname.includes('/signup') &&
-                !window.location.pathname.includes('/forgot-password')) {
+
+            if (!window.location.pathname.includes('/login') &&
+              !window.location.pathname.includes('/signup') &&
+              !window.location.pathname.includes('/forgot-password')) {
               setTimeout(() => {
                 window.location.href = '/login?auth_error=true';
               }, 1000);
             }
           }
-          
-          throw retryError;
+
+          // CRITICAL: Don't throw the error back to the interceptor
+          // Return a rejected promise directly to prevent the interceptor from catching it again
+          return Promise.reject(retryError);
         }
       } catch (refreshError) {
         console.error('❌ Token refresh failed:', {
@@ -430,12 +434,12 @@ apiClient.interceptors.response.use(
         console.error('  - Request data:', refreshError.config?.data);
 
         // Check if refresh token itself is invalid/expired
-        const isRefreshTokenInvalid = refreshError.response?.status === 401 || 
-                                       refreshError.response?.status === 400;
+        const isRefreshTokenInvalid = refreshError.response?.status === 401 ||
+          refreshError.response?.status === 400;
 
         if (isRefreshTokenInvalid) {
           console.log('❌ Refresh token is invalid or expired - clearing all tokens');
-          
+
           // Refresh failed, clear tokens and redirect to login
           TokenManager.clearTokens();
 
@@ -449,9 +453,9 @@ apiClient.interceptors.response.use(
           }
 
           // Only redirect if we're not already on auth pages
-          if (!window.location.pathname.includes('/login') && 
-              !window.location.pathname.includes('/signup') &&
-              !window.location.pathname.includes('/forgot-password')) {
+          if (!window.location.pathname.includes('/login') &&
+            !window.location.pathname.includes('/signup') &&
+            !window.location.pathname.includes('/forgot-password')) {
             setTimeout(() => {
               window.location.href = '/login?session_expired=true';
             }, 1000);
@@ -647,7 +651,7 @@ const createFormData = (data) => {
 const debugTokenStatus = () => {
   const accessToken = TokenManager.getAccessToken();
   const refreshToken = TokenManager.getRefreshToken();
-  
+
   console.log('🔍 Token Status Debug:', {
     hasAccessToken: !!accessToken,
     hasRefreshToken: !!refreshToken,
@@ -672,10 +676,10 @@ const testRefreshEndpoint = async () => {
     console.error('❌ No refresh token found');
     return;
   }
-  
+
   console.log('🧪 Testing refresh endpoint...');
   console.log('🔍 Using refresh token:', refreshToken.substring(0, 30) + '...');
-  
+
   try {
     const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
       refresh: refreshToken,
@@ -684,12 +688,12 @@ const testRefreshEndpoint = async () => {
         'Content-Type': 'application/json'
       }
     });
-    
+
     console.log('✅ Refresh endpoint response:', response);
     console.log('📦 Response data:', JSON.stringify(response.data, null, 2));
     console.log('📦 Response status:', response.status);
     console.log('📦 Response headers:', response.headers);
-    
+
     return response.data;
   } catch (error) {
     console.error('❌ Refresh endpoint error:', error);

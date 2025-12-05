@@ -16,7 +16,6 @@ import {
 	Heading,
 } from '@chakra-ui/react';
 // import {Zap} from '@chakra-ui/icons'
-import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { PaystackButton } from 'react-paystack';
 import {PinField, CenteredLayout} from '.';
 import {EmptyWalletIcon,} from './icons';
@@ -38,7 +37,7 @@ export const PaystackPaymentModal = ({
 	} = payload;
 
 	const {title, logo, description} = customizations;
-	const DEBUG = JSON.parse(import.meta.env.VITE_DEBUG);
+	const DEBUG = import.meta.env.VITE_DEBUG ? JSON.parse(import.meta.env.VITE_DEBUG) : false;
 	// const PAYSTACK_LIVE_KEY = import.meta.env.VITE_PAYSTACK_LIVE_PUBLIC_KEY;
 	const PAYSTACK_LIVE_KEY = "pk_test_b61ba0372b2ab11527ef2b9da625af0cfe4d3134";
 
@@ -172,166 +171,6 @@ export const PaystackPaymentModal = ({
 	          		e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
 	          	}}
 	          />
-	        </Box>
-
-	        <Text fontSize="xs" color="gray.500" textAlign="center" mt={4}>
-	          🔒 256-bit SSL encrypted payment
-	        </Text>
-	      </ModalBody>
-	    </ModalContent>
-	  </Modal>
-	)
-}
-
-
-export const FlutterwavePaymentModal = ({
-	isOpen, onClose,
-	onSuccess, payload,
-	customizations,
-	...props
-}) => {
-	const {
-	    currency, amount, payment_option,
-	    email, phone_number, first_name, last_name,
-	} = payload;
-
-	const {title, logo, description} = customizations;
-	const DEBUG = JSON.parse(import.meta.env.VITE_DEBUG);
-	console.log("Amount", payment_option, amount)
-
-	const config = {
-		public_key: "FLWPUBK_TEST-6d708e896eb3ba9f1ee4e1e73509e9e5-X",
-		tx_ref: Date.now(),
-		amount: DEBUG ? (amount > 500000 ? 500000 : amount) : amount,
-		currency: currency,
-		payment_options: payment_option,
-		customer: {
-		  email: email,
-		  phone_number: phone_number,
-		  name: `${first_name} ${last_name}`,
-		},
-		customizations: {
-		  title: "Payment for Veyu",
-		  description: description,
-		  logo: logo,
-		},
-		meta: {...props?.meta}
-	};
-	const handleFlutterPayment = useFlutterwave(config);
-
-	function payUp(){
-		try{
-		  handleFlutterPayment({
-		    callback: (response) => {
-		      console.log(response);
-		      onPaymentComplete(response);
-		      closePaymentModal(); // this will close the modal programmatically
-		    },
-		    onClose: () => {
-		      onModalClose();
-		    },
-		  });
-		}catch(err){
-		  console.log("error paying up:", err)
-		}
-	}
-
-	function onPaymentComplete(response){
-		return onSuccess(response)
-	}
-
-	function onModalClose(){
-	// user cancelled the payment flow
-		console.log("User cancelled the transaction")
-	}
-
-
-	return(
-	  <Modal isCentered isOpen={isOpen} onClose={onClose} size="lg">
-	    <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
-	    <ModalContent 
-	    	w={'90%'} 
-	    	maxW={'500px'} 
-	    	borderRadius="2xl" 
-	    	overflow="hidden"
-	    	boxShadow="2xl"
-	    >
-	      <ModalHeader 
-	      	bg="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" 
-	      	color="white" 
-	      	py={6}
-	      	position="relative"
-	      >
-	        <Box textAlign="center">
-	          <Heading size="lg" mb={2}>{title}</Heading>
-	          <Text fontSize="3xl" fontWeight="bold">
-	            {currency} {parseInt(amount).toLocaleString()}
-	          </Text>
-	        </Box>
-	        <ModalCloseButton color="white" top={4} right={4} />
-	      </ModalHeader>
-
-	      <ModalBody py={6} px={6}>
-	        <Box w={'100%'} mb={4}>
-	          <Box 
-	          	bg="gray.50" 
-	          	p={4} 
-	          	borderRadius="xl" 
-	          	border="1px solid" 
-	          	borderColor="gray.200"
-	          	mb={4}
-	          >
-	            <Image 
-	            	w={'100%'} 
-	            	maxH="80px"
-	            	objectFit="contain"
-	            	src={'/assets/images/flutterwave-banner.png'} 
-	            	alt="Flutterwave"
-	            />
-	          </Box>
-
-	          <Alert 
-	          	status="info"
-	          	variant="left-accent"
-	          	borderRadius="lg" 
-	          	bg="orange.50"
-	          	borderColor="orange.200"
-	          >
-	          	<AlertIcon color="orange.500" />
-	          	<Box>
-		          	<Text fontSize="sm" color="gray.700" fontWeight="500">
-		          		Secure Payment Processing
-		          	</Text>
-		          	<Text fontSize="xs" color="gray.600" mt={1}>
-		          		Veyu does not store your card details. All transactions are securely processed by Flutterwave.
-		          	</Text>
-	          	</Box>
-	          </Alert>
-	        </Box>
-
-	        <Box mt={6} mb={4}>
-	          <Button 
-	          	w="100%" 
-	          	size="lg"
-	          	h="56px"
-	          	bg="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
-	          	color="white"
-	          	borderRadius="xl"
-	          	fontSize="16px"
-	          	fontWeight="600"
-	          	_hover={{
-	          		transform: 'translateY(-2px)',
-	          		boxShadow: '0 6px 16px rgba(245, 87, 108, 0.5)'
-	          	}}
-	          	_active={{
-	          		transform: 'translateY(0)',
-	          	}}
-	          	transition="all 0.3s ease"
-	          	boxShadow="0 4px 12px rgba(245, 87, 108, 0.4)"
-	          	onClick={payUp}
-	          > 
-	          	Pay Now 
-	          </Button>
 	        </Box>
 
 	        <Text fontSize="xs" color="gray.500" textAlign="center" mt={4}>

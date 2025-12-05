@@ -21,7 +21,7 @@ import {
   Stack,
   Divider,
 } from '@chakra-ui/react';
-import { ArrowLeft, CheckCircle, Calendar, Clock, User, Mail, Phone, Car, FileText, Download, Printer } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Calendar, Clock, User, Mail, Phone, Car, FileText, Download, Printer, AlertCircle } from 'lucide-react';
 import { GlobalStore } from '../../../App';
 import InspectionSlip from '../../../components/InspectionSlip';
 import inspectionService from '../../../services/inspectionService';
@@ -169,7 +169,7 @@ const InspectionSlipPage = () => {
       <Box bgGradient={bgGradient} minH="100vh" py={12}>
         <Container maxW="container.md">
           <VStack spacing={6}>
-            <Icon as={AlertIcon} boxSize={16} color="red.500" />
+            <Icon as={AlertCircle} boxSize={16} color="red.500" />
             <Heading size="lg">Oops! Something went wrong</Heading>
             <Alert status="error" borderRadius="lg">
               <AlertIcon />
@@ -198,12 +198,22 @@ const InspectionSlipPage = () => {
 
   if (!slipData) return null;
 
-  // Normalize data
+  // Normalize data according to API spec
   const {
-    reference,
+    inspection_id,
     inspection_number,
-    slip_reference,
     inspection_type,
+    payment_status,
+    inspection_status,
+    paid_at,
+    inspection_fee,
+    slip_url,
+    vehicle,
+    customer,
+    dealer,
+    // Legacy field support
+    reference,
+    slip_reference,
     inspectionType,
     scheduled_date,
     scheduledDate,
@@ -214,29 +224,27 @@ const InspectionSlipPage = () => {
     customer_email,
     customerEmail,
     customer_phone,
-    vehicle,
     vehicleDetails,
-    payment_status,
     paymentStatus,
-    inspection_fee,
     amount,
     created_at,
     createdAt,
-    dealer,
     status,
   } = slipData;
 
+  // Use API spec fields with fallbacks to legacy fields
   const slipRef = inspection_number || slip_reference || reference;
   const inspType = inspection_type || inspectionType;
   const schedDate = scheduled_date || scheduledDate;
   const schedTime = scheduled_time || scheduledTime;
-  const custName = customer_name || customerName;
-  const custEmail = customer_email || customerEmail;
-  const custPhone = customer_phone;
+  const custName = customer?.name || customer_name || customerName;
+  const custEmail = customer?.email || customer_email || customerEmail;
+  const custPhone = customer?.phone || customer_phone;
   const vehicleInfo = vehicle || vehicleDetails;
   const payStatus = payment_status || paymentStatus;
   const paidAmount = inspection_fee || amount;
-  const createdDate = created_at || createdAt;
+  const createdDate = paid_at || created_at || createdAt;
+  const inspStatus = inspection_status || status;
 
   return (
     <Box bgGradient={bgGradient} minH="100vh" py={8} className="inspection-page">
@@ -344,12 +352,12 @@ const InspectionSlipPage = () => {
                     value={`₦${paidAmount?.toLocaleString() || 'N/A'}`}
                     valueColor="green.600"
                   />
-                  {status && (
+                  {inspStatus && (
                     <InfoItem
-                      label="Status"
+                      label="Inspection Status"
                       value={
                         <Badge colorScheme="blue" fontSize="sm">
-                          {status.replace('_', ' ').toUpperCase()}
+                          {inspStatus.replace('_', ' ').toUpperCase()}
                         </Badge>
                       }
                     />
@@ -430,6 +438,18 @@ const InspectionSlipPage = () => {
                           value={vehicleInfo.name}
                         />
                       )}
+                      {vehicleInfo.condition && (
+                        <InfoItem
+                          label="Condition"
+                          value={vehicleInfo.condition}
+                        />
+                      )}
+                      {vehicleInfo.color && (
+                        <InfoItem
+                          label="Color"
+                          value={vehicleInfo.color}
+                        />
+                      )}
                     </SimpleGrid>
                   </Box>
                 </>
@@ -456,15 +476,40 @@ const InspectionSlipPage = () => {
                           value={dealer.location}
                         />
                       )}
-                      {dealer.phone && (
+                      {(dealer.phone || dealer.phone_number) && (
                         <InfoItem
+                          icon={Phone}
                           label="Phone"
-                          value={dealer.phone}
+                          value={dealer.phone || dealer.phone_number}
                         />
                       )}
                     </SimpleGrid>
                   </Box>
                 </>
+              )}
+
+              {/* PDF Slip URL - if provided by backend */}
+              {slip_url && (
+                <Alert status="info" borderRadius="lg" variant="left-accent">
+                  <AlertIcon />
+                  <Box flex="1">
+                    <Text fontWeight="semibold" mb={1}>Official Slip Document</Text>
+                    <Text fontSize="sm" mb={2}>
+                      Your official inspection slip PDF is available for download.
+                    </Text>
+                    <Button
+                      as="a"
+                      href={slip_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      size="sm"
+                      colorScheme="blue"
+                      leftIcon={<Download size={16} />}
+                    >
+                      Download Official PDF
+                    </Button>
+                  </Box>
+                </Alert>
               )}
 
               {/* Important Notice */}

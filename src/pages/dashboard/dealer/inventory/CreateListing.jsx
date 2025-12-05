@@ -194,6 +194,42 @@ export default function AddListing() {
         form.append('doors', formData?.doors || '4');
         form.append('seats', formData?.seats || '5');
         form.append('registration', formData?.registration || 'Registered');
+      } else if (category === 'aircraft') {
+        // Aircraft-specific fields
+        form.append('aircraft_type', formData?.aircraft_type || 'single-engine');
+        form.append('engine_type', formData?.engine_type || 'piston');
+        form.append('total_hours', formData?.total_hours || '0');
+        form.append('passenger_capacity', formData?.passenger_capacity || '4');
+        
+        // Backend expects these fields for all vehicles - provide aircraft-appropriate defaults
+        form.append('transmission', 'N/A');
+        form.append('fuel_system', formData?.engine_type || 'piston');
+        form.append('seats', formData?.passenger_capacity || '4');
+        form.append('doors', '2');
+      } else if (category === 'bike') {
+        // Bike-specific fields
+        form.append('engine_capacity', formData?.engine_capacity || '150');
+        form.append('bike_type', formData?.bike_type || 'sport');
+        form.append('fuel_system', formData?.fuel || 'petrol');
+        form.append('transmission', formData?.transmission || 'manual');
+        form.append('mileage', formData?.mileage || '0');
+        
+        // Backend expects these fields - provide bike-appropriate defaults
+        form.append('seats', '2');
+        form.append('doors', '0');
+      } else if (category === 'boat') {
+        // Boat-specific fields
+        form.append('boat_type', formData?.boat_type || 'motorboat');
+        form.append('length', formData?.length || '20');
+        form.append('engine_type', formData?.engine_type || 'outboard');
+        form.append('hull_material', formData?.hull_material || 'fiberglass');
+        form.append('capacity', formData?.capacity || '6');
+        
+        // Backend expects these fields - provide boat-appropriate defaults
+        form.append('transmission', 'N/A');
+        form.append('fuel_system', formData?.engine_type || 'outboard');
+        form.append('seats', formData?.capacity || '6');
+        form.append('doors', '0');
       }
 
       // Convert features to a properly formatted array
@@ -221,12 +257,6 @@ export default function AddListing() {
       featuresArray.forEach(feature => {
         form.append('features', feature);
       });
-
-      // Add default values for required fields that might be missing
-      if (!form.has('vin')) form.append('vin', 'N/A');
-      if (!form.has('drivetrain')) form.append('drivetrain', 'FWD');
-      if (!form.has('registration')) form.append('registration', 'Registered');
-      if (!form.has('color')) form.append('color', 'Black');
 
       // Debug: Log all FormData entries
       console.log('=== LISTING CREATION DEBUG ===');
