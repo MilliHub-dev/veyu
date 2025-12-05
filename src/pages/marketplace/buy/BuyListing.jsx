@@ -43,6 +43,7 @@ import {
     PriceFilter,
     LocationFilter,
     TransmissionFilter,
+    FuelSystemFilter,
 } from "../../../components/filters"
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom';
@@ -62,13 +63,14 @@ const BuyListing = ({ }) => {
     const [showFilters, setShowFilters] = useState(false);
 
     // Vehicle categories with icons and colors
+    // Map frontend IDs to API vehicle_type values
     const vehicleCategories = [
-        { id: 'all', name: 'All Vehicles', icon: Eye, color: 'gray.600' },
-        { id: 'cars', name: 'Cars', icon: Car, color: '#F4A950' },
-        { id: 'motorcycles', name: 'Motorcycles', icon: Bike, color: 'blue.500' },
-        { id: 'boats', name: 'Boats', icon: Ship, color: 'cyan.500' },
-        { id: 'aircraft', name: 'Aircraft', icon: Plane, color: 'purple.500' },
-        { id: 'uavs', name: 'UAVs', icon: Radio, color: 'green.500' }
+        { id: 'all', name: 'All Vehicles', icon: Eye, color: 'gray.600', apiValue: null },
+        { id: 'cars', name: 'Cars', icon: Car, color: '#F4A950', apiValue: 'car' },
+        { id: 'motorcycles', name: 'Motorcycles', icon: Bike, color: 'blue.500', apiValue: 'bike' },
+        { id: 'boats', name: 'Boats', icon: Ship, color: 'cyan.500', apiValue: 'boat' },
+        { id: 'aircraft', name: 'Aircraft', icon: Plane, color: 'purple.500', apiValue: 'plane' },
+        { id: 'uavs', name: 'UAVs', icon: Radio, color: 'green.500', apiValue: 'uav' }
     ];
 
     const { axios, notify, commaInt } = useContext(GlobalStore);
@@ -137,6 +139,7 @@ const BuyListing = ({ }) => {
      * @param filter: filter object
      * e.g { filter: 'brands', value : 'bmw', 'audi'}
      * e.g { filter: 'price', value: 1200000-5000000}
+     * e.g { filter: 'vehicle_type', value: 'car,plane'}
      * 
      * */
     function applyFilter({ filter, value }) {
@@ -157,6 +160,7 @@ const BuyListing = ({ }) => {
         Object.entries(updatedFilters).forEach(([key, val]) => {
             params.set(key, val);
         });
+        
         // Include sort ordering if applied
         if (sort && sort !== 'relevance') {
             params.set('ordering', sort === 'price_low' ? 'price' : sort === 'price_high' ? '-price' : sort === 'newest' ? '-created_at' : '');
@@ -164,7 +168,7 @@ const BuyListing = ({ }) => {
         }
 
         setAppliedFilters(updatedFilters);
-        console.log("Applied filters", appliedFilters)
+        console.log("Applied filters", updatedFilters)
 
         // Send updated filter parameters to the server
         getData(`/listings/buy/?${params.toString()}`);
@@ -179,20 +183,40 @@ const BuyListing = ({ }) => {
         setSort('relevance');
         setCarType('all');
         setVehicleCategory('all');
+        setSearchQuery('');
         getData(`/listings/buy/`);
     }
 
     function changeSort(next) {
         setSort(next);
         const params = new URLSearchParams();
-        // include existing filters
+        
+        // Include existing filters
         Object.entries(appliedFilters).forEach(([key, val]) => {
             params.set(key, val);
         });
+        
+        // Add ordering parameter
         params.set('ordering', next === 'price_low' ? 'price' : next === 'price_high' ? '-price' : next === 'newest' ? '-created_at' : '');
         if (!params.get('ordering')) params.delete('ordering');
+        
         const query = params.toString();
         getData(`/listings/buy/${query ? `?${query}` : ''}`);
+    }
+
+    // Handle vehicle category change - sends vehicle_type to API
+    function changeVehicleCategory(categoryId) {
+        setVehicleCategory(categoryId);
+        
+        const category = vehicleCategories.find(c => c.id === categoryId);
+        
+        if (category?.apiValue) {
+            // Apply vehicle_type filter to API
+            applyFilter({ filter: 'vehicle_type', value: category.apiValue });
+        } else {
+            // Remove vehicle_type filter (show all)
+            applyFilter({ filter: 'vehicle_type', value: null });
+        }
     }
 
 
@@ -212,17 +236,19 @@ const BuyListing = ({ }) => {
     const filters = [
         <CarBrandFilter key="brand" onChange={applyFilter} />,
         <PriceFilter key="price" onChange={applyFilter} />,
-        <LocationFilter key="location" onChange={applyFilter} />,
         <TransmissionFilter key="transmission" onChange={applyFilter} />,
+        <FuelSystemFilter key="fuel" onChange={applyFilter} />,
+        <LocationFilter key="location" onChange={applyFilter} />,
     ]
 
-    // Filter listings based on carType and vehicleCategory
+    // Filter listings based on carType (condition: new/used)
+    // Vehicle category filtering is now handled by API via vehicle_type parameter
     const getFilteredListings = () => {
         if (!listings) return [];
 
         let filtered = listings;
 
-        // Filter by condition (new/used/all)
+        // Filter by condition (new/used/all) - client-side only
         switch (carType) {
             case 'new':
                 filtered = filtered.filter((listing) => ['new', 'New'].includes(listing?.vehicle?.condition));
@@ -236,20 +262,14 @@ const BuyListing = ({ }) => {
                 break;
         }
 
-        // Filter by vehicle category
-        if (vehicleCategory !== 'all') {
+        // Search query filter - client-side
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
             filtered = filtered.filter((listing) => {
-                // Use vehicle.kind as per API documentation
-                const vehicleKind = listing?.vehicle?.kind?.toLowerCase() || '';
-                
-                // Map category IDs to API vehicle kinds
-                if (vehicleCategory === 'cars') return vehicleKind === 'car';
-                if (vehicleCategory === 'motorcycles') return vehicleKind === 'bike';
-                if (vehicleCategory === 'boats') return vehicleKind === 'boat';
-                if (vehicleCategory === 'aircraft') return vehicleKind === 'plane';
-                if (vehicleCategory === 'uavs') return vehicleKind === 'uav';
-                
-                return false;
+                const title = listing?.title?.toLowerCase() || '';
+                const brand = listing?.vehicle?.brand?.toLowerCase() || '';
+                const model = listing?.vehicle?.model?.toLowerCase() || '';
+                return title.includes(query) || brand.includes(query) || model.includes(query);
             });
         }
 
@@ -257,6 +277,19 @@ const BuyListing = ({ }) => {
     };
 
     const filteredListings = getFilteredListings();
+
+    // Get count for each vehicle category from current listings
+    const getCategoryCount = (categoryId) => {
+        if (categoryId === 'all') return listings?.length || 0;
+        
+        const category = vehicleCategories.find(c => c.id === categoryId);
+        if (!category?.apiValue) return 0;
+        
+        return listings?.filter(l => {
+            const vehicleKind = l?.vehicle?.kind?.toLowerCase() || '';
+            return vehicleKind === category.apiValue;
+        }).length || 0;
+    };
 
     if (loading) {
         return <ListingSkeleton />
@@ -488,27 +521,12 @@ const BuyListing = ({ }) => {
                                         {vehicleCategories.map((category) => {
                                             const IconComponent = category.icon;
                                             const isActive = vehicleCategory === category.id;
-                                            
-                                            const categoryCount = category.id === 'all'
-                                                ? listings?.length || 0
-                                                : listings?.filter(l => {
-                                                    // Use vehicle.kind as per API documentation
-                                                    const vehicleKind = l?.vehicle?.kind?.toLowerCase() || '';
-                                                    
-                                                    // Map category IDs to API vehicle kinds
-                                                    if (category.id === 'cars') return vehicleKind === 'car';
-                                                    if (category.id === 'motorcycles') return vehicleKind === 'bike';
-                                                    if (category.id === 'boats') return vehicleKind === 'boat';
-                                                    if (category.id === 'aircraft') return vehicleKind === 'plane';
-                                                    if (category.id === 'uavs') return vehicleKind === 'uav';
-                                                    
-                                                    return false;
-                                                }).length || 0;
+                                            const categoryCount = getCategoryCount(category.id);
 
                                             return (
                                                 <WrapItem key={category.id}>
                                                     <Button
-                                                        onClick={() => setVehicleCategory(category.id)}
+                                                        onClick={() => changeVehicleCategory(category.id)}
                                                         size="md"
                                                         px={6}
                                                         py={4}

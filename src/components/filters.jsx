@@ -315,4 +315,78 @@ export const TransmissionFilter = ({ onChange, onClose }) => {
 }
 
 
+export const FuelSystemFilter = ({ onChange, onClose }) => {
+    const fuelTypes = [
+        'Petrol', 'Diesel', 'Electric', 'Hybrid', 'CNG', 'LPG'
+    ]
+    const [isOpen, setOpenState] = useState(false);
+    const [value, setValue] = useState([]);
+
+    function addOrRemoveFuel(e){
+        const fuel = e.target.value;
+        let _value = value;
+
+        if (_value.includes(fuel)){
+            _value.splice(_value.indexOf(fuel), 1);
+        }else{
+            _value.push(fuel)
+        }
+        setValue([..._value]);
+    }
+
+    function onClose(){
+        setOpenState(false)
+    }
+
+    function onOpen(){
+        setOpenState(true)
+    }
+
+    function applyFilter(){
+        onClose();
+        onChange({
+            'filter': 'fuel_system',
+            'value': ''.concat(value)
+        });
+    }
+
+    return(
+        <Menu closeOnSelect={false} isOpen={isOpen} onClose={onClose}>
+            <MenuButton
+             minW={'max-content'}
+             size={'md'} borderRadius={'10px'}
+             isActive={isOpen}
+             as={Button}
+             onClick={isOpen ? onClose : onOpen}
+             bgColor="gray.100"
+             rightIcon={<ChevronDownIcon />}
+            > Fuel Type </MenuButton>
+            <MenuList maxH="300px" overflowY="auto">
+                <Box>
+                    <Text p={3} size="md"> Select Fuel Type </Text>
+                    {
+                        fuelTypes.map((fuel) => 
+                            <MenuItem
+                             key={fuel}
+                             selected={value.includes(fuel)}
+                             value={fuel}
+                             onInput={addOrRemoveFuel}
+                             as={Checkbox}
+                            > {fuel} </MenuItem>
+                    )}
+                </Box>
+                <Box px={2} display={'block'} mt={2}>
+                    <Button
+                     onClick={applyFilter}
+                     colorScheme="blue"
+                     bgColor="primary"
+                     w={'100%'}
+                    > Confirm </Button>
+                </Box>
+            </MenuList>
+        </Menu>
+    )
+}
+
+
 

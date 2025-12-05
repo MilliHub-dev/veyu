@@ -17,13 +17,14 @@ import { ListingItemCard, DatePicker } from "../../../components"
 import { objectifyJSON } from "../../../utils"
 import { ListingSkeleton } from "../../../components/loaders"
 import { CustomPlacesAutocomplete } from "../../../components/maps"
-import { MapPin, Calendar as CalendarIcon, Search as SearchIcon, Filter, SlidersHorizontal, Car, Clock, Users, Zap } from "lucide-react";
+import { MapPin, Calendar as CalendarIcon, Search as SearchIcon, Filter, SlidersHorizontal, Car, Clock, Users, Zap, Plane, Ship, Bike, Radio } from "lucide-react";
 import {Autocomplete} from "@react-google-maps/api";
 import {
     CarBrandFilter,
     PriceFilter,
     LocationFilter,
     TransmissionFilter,
+    FuelSystemFilter,
 } from "../../../components/filters";
 
 
@@ -43,6 +44,17 @@ export const RentListing = ({ props }) => {
     const onLoad = (auto) => setAutocomplete(auto);
     const [appliedFilters, setAppliedFilters] = useState([]);
     const [sort, setSort] = useState('relevance');
+    const [vehicleCategory, setVehicleCategory] = useState('all');
+
+    // Vehicle categories with icons and colors
+    const vehicleCategories = [
+        { id: 'all', name: 'All Vehicles', icon: Car, color: 'gray.600', apiValue: null },
+        { id: 'cars', name: 'Cars', icon: Car, color: '#F4A950', apiValue: 'car' },
+        { id: 'motorcycles', name: 'Motorcycles', icon: Bike, color: 'blue.500', apiValue: 'bike' },
+        { id: 'boats', name: 'Boats', icon: Ship, color: 'cyan.500', apiValue: 'boat' },
+        { id: 'aircraft', name: 'Aircraft', icon: Plane, color: 'purple.500', apiValue: 'plane' },
+        { id: 'uavs', name: 'UAVs', icon: Radio, color: 'green.500', apiValue: 'uav' }
+    ];
 
     const onPlaceChanged = () => {
         if (autocomplete) {
@@ -58,26 +70,49 @@ export const RentListing = ({ props }) => {
 
     /**
      * @param filter: filter object
-     * e.g { brand: 'bmw'}
-     * e.g { min_price: 120000, max_price: 5000000}
+     * e.g { filter: 'brands', value: 'bmw,audi'}
+     * e.g { filter: 'price', value: '120000-5000000'}
+     * e.g { filter: 'vehicle_type', value: 'car,plane'}
      * 
      * */
     function applyFilter({filter, value}){
-        let url = window.location.search;
-        const params = new URLSearchParams(url);
+        const params = new URLSearchParams();
         const _filters = appliedFilters;
-        params.delete(filter);
 
         if (!_filters.includes(filter) && Boolean(value)){
             _filters.push(filter);
-            params.append(filter, value);
         }else if (_filters.includes(filter) && !Boolean(value)){
             _filters.splice(_filters.indexOf(filter), 1);
         }
         setAppliedFilters([ ..._filters ]);
 
-        // convert filterList to url param
-        getData(`/listings/rentals/?${params.toString()}`);
+        // Build params from all applied filters
+        _filters.forEach(f => {
+            if (f === filter && value) {
+                params.set(f, value);
+            } else if (f !== filter) {
+                // Keep existing filter values from current URL
+                const currentParams = new URLSearchParams(window.location.search);
+                const existingValue = currentParams.get(f);
+                if (existingValue) {
+                    params.set(f, existingValue);
+                }
+            }
+        });
+
+        // Add the new/updated filter
+        if (Boolean(value)) {
+            params.set(filter, value);
+        }
+
+        // Include sort ordering if applied
+        if (sort && sort !== 'relevance') {
+            params.set('ordering', sort === 'price_low' ? 'price' : sort === 'price_high' ? '-price' : sort === 'newest' ? '-created_at' : '');
+            if (!params.get('ordering')) params.delete('ordering');
+        }
+
+        // Convert filterList to url param
+        getData(`/listings/rent/?${params.toString()}`);
     }
 
     function removeFilter(name){
@@ -85,23 +120,65 @@ export const RentListing = ({ props }) => {
         url.delete(name);
         const next = appliedFilters.filter(f => f !== name);
         setAppliedFilters(next);
-        getData(`/listings/rentals/?${url.toString()}`);
+        getData(`/listings/rent/?${url.toString()}`);
     }
 
     function clearAll(){
         setAppliedFilters([]);
-        getData(`/listings/rentals/`);
+        setSort('relevance');
+        setVehicleCategory('all');
+        getData(`/listings/rent/`);
     }
+
+    // Handle vehicle category change - sends vehicle_type to API
+    function changeVehicleCategory(categoryId) {
+        setVehicleCategory(categoryId);
+        
+        const category = vehicleCategories.find(c => c.id === categoryId);
+        
+        if (category?.apiValue) {
+            // Apply vehicle_type filter to API
+            applyFilter({ filter: 'vehicle_type', value: category.apiValue });
+        } else {
+            // Remove vehicle_type filter (show all)
+            applyFilter({ filter: 'vehicle_type', value: null });
+        }
+    }
+
+    // Get count for each vehicle category from current listings
+    const getCategoryCount = (categoryId) => {
+        if (categoryId === 'all') return listings?.length || 0;
+        
+        const category = vehicleCategories.find(c => c.id === categoryId);
+        if (!category?.apiValue) return 0;
+        
+        return listings?.filter(l => {
+            const vehicleKind = l?.vehicle?.kind?.toLowerCase() || '';
+            return vehicleKind === category.apiValue;
+        }).length || 0;
+    };
 
     function changeSort(next){
         setSort(next);
-        const url = new URLSearchParams(window.location.search);
-        url.set('ordering', next === 'price_low' ? 'price' : next === 'price_high' ? '-price' : next === 'newest' ? '-created_at' : '');
-        if (!url.get('ordering')) url.delete('ordering');
-        getData(`/listings/rentals/?${url.toString()}`);
+        const params = new URLSearchParams();
+        
+        // Include existing filters
+        appliedFilters.forEach(filter => {
+            const currentParams = new URLSearchParams(window.location.search);
+            const value = currentParams.get(filter);
+            if (value) {
+                params.set(filter, value);
+            }
+        });
+        
+        // Add ordering parameter
+        params.set('ordering', next === 'price_low' ? 'price' : next === 'price_high' ? '-price' : next === 'newest' ? '-created_at' : '');
+        if (!params.get('ordering')) params.delete('ordering');
+        
+        getData(`/listings/rent/?${params.toString()}`);
     }
 
-    async function getData(url=`/listings/rentals/`){
+    async function getData(url=`/listings/rent/`){
         try {
             const res = await axios.get(url);
             const parsed = objectifyJSON(res?.data);
@@ -149,8 +226,9 @@ export const RentListing = ({ props }) => {
     const filters = [
         <CarBrandFilter key="brand" onChange={applyFilter} />,
         <PriceFilter key="price" onChange={applyFilter} />,
-        <LocationFilter key="location" onChange={applyFilter} />,
         <TransmissionFilter key="transmission" onChange={applyFilter} />,
+        <FuelSystemFilter key="fuel" onChange={applyFilter} />,
+        <LocationFilter key="location" onChange={applyFilter} />,
     ]
 
     const bgColor = useColorModeValue('white', 'gray.800');
@@ -299,78 +377,132 @@ export const RentListing = ({ props }) => {
                     </SimpleGrid>
                 </VStack>
 
-                {/* Filters and Sorting */}
+                {/* Vehicle Categories and Filters */}
                 <Card bg={bgColor} border="1px" borderColor={borderColor} borderRadius="xl" mb={6}>
-                    <CardBody p={4}>
-                        <Flex align="center" gap={4} wrap="wrap">
-                            {/* Sort Dropdown */}
-                            <HStack spacing={3}>
-                                <Icon as={SlidersHorizontal} color="#F4A950" />
-                                <Menu>
-                                    <MenuButton 
-                                        as={Button} 
-                                        size="sm" 
-                                        rightIcon={<ChevronDownIcon />} 
-                                        variant="outline"
-                                        borderColor={borderColor}
-                                        _hover={{ borderColor: "#F4A950" }}
-                                    >
-                                        Sort: {sort === 'relevance' ? 'Relevance' : sort === 'price_low' ? 'Price (Low→High)' : sort === 'price_high' ? 'Price (High→Low)' : 'Newest'}
-                                    </MenuButton>
-                                    <MenuList>
-                                        <MenuItem onClick={() => changeSort('relevance')}>Relevance</MenuItem>
-                                        <MenuItem onClick={() => changeSort('price_low')}>Price (Low→High)</MenuItem>
-                                        <MenuItem onClick={() => changeSort('price_high')}>Price (High→Low)</MenuItem>
-                                        <MenuItem onClick={() => changeSort('newest')}>Newest</MenuItem>
-                                    </MenuList>
-                                </Menu>
-                                
-                                <Button 
-                                    size="sm" 
-                                    variant="ghost" 
-                                    onClick={clearAll} 
-                                    isDisabled={!appliedFilters.length}
-                                    color="#F4A950"
-                                    _hover={{ bg: "orange.50" }}
-                                >
-                                    Clear all
-                                </Button>
-                            </HStack>
-                            
-                            <Spacer />
-                            
-                            {/* Filter Buttons */}
-                            <Wrap spacing={2}>
-                                {filters.map((filter, i) => (
-                                    <WrapItem key={`filter-${i}`}>
-                                        {filter}
-                                    </WrapItem>
-                                ))}
-                            </Wrap>
-                        </Flex>
+                    <CardBody p={6}>
+                        <VStack spacing={6} align="stretch">
+                            {/* Vehicle Category Filters */}
+                            <VStack spacing={4} align="stretch">
+                                <HStack spacing={3}>
+                                    <Icon as={Filter} color="#F4A950" boxSize={5} />
+                                    <Heading size="md" color="gray.800">
+                                        Vehicle Categories
+                                    </Heading>
+                                </HStack>
 
-                        {/* Applied Filters */}
-                        {!!appliedFilters.length && (
-                            <Box mt={4} pt={4} borderTop="1px" borderColor={borderColor}>
-                                <Text fontSize="sm" color="gray.600" mb={2}>Active filters:</Text>
+                                {/* Vehicle Category Buttons */}
+                                <Wrap spacing={3}>
+                                    {vehicleCategories.map((category) => {
+                                        const IconComponent = category.icon;
+                                        const isActive = vehicleCategory === category.id;
+                                        const categoryCount = getCategoryCount(category.id);
+
+                                        return (
+                                            <WrapItem key={category.id}>
+                                                <Button
+                                                    onClick={() => changeVehicleCategory(category.id)}
+                                                    size="md"
+                                                    px={6}
+                                                    py={4}
+                                                    borderRadius="full"
+                                                    bg={isActive ? category.color : 'transparent'}
+                                                    color={isActive ? 'white' : 'gray.600'}
+                                                    border="2px solid"
+                                                    borderColor={isActive ? category.color : 'gray.300'}
+                                                    _hover={{
+                                                        bg: isActive ? category.color : `${category.color}20`,
+                                                        borderColor: category.color,
+                                                        color: isActive ? 'white' : category.color,
+                                                        transform: 'translateY(-2px)',
+                                                        shadow: 'md'
+                                                    }}
+                                                    _active={{ transform: 'translateY(0)' }}
+                                                    transition="all 0.2s"
+                                                    leftIcon={<IconComponent size={18} />}
+                                                    fontSize="sm"
+                                                    fontWeight="medium"
+                                                >
+                                                    {category.name} ({categoryCount})
+                                                </Button>
+                                            </WrapItem>
+                                        );
+                                    })}
+                                </Wrap>
+                            </VStack>
+
+                            <Divider />
+
+                            {/* Sort and Filters */}
+                            <Flex align="center" gap={4} wrap="wrap">
+                                {/* Sort Dropdown */}
+                                <HStack spacing={3}>
+                                    <Icon as={SlidersHorizontal} color="#F4A950" />
+                                    <Menu>
+                                        <MenuButton 
+                                            as={Button} 
+                                            size="sm" 
+                                            rightIcon={<ChevronDownIcon />} 
+                                            variant="outline"
+                                            borderColor={borderColor}
+                                            _hover={{ borderColor: "#F4A950" }}
+                                        >
+                                            Sort: {sort === 'relevance' ? 'Relevance' : sort === 'price_low' ? 'Price (Low→High)' : sort === 'price_high' ? 'Price (High→Low)' : 'Newest'}
+                                        </MenuButton>
+                                        <MenuList>
+                                            <MenuItem onClick={() => changeSort('relevance')}>Relevance</MenuItem>
+                                            <MenuItem onClick={() => changeSort('price_low')}>Price (Low→High)</MenuItem>
+                                            <MenuItem onClick={() => changeSort('price_high')}>Price (High→Low)</MenuItem>
+                                            <MenuItem onClick={() => changeSort('newest')}>Newest</MenuItem>
+                                        </MenuList>
+                                    </Menu>
+                                    
+                                    <Button 
+                                        size="sm" 
+                                        variant="ghost" 
+                                        onClick={clearAll} 
+                                        isDisabled={!appliedFilters.length && vehicleCategory === 'all'}
+                                        color="#F4A950"
+                                        _hover={{ bg: "orange.50" }}
+                                    >
+                                        Clear all
+                                    </Button>
+                                </HStack>
+                                
+                                <Spacer />
+                                
+                                {/* Filter Buttons */}
                                 <Wrap spacing={2}>
-                                    {appliedFilters.map((f) => (
-                                        <WrapItem key={`applied-${f}`}>
-                                            <Tag 
-                                                size="md" 
-                                                borderRadius="full" 
-                                                bg="#F4A950" 
-                                                color="white"
-                                                variant="solid"
-                                            >
-                                                <TagLabel>{f}</TagLabel>
-                                                <TagCloseButton onClick={() => removeFilter(f)} />
-                                            </Tag>
+                                    {filters.map((filter, i) => (
+                                        <WrapItem key={`filter-${i}`}>
+                                            {filter}
                                         </WrapItem>
                                     ))}
                                 </Wrap>
-                            </Box>
-                        )}
+                            </Flex>
+
+                            {/* Applied Filters */}
+                            {!!appliedFilters.length && (
+                                <Box pt={4} borderTop="1px" borderColor={borderColor}>
+                                    <Text fontSize="sm" color="gray.600" mb={2}>Active filters:</Text>
+                                    <Wrap spacing={2}>
+                                        {appliedFilters.map((f) => (
+                                            <WrapItem key={`applied-${f}`}>
+                                                <Tag 
+                                                    size="md" 
+                                                    borderRadius="full" 
+                                                    bg="#F4A950" 
+                                                    color="white"
+                                                    variant="solid"
+                                                >
+                                                    <TagLabel>{f}</TagLabel>
+                                                    <TagCloseButton onClick={() => removeFilter(f)} />
+                                                </Tag>
+                                            </WrapItem>
+                                        ))}
+                                    </Wrap>
+                                </Box>
+                            )}
+                        </VStack>
                     </CardBody>
                 </Card>
 
