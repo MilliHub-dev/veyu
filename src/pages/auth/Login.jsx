@@ -144,7 +144,7 @@ export const LoginView = ({ ...props }) => {
           // For business users, fetch their complete profile to check completion status
           // The login endpoint may not return all business fields
           try {
-            console.log('🔍 Fetching complete profile for business user...');
+            console.log('Fetching complete profile for business user...');
             const completeProfile = await authService.getProfile();
             
             // Check if profile has required business fields
@@ -157,7 +157,7 @@ export const LoginView = ({ ...props }) => {
             
             hasCompletedProfile = hasBusinessName && hasContactInfo;
             
-            console.log('🔐 Business profile check:', {
+            console.log('Business profile check:', {
               userType,
               hasBusinessName,
               hasContactInfo,
@@ -175,7 +175,7 @@ export const LoginView = ({ ...props }) => {
             
             hasCompletedProfile = hasBusinessName && hasContactInfo;
             
-            console.log('🔐 Business profile check (fallback):', {
+            console.log('Business profile check (fallback):', {
               userType,
               hasBusinessName,
               hasContactInfo,
@@ -195,16 +195,16 @@ export const LoginView = ({ ...props }) => {
         // Redirect based on user type and profile completion status
         if (userType === 'dealer' || userType === 'mechanic') {
           if (hasCompletedProfile) {
-            console.log('🔄 Business user with completed profile - redirecting to dashboard');
+            console.log('Business user with completed profile - redirecting to dashboard');
             redirect('/dashboard');
           } else {
-            console.log('🔄 Business user with incomplete profile - redirecting to business profile setup');
+            console.log('Business user with incomplete profile - redirecting to business profile setup');
             redirect('/business-profile');
           }
         } else {
           // Customer users always redirect to home
           const userEmail = user?.email || 'unknown';
-          console.log('🔄 Customer user - redirecting to home');
+          console.log('Customer user - redirecting to home');
           redirect(`/home?user=${userEmail}`);
         }
       } else {
@@ -298,7 +298,7 @@ export const LoginView = ({ ...props }) => {
         if (userType === 'dealer' || userType === 'mechanic') {
           // For business users, fetch their complete profile to check completion status
           try {
-            console.log('🔍 Fetching complete profile for Google business user...');
+            console.log('Fetching complete profile for Google business user...');
             const completeProfile = await authService.getProfile();
             
             // Check if profile has required business fields
@@ -311,7 +311,7 @@ export const LoginView = ({ ...props }) => {
             
             hasCompletedProfile = hasBusinessName && hasContactInfo;
             
-            console.log('🔐 Google business profile check:', {
+            console.log('Google business profile check:', {
               userType,
               hasBusinessName,
               hasContactInfo,
@@ -329,7 +329,7 @@ export const LoginView = ({ ...props }) => {
             
             hasCompletedProfile = hasBusinessName && hasContactInfo;
             
-            console.log('🔐 Google business profile check (fallback):', {
+            console.log('Google business profile check (fallback):', {
               userType,
               hasBusinessName,
               hasContactInfo,
@@ -348,16 +348,16 @@ export const LoginView = ({ ...props }) => {
         // Redirect based on user type and profile completion status
         if (userType === 'dealer' || userType === 'mechanic') {
           if (hasCompletedProfile) {
-            console.log('🔄 Google business user with completed profile - redirecting to dashboard');
+            console.log('Google business user with completed profile - redirecting to dashboard');
             redirect('/dashboard');
           } else {
-            console.log('🔄 Google business user with incomplete profile - redirecting to business profile setup');
+            console.log('Google business user with incomplete profile - redirecting to business profile setup');
             redirect('/business-profile');
           }
         } else {
           // Customer users always redirect to home
           const userEmail = userData?.email || 'unknown';
-          console.log('🔄 Google customer user - redirecting to home');
+          console.log('Google customer user - redirecting to home');
           redirect(`/home?user=${userEmail}`);
         }
       }
