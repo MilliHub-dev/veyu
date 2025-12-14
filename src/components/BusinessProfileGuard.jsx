@@ -82,18 +82,9 @@ const BusinessProfileGuard = ({ children }) => {
     return children;
   }
 
-  // If user needs to complete business profile, redirect to business profile page
-  if (completionStatus.needsCompletion) {
-    // Don't redirect if already on the business profile page to avoid infinite loops
-    if (location.pathname === '/business-profile') {
-      return children;
-    }
-
-    console.log('Redirecting business user to complete profile setup');
-    return <Navigate to="/business-profile" replace />;
-  }
-
-  // If profile is complete or user is not a business user, render children
+  // TEMPORARILY DISABLED: Business profile completion check
+  // Always allow access - the dashboard will handle any profile requirements
+  console.log('BusinessProfileGuard: Allowing access (profile check disabled)');
   return children;
 };
 

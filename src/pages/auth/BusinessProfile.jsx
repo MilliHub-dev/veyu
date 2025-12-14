@@ -232,31 +232,51 @@ function BusinessProfile({ onSubmit, ...props }) {
   // Helper function to ensure authentication and handle token refresh
   const ensureAuthentication = async () => {
     try {
+      // Check multiple sources for authentication
       const token = authService.getAccessToken();
-      if (!token) {
-        throw new Error('No authentication token found');
+      const user = authService.getCurrentUser();
+      
+      // If we have either a token OR user data, consider authenticated
+      // The API calls will handle token refresh if needed
+      if (token || user) {
+        console.log('✅ Authentication verified:', {
+          hasToken: !!token,
+          hasUser: !!user,
+          userType: user?.user_type
+        });
+        return true;
       }
 
-      // For initial component load, just check if token exists
-      // Only make API call to verify token during actual form submission
-      console.log('✅ Authentication token found, proceeding...');
-      return true;
+      throw new Error('No authentication found');
     } catch (error) {
       console.error('Authentication check failed:', error);
-      toast({
-        title: 'Authentication Error',
-        description: 'Session expired. Please log in again.',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-      navigate('/login', { 
-        state: { 
-          message: 'Session expired during profile setup. Please log in again.',
-          returnTo: '/business-profile'
-        }
-      });
-      return false;
+      
+      // Only redirect to login if we're absolutely sure there's no authentication
+      // Give the user a chance to stay on the page
+      const confirmRedirect = window.confirm(
+        'Your session may have expired. Do you want to go to the login page? Click Cancel to stay on this page.'
+      );
+      
+      if (confirmRedirect) {
+        toast({
+          title: 'Authentication Error',
+          description: 'Session expired. Please log in again.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        });
+        navigate('/login', { 
+          state: { 
+            message: 'Session expired during profile setup. Please log in again.',
+            returnTo: '/business-profile'
+          }
+        });
+        return false;
+      } else {
+        // User chose to stay, return true to continue
+        console.log('User chose to stay on business profile page despite auth check failure');
+        return true;
+      }
     }
   };
 

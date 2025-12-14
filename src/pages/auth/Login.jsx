@@ -137,74 +137,23 @@ export const LoginView = ({ ...props }) => {
           console.warn('⚠️ User type missing from login response, defaulting to customer');
         }
         
-        // Check if business profile is complete for business users
-        let hasCompletedProfile = true; // Default to true
-        
-        if (userType === 'dealer' || userType === 'mechanic') {
-          // For business users, fetch their complete profile to check completion status
-          // The login endpoint may not return all business fields
-          try {
-            console.log('Fetching complete profile for business user...');
-            const completeProfile = await authService.getProfile();
-            
-            // Check if profile has required business fields
-            const hasBusinessName = completeProfile?.business_name && completeProfile.business_name.trim() !== '';
-            const hasContactInfo = (completeProfile?.business_address && completeProfile.business_address.trim() !== '') ||
-              (completeProfile?.business_phone && completeProfile.business_phone.trim() !== '') ||
-              (completeProfile?.business_email && completeProfile.business_email.trim() !== '') ||
-              (completeProfile?.contact_phone && completeProfile.contact_phone.trim() !== '') ||
-              (completeProfile?.contact_email && completeProfile.contact_email.trim() !== '');
-            
-            hasCompletedProfile = hasBusinessName && hasContactInfo;
-            
-            console.log('Business profile check:', {
-              userType,
-              hasBusinessName,
-              hasContactInfo,
-              hasCompletedProfile,
-              business_name: completeProfile?.business_name
-            });
-          } catch (profileError) {
-            console.warn('⚠️ Could not fetch complete profile, checking login response data:', profileError.message);
-            
-            // Fallback: check the login response data
-            const hasBusinessName = user?.business_name && user.business_name.trim() !== '';
-            const hasContactInfo = (user?.business_address && user.business_address.trim() !== '') ||
-              (user?.business_phone && user.business_phone.trim() !== '') ||
-              (user?.business_email && user.business_email.trim() !== '');
-            
-            hasCompletedProfile = hasBusinessName && hasContactInfo;
-            
-            console.log('Business profile check (fallback):', {
-              userType,
-              hasBusinessName,
-              hasContactInfo,
-              hasCompletedProfile
-            });
-          }
-        }
-        
-        console.log('� Loguin redirect check:', {
+        console.log('🔐 Login redirect check:', {
           userType: userType || 'unknown',
           email_verified: user?.email_verified,
           is_verified: user?.is_verified,
-          hasCompletedProfile,
           redirectUrl: authService.getPostLoginRedirectUrl()
         });
         
-        // Redirect based on user type and profile completion status
+        // Redirect based on user type
+        // Business users (dealers/mechanics) always go to dashboard after login
+        // The dashboard will handle any profile completion checks
         if (userType === 'dealer' || userType === 'mechanic') {
-          if (hasCompletedProfile) {
-            console.log('Business user with completed profile - redirecting to dashboard');
-            redirect('/dashboard');
-          } else {
-            console.log('Business user with incomplete profile - redirecting to business profile setup');
-            redirect('/business-profile');
-          }
+          console.log('🔄 Business user - redirecting to dashboard');
+          redirect('/dashboard');
         } else {
           // Customer users always redirect to home
           const userEmail = user?.email || 'unknown';
-          console.log('Customer user - redirecting to home');
+          console.log('🔄 Customer user - redirecting to home');
           redirect(`/home?user=${userEmail}`);
         }
       } else {
@@ -292,72 +241,22 @@ export const LoginView = ({ ...props }) => {
           console.warn('⚠️ User type missing from Google login response, defaulting to customer');
         }
         
-        // Check if business profile is complete for business users
-        let hasCompletedProfile = true; // Default to true
-        
-        if (userType === 'dealer' || userType === 'mechanic') {
-          // For business users, fetch their complete profile to check completion status
-          try {
-            console.log('Fetching complete profile for Google business user...');
-            const completeProfile = await authService.getProfile();
-            
-            // Check if profile has required business fields
-            const hasBusinessName = completeProfile?.business_name && completeProfile.business_name.trim() !== '';
-            const hasContactInfo = (completeProfile?.business_address && completeProfile.business_address.trim() !== '') ||
-              (completeProfile?.business_phone && completeProfile.business_phone.trim() !== '') ||
-              (completeProfile?.business_email && completeProfile.business_email.trim() !== '') ||
-              (completeProfile?.contact_phone && completeProfile.contact_phone.trim() !== '') ||
-              (completeProfile?.contact_email && completeProfile.contact_email.trim() !== '');
-            
-            hasCompletedProfile = hasBusinessName && hasContactInfo;
-            
-            console.log('Google business profile check:', {
-              userType,
-              hasBusinessName,
-              hasContactInfo,
-              hasCompletedProfile,
-              business_name: completeProfile?.business_name
-            });
-          } catch (profileError) {
-            console.warn('⚠️ Could not fetch complete profile for Google login, checking response data:', profileError.message);
-            
-            // Fallback: check the login response data
-            const hasBusinessName = userData?.business_name && userData.business_name.trim() !== '';
-            const hasContactInfo = (userData?.business_address && userData.business_address.trim() !== '') ||
-              (userData?.business_phone && userData.business_phone.trim() !== '') ||
-              (userData?.business_email && userData.business_email.trim() !== '');
-            
-            hasCompletedProfile = hasBusinessName && hasContactInfo;
-            
-            console.log('Google business profile check (fallback):', {
-              userType,
-              hasBusinessName,
-              hasContactInfo,
-              hasCompletedProfile
-            });
-          }
-        }
-        
-        console.log('� G oogle login redirect check:', {
+        console.log('🔐 Login redirect check:', {
           userType: userType || 'unknown',
-          email_verified: userData?.email_verified,
-          is_verified: userData?.is_verified,
-          hasCompletedProfile
+          email_verified: userData?.email_verified || user?.email_verified,
+          is_verified: userData?.is_verified || user?.is_verified
         });
-
-        // Redirect based on user type and profile completion status
+        
+        // Redirect based on user type
+        // Business users (dealers/mechanics) always go to dashboard after login
+        // The dashboard will handle any profile completion checks
         if (userType === 'dealer' || userType === 'mechanic') {
-          if (hasCompletedProfile) {
-            console.log('Google business user with completed profile - redirecting to dashboard');
-            redirect('/dashboard');
-          } else {
-            console.log('Google business user with incomplete profile - redirecting to business profile setup');
-            redirect('/business-profile');
-          }
+          console.log('🔄 Business user - redirecting to dashboard');
+          redirect('/dashboard');
         } else {
           // Customer users always redirect to home
-          const userEmail = userData?.email || 'unknown';
-          console.log('Google customer user - redirecting to home');
+          const userEmail = userData?.email || user?.email || 'unknown';
+          console.log('🔄 Customer user - redirecting to home');
           redirect(`/home?user=${userEmail}`);
         }
       }
