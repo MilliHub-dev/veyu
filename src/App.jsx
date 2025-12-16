@@ -118,6 +118,10 @@ function App() {
   const notify = ({ title, body, color = "green", duration = 2500 }) =>
     toast({ title, description: body, colorScheme: color, duration });
 
+  if (typeof window !== 'undefined') {
+    window.notify = notify;
+  }
+
   const redirect = (url, timeout) => {
     timeout ? setTimeout(() => (window.location.href = url), timeout) : (window.location.href = url);
   };

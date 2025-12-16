@@ -238,6 +238,15 @@ apiClient.interceptors.response.use(
       console.log('🔍 Request method:', originalRequest.method);
       originalRequest._retry = true;
       originalRequest._isRetry = true; // Also set this flag for request interceptor
+      const AUTH_ENDPOINTS = [
+        '/accounts/login/',
+        '/accounts/signup/',
+        '/accounts/logout/',
+        '/token/',
+        '/token/refresh/',
+        '/token/verify/'
+      ];
+      const isAuthEndpoint = (url) => AUTH_ENDPOINTS.some(e => url?.includes(e));
 
       try {
         const refreshToken = TokenManager.getRefreshToken();
@@ -251,24 +260,22 @@ apiClient.interceptors.response.use(
 
         if (!refreshToken) {
           console.log('❌ No refresh token available - clearing tokens and redirecting to login');
-          TokenManager.clearTokens();
-
-          // Show user-friendly notification
-          if (window.notify) {
-            window.notify({
-              title: 'Session Expired',
-              body: 'Your session has expired. Please log in again.',
-              color: 'orange'
-            });
-          }
-
-          // Only redirect if we're not already on auth pages
-          if (!window.location.pathname.includes('/login') &&
-            !window.location.pathname.includes('/signup') &&
-            !window.location.pathname.includes('/forgot-password')) {
-            setTimeout(() => {
-              window.location.href = '/login?session_expired=true';
-            }, 1000);
+          if (isAuthEndpoint(originalRequest.url)) {
+            TokenManager.clearTokens();
+            if (window.notify) {
+              window.notify({
+                title: 'Session Expired',
+                body: 'Your session has expired. Please log in again.',
+                color: 'orange'
+              });
+            }
+            if (!window.location.pathname.includes('/login') &&
+              !window.location.pathname.includes('/signup') &&
+              !window.location.pathname.includes('/forgot-password')) {
+              setTimeout(() => {
+                window.location.href = '/login?session_expired=true';
+              }, 1000);
+            }
           }
           return Promise.reject(error);
         }
@@ -393,23 +400,23 @@ apiClient.interceptors.response.use(
             console.error('🚨 CRITICAL: Refreshed token was rejected by backend!');
             console.error('🚨 This indicates the /token/refresh/ endpoint returned an invalid token');
 
-            // Clear tokens and force re-login
-            TokenManager.clearTokens();
-
-            if (window.notify) {
-              window.notify({
-                title: 'Authentication Error',
-                body: 'There was a problem with your session. Please log in again.',
-                color: 'red'
-              });
-            }
-
-            if (!window.location.pathname.includes('/login') &&
-              !window.location.pathname.includes('/signup') &&
-              !window.location.pathname.includes('/forgot-password')) {
-              setTimeout(() => {
-                window.location.href = '/login?auth_error=true';
-              }, 1000);
+            // Only force re-login for auth endpoints
+            if (isAuthEndpoint(originalRequest.url)) {
+              TokenManager.clearTokens();
+              if (window.notify) {
+                window.notify({
+                  title: 'Authentication Error',
+                  body: 'There was a problem with your session. Please log in again.',
+                  color: 'red'
+                });
+              }
+              if (!window.location.pathname.includes('/login') &&
+                !window.location.pathname.includes('/signup') &&
+                !window.location.pathname.includes('/forgot-password')) {
+                setTimeout(() => {
+                  window.location.href = '/login?auth_error=true';
+                }, 1000);
+              }
             }
           }
 
@@ -440,25 +447,23 @@ apiClient.interceptors.response.use(
         if (isRefreshTokenInvalid) {
           console.log('❌ Refresh token is invalid or expired - clearing all tokens');
 
-          // Refresh failed, clear tokens and redirect to login
-          TokenManager.clearTokens();
-
-          // Show user-friendly notification
-          if (window.notify) {
-            window.notify({
-              title: 'Session Expired',
-              body: 'Your session has expired. Please log in again to continue.',
-              color: 'red'
-            });
-          }
-
-          // Only redirect if we're not already on auth pages
-          if (!window.location.pathname.includes('/login') &&
-            !window.location.pathname.includes('/signup') &&
-            !window.location.pathname.includes('/forgot-password')) {
-            setTimeout(() => {
-              window.location.href = '/login?session_expired=true';
-            }, 1000);
+          // Only force logout for auth endpoints; otherwise, surface the error
+          if (isAuthEndpoint(originalRequest.url)) {
+            TokenManager.clearTokens();
+            if (window.notify) {
+              window.notify({
+                title: 'Session Expired',
+                body: 'Your session has expired. Please log in again to continue.',
+                color: 'red'
+              });
+            }
+            if (!window.location.pathname.includes('/login') &&
+              !window.location.pathname.includes('/signup') &&
+              !window.location.pathname.includes('/forgot-password')) {
+              setTimeout(() => {
+                window.location.href = '/login?session_expired=true';
+              }, 1000);
+            }
           }
         } else {
           // Some other error - don't logout, just log it

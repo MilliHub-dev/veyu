@@ -14,8 +14,14 @@ class AuthService {
   async login(email, password) {
     try {
       const response = await apiClient.post('/accounts/login/', {
-        email,
-        password,
+        email: (email || '').trim(),
+        password: (password || '').trim(),
+        provider: 'veyu',
+        action: 'login',
+        device: {
+          app: 'web',
+          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+        }
       });
 
       const result = handleApiResponse(response);
