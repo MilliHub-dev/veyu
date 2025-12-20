@@ -20,7 +20,6 @@ class LocationService {
    */
   async createLocation(locationData) {
     try {
-      console.log('📍 Creating location:', locationData);
       
       const response = await apiClient.post('/locations/', {
         country: locationData.country,
@@ -34,7 +33,6 @@ class LocationService {
       });
 
       const data = handleApiResponse(response);
-      console.log('✅ Location created:', data);
       return data;
     } catch (error) {
       console.error('❌ Failed to create location:', error);
@@ -49,12 +47,10 @@ class LocationService {
    */
   async getLocation(locationId) {
     try {
-      console.log('📍 Fetching location:', locationId);
       
       const response = await apiClient.get(`/locations/${locationId}/`);
       const data = handleApiResponse(response);
       
-      console.log('✅ Location fetched:', data);
       return data;
     } catch (error) {
       console.error('❌ Failed to fetch location:', error);
@@ -99,11 +95,9 @@ class LocationService {
    */
   async deleteLocation(locationId) {
     try {
-      console.log('📍 Deleting location:', locationId);
       
       await apiClient.delete(`/locations/${locationId}/`);
       
-      console.log('✅ Location deleted');
       return true;
     } catch (error) {
       console.error('❌ Failed to delete location:', error);

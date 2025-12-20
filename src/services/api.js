@@ -31,14 +31,13 @@ const TokenManager = {
         if (oldAuthUser) {
           const authData = JSON.parse(oldAuthUser);
           if (authData.token) {
-            console.log('🔄 TokenManager: Using token from old auth format');
             token = authData.token;
             // Migrate to new format
             localStorage.setItem('veyu_access_token', token);
           }
         }
       } catch (e) {
-        console.log('🔄 TokenManager: Could not parse old auth data');
+        // Ignore parsing errors
       }
     }
 
@@ -46,17 +45,12 @@ const TokenManager = {
   },
   getRefreshToken: () => localStorage.getItem('veyu_refresh_token'),
   setTokens: (accessToken, refreshToken) => {
-    console.log('🔐 TokenManager: Storing tokens...', {
-      accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : 'NULL',
-      refreshToken: refreshToken ? `${refreshToken.substring(0, 20)}...` : 'NULL'
-    });
     localStorage.setItem('veyu_access_token', accessToken);
     if (refreshToken) {
       localStorage.setItem('veyu_refresh_token', refreshToken);
     }
   },
   clearTokens: () => {
-    console.log('🗑️ TokenManager: Clearing all tokens and user data');
     localStorage.removeItem('veyu_access_token');
     localStorage.removeItem('veyu_refresh_token');
     localStorage.removeItem('veyu_user_data');
@@ -67,12 +61,10 @@ const TokenManager = {
     const hasRefreshToken = !!TokenManager.getRefreshToken();
 
     if (!hasAccessToken && !hasRefreshToken) {
-      console.log('❌ TokenManager: No tokens found - user not authenticated');
       return false;
     }
 
     if (!hasAccessToken && hasRefreshToken) {
-      console.log('⚠️ TokenManager: Access token missing but refresh token exists');
       return true; // Can try to refresh
     }
 
@@ -87,10 +79,6 @@ const TokenManager = {
       const expirationTime = payload.exp * 1000; // Convert to milliseconds
       const currentTime = Date.now();
       const isExpired = currentTime >= expirationTime;
-
-      if (isExpired) {
-        console.log('⏰ TokenManager: Token has expired');
-      }
 
       return isExpired;
     } catch (e) {
@@ -120,9 +108,6 @@ apiClient.interceptors.request.use(
       // On retry, we want to preserve all headers including Authorization
       if (!config._isRetry) {
         delete config.headers['Content-Type'];
-        console.log(`📦 FormData detected - letting axios set Content-Type with boundary`);
-      } else {
-        console.log(`📦 FormData retry - preserving all headers`);
       }
     } else if (config.data && typeof config.data === 'object') {
       // For JSON data, explicitly set Content-Type
@@ -152,13 +137,10 @@ apiClient.interceptors.request.use(
 
       if (config._isRetry) {
         // For retry requests after token refresh, use the fresh token from storage
-        console.log(`🔄 Retry request after token refresh - using fresh token from storage`);
-        console.log(`🔑 API Request: ${config.method?.toUpperCase()} ${config.url} - Using refreshed token (${token ? token.substring(0, 20) + '...' : 'NOT FOUND'})`);
       } else {
         // Check if token exists and is expired (only for non-retry requests)
         if (token && TokenManager.isTokenExpired(token)) {
-          console.log('⚠️ Access token is expired - attempting proactive refresh before request');
-
+          
           const refreshToken = TokenManager.getRefreshToken();
           if (refreshToken && !TokenManager.isTokenExpired(refreshToken)) {
             try {
@@ -175,7 +157,6 @@ apiClient.interceptors.request.use(
               const tokenData = response.data.data || response.data;
               const { access, refresh } = tokenData;
               if (access) {
-                console.log('✅ Proactive token refresh successful');
                 TokenManager.setTokens(access, refresh || refreshToken);
                 token = access;
               }
@@ -183,8 +164,6 @@ apiClient.interceptors.request.use(
               console.error('❌ Proactive token refresh failed:', refreshError.message);
               // Continue with expired token - the response interceptor will handle it
             }
-          } else {
-            console.log('⚠️ Refresh token is missing or expired - request will likely fail with 401');
           }
         }
       }
@@ -192,16 +171,7 @@ apiClient.interceptors.request.use(
       // Attach token to request (for both retry and normal requests)
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log(`🔑 API Request: ${config.method?.toUpperCase()} ${config.url} - Bearer token attached (${token.substring(0, 20)}...)`);
-      } else {
-        console.log(`🚫 API Request: ${config.method?.toUpperCase()} ${config.url} - No token found`);
-        console.log('🔍 Debug: Checking localStorage for tokens...');
-        console.log('veyu_access_token:', localStorage.getItem('veyu_access_token') ? 'EXISTS' : 'NOT FOUND');
-        console.log('veyu_refresh_token:', localStorage.getItem('veyu_refresh_token') ? 'EXISTS' : 'NOT FOUND');
-        console.log('veyu-auth-user:', localStorage.getItem('veyu-auth-user') ? 'EXISTS' : 'NOT FOUND');
       }
-    } else {
-      console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url} - Public endpoint (no token)`);
     }
 
     // Add request ID for debugging
@@ -220,9 +190,7 @@ apiClient.interceptors.response.use(
   (response) => {
     // Log response time for debugging
     if (response.config.metadata) {
-      const endTime = new Date();
-      const duration = endTime - response.config.metadata.startTime;
-      console.log(`✅ API Request: ${response.config.method?.toUpperCase()} ${response.config.url} - ${duration}ms`);
+      // Keep timing logic if needed, but removing verbose log as requested
     }
 
     return response;
@@ -233,9 +201,7 @@ apiClient.interceptors.response.use(
     // Handle 401 Unauthorized - Token expired or invalid
     // CRITICAL: Only attempt refresh once per request to prevent infinite loops
     if (error.response?.status === 401 && !originalRequest._retry) {
-      console.log('🔴 401 Unauthorized - Attempting to refresh token...');
-      console.log('🔍 Request URL:', originalRequest.url);
-      console.log('🔍 Request method:', originalRequest.method);
+      
       originalRequest._retry = true;
       originalRequest._isRetry = true; // Also set this flag for request interceptor
       const AUTH_ENDPOINTS = [
@@ -445,8 +411,7 @@ apiClient.interceptors.response.use(
           refreshError.response?.status === 400;
 
         if (isRefreshTokenInvalid) {
-          console.log('❌ Refresh token is invalid or expired - clearing all tokens');
-
+          
           // Only force logout for auth endpoints; otherwise, surface the error
           if (isAuthEndpoint(originalRequest.url)) {
             TokenManager.clearTokens();

@@ -25,8 +25,7 @@ class AuthService {
       });
 
       const result = handleApiResponse(response);
-      console.log('🔐 Login Response:', result);
-
+      
       // Handle both response formats: direct {user, tokens} or {success, data: {user, tokens}}
       let user, tokens;
       
@@ -41,7 +40,6 @@ class AuthService {
       }
       
       if (tokens && user) {
-        console.log('🔐 Storing tokens and complete user data during login...');
         
         // Ensure both access and refresh tokens are stored using Token Manager
         TokenManager.setTokens(tokens.access, tokens.refresh);
@@ -50,13 +48,6 @@ class AuthService {
         // Update user data synchronization logic to use email verification
         syncProfileCompletionStatus(user);
         
-        console.log('✅ Authentication successful - tokens and user data stored', {
-          hasAccessToken: !!tokens.access,
-          hasRefreshToken: !!tokens.refresh,
-          userType: user.user_type,
-          emailVerified: user.email_verified || user.is_verified,
-          userId: user.id
-        });
       } else {
         console.error('❌ Missing tokens or user data in login response:', result);
         throw new Error('Login failed - incomplete response data');
@@ -71,8 +62,6 @@ class AuthService {
   // Register new user (Updated to match newdoc.md)
   async register(userData) {
     try {
-      // Debug: Log what we received from frontend
-      console.log('AuthService received userData:', JSON.stringify(userData, null, 2));
       
       // Prepare payload according to auth.md specification
       const payload = {
@@ -89,10 +78,6 @@ class AuthService {
       
       // TEMPORARY DEBUG: Always add business_name
       payload.business_name = userData.business_name || 'Test Business Name';
-      console.log('FORCE ADDED business_name to authService payload:', payload.business_name);
-
-      // Debug: Log payload before cleanup
-      console.log('AuthService payload before cleanup:', JSON.stringify(payload, null, 2));
 
       // Check for empty or invalid required fields
       if (!payload.password || payload.password.trim() === '') {
@@ -110,8 +95,6 @@ class AuthService {
           delete payload[key];
         }
       });
-
-      console.log('AuthService register payload (final):', JSON.stringify(payload, null, 2));
 
       // Additional check: Create a test payload to ensure we're sending the right data
       const testPayload = {
@@ -132,9 +115,6 @@ class AuthService {
       
       // TEMPORARY DEBUG: Always add business_name to testPayload
       testPayload.business_name = payload.business_name || 'Test Business Name';
-      console.log('FORCE ADDED business_name to testPayload:', testPayload.business_name);
-      
-      console.log('Final test payload being sent to API:', JSON.stringify(testPayload, null, 2));
       
       // Validate all required fields according to auth.md specification
       const apiRequiredFields = ['email', 'password', 'confirm_password', 'first_name', 'last_name', 'user_type', 'provider', 'action'];
@@ -186,28 +166,9 @@ class AuthService {
         throw new Error('Password must be at least 8 characters long');
       }
       
-      console.log('Password verification passed - sending request to backend');
-      console.log('Request URL: POST /accounts/signup/');
-      console.log('Request Headers: Content-Type: application/json');
-      console.log('Request Body:', JSON.stringify(testPayload, null, 2));
-      
-      // Additional debug for business accounts
-      if (testPayload.user_type === 'dealer' || testPayload.user_type === 'mechanic') {
-        console.log('BUSINESS ACCOUNT DEBUG:', {
-          user_type: testPayload.user_type,
-          business_name: testPayload.business_name,
-          business_name_type: typeof testPayload.business_name,
-          business_name_length: testPayload.business_name ? testPayload.business_name.length : 'N/A',
-          has_business_name_field: 'business_name' in testPayload
-        });
-      }
-
       const response = await apiClient.post('/accounts/signup/', testPayload, {
         timeout: 60000,
       });
-      
-      console.log('Response Status:', response.status);
-      console.log('Response Data:', response.data);
       
       const result = handleApiResponse(response);
 
@@ -216,7 +177,6 @@ class AuthService {
         const { tokens, ...userData } = result.data;
         
         if (tokens) {
-          console.log('🔐 Storing tokens and user data during registration...');
           
           // Ensure both access and refresh tokens are stored using Token Manager
           TokenManager.setTokens(tokens.access, tokens.refresh);
@@ -225,13 +185,6 @@ class AuthService {
           // Update user data synchronization logic to use email verification
           syncProfileCompletionStatus(userData);
           
-          console.log('✅ Registration successful - tokens and user data stored', {
-            hasAccessToken: !!tokens.access,
-            hasRefreshToken: !!tokens.refresh,
-            userType: userData.user_type,
-            emailVerified: userData.email_verified || userData.is_verified,
-            userId: userData.user_id || userData.id
-          });
         }
       }
 
@@ -254,7 +207,6 @@ class AuthService {
 
       // Store tokens if provided
       if (data.token) {
-        console.log('🔐 Storing tokens and user data during business registration...');
         
         // Ensure both access and refresh tokens are stored using Token Manager
         TokenManager.setTokens(data.token.access, data.token.refresh);
@@ -263,13 +215,6 @@ class AuthService {
         // Update user data synchronization logic to use email verification
         syncProfileCompletionStatus(data.user);
         
-        console.log('✅ Business registration successful - tokens and user data stored', {
-          hasAccessToken: !!data.token.access,
-          hasRefreshToken: !!data.token.refresh,
-          userType: data.user?.user_type,
-          emailVerified: data.user?.email_verified || data.user?.is_verified,
-          userId: data.user?.id
-        });
       }
 
       return data;
@@ -290,7 +235,6 @@ class AuthService {
       const data = handleApiResponse(response);
 
       if (data.token) {
-        console.log('🔐 Storing tokens and user data during social login...');
         
         // Ensure both access and refresh tokens are stored using Token Manager
         TokenManager.setTokens(data.token.access, data.token.refresh);
@@ -299,13 +243,6 @@ class AuthService {
         // Update user data synchronization logic to use email verification
         syncProfileCompletionStatus(data.user);
         
-        console.log('✅ Social login successful - tokens and user data stored', {
-          hasAccessToken: !!data.token.access,
-          hasRefreshToken: !!data.token.refresh,
-          userType: data.user?.user_type,
-          emailVerified: data.user?.email_verified || data.user?.is_verified,
-          userId: data.user?.id
-        });
       }
 
       return data;
@@ -321,17 +258,9 @@ class AuthService {
       const response = await apiClient.get('/accounts/profile/');
       const data = handleApiResponse(response);
       
-      console.log('🔐 Synchronizing user profile data from API...');
-      
       // Store complete user object including email verification status
       // Update user data synchronization logic to use email verification
       const syncedData = syncProfileCompletionStatus(data);
-      
-      console.log('✅ Profile data synchronized', {
-        userType: syncedData?.user_type,
-        emailVerified: syncedData?.email_verified || syncedData?.is_verified,
-        userId: syncedData?.id
-      });
       
       return syncedData;
     } catch (error) {
@@ -346,17 +275,9 @@ class AuthService {
       const response = await apiClient.put('/accounts/profile/', profileData);
       const data = handleApiResponse(response);
       
-      console.log('🔐 Synchronizing updated user profile data...');
-      
       // Store complete user object including email verification status
       // Update user data synchronization logic to use email verification
       const syncedData = syncProfileCompletionStatus(data);
-      
-      console.log('✅ Updated profile data synchronized', {
-        userType: syncedData?.user_type,
-        emailVerified: syncedData?.email_verified || syncedData?.is_verified,
-        userId: syncedData?.id
-      });
       
       return syncedData;
     } catch (error) {
@@ -415,7 +336,6 @@ class AuthService {
 
   async verifyEmail(email, otp) {
     try {
-      console.log('AuthService: Verifying email with unauthenticated endpoint');
       
       // Validate inputs
       if (!email || !otp) {
@@ -533,7 +453,6 @@ class AuthService {
           return handleApiResponse(response);
         } catch (fallbackError) {
           // If both fail, return default status
-          console.log('Both verification endpoints failed, returning default status');
           return { status: 'not_submitted' };
         }
       }
