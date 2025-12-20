@@ -913,52 +913,25 @@ function BusinessProfile({ onSubmit, ...props }) {
         // Update business profile completion status using authService
         authService.updateBusinessProfileCompletionStatus(true);
         
-        // Update the GlobalStore's authUser state to reflect the changes
-        // This ensures the routing logic uses the updated user data
-        // IMPORTANT: Call onAuthenticated AFTER updating localStorage
-        // Flatten user properties to top level for backward compatibility with routing
-        onAuthenticated({
-          ...verifiedUser, // Spread user properties at top level for authUser.user_type access
-          user: verifiedUser, // Also keep nested for consistency
-          tokens: {
-            access: authService.getAccessToken(),
-            refresh: TokenManager.getRefreshToken()
-          }
-        });
-        console.log('✅ Updated GlobalStore authUser state');
+        // Business flow: Signup -> Verify -> Business Profile -> Login -> Dashboard
+        // After profile setup, logout and redirect to login
+        console.log('✅ Business profile setup complete. Logging out and redirecting to login.');
         
-        // Use the correct redirect logic based on user type
-        const userType = verifiedUser.user_type;
-        let redirectUrl = '/dashboard'; // Default for business users
-        
-        if (userType === 'dealer' || userType === 'mechanic') {
-          // Business users with verified email go to dashboard
-          redirectUrl = '/dashboard';
-        } else {
-          // Customer users go to home
-          redirectUrl = `/home?user=${verifiedUser.email}`;
-        }
-        
-        console.log('🔄 Redirecting after profile completion:', {
-          userType,
-          emailVerified: true,
-          businessProfileCompleted: true,
-          redirectUrl,
-          verifiedUser
+        toast({
+          title: 'Profile Setup Complete!',
+          description: 'Your business profile is ready. Please log in to access your dashboard.',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
         });
         
-        // Debug: Check what's in localStorage before redirect
-        console.log('📦 LocalStorage before redirect:', {
-          veyu_user_data: localStorage.getItem('veyu_user_data'),
-          'veyu-auth-user': localStorage.getItem('veyu-auth-user')
-        });
-        
-        // Force a page reload to ensure App.jsx re-evaluates routing with updated state
-        // This prevents the BusinessProfileGuard from using stale state
+        // Delay slightly to let the user see the success message
         setTimeout(() => {
-          console.log('🚀 Executing redirect to:', redirectUrl);
-          window.location.href = redirectUrl;
-        }, 1500);
+          // Use context logout to clear global state and storage
+          logout(); 
+          console.log('🚀 Executing redirect to: /login');
+          navigate('/login');
+        }, 2000);
       } else {
         throw new Error(data.message || 'Failed to set up business profile');
       }

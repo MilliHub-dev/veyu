@@ -105,6 +105,7 @@ export const LoginView = ({ ...props }) => {
 
   async function handleLogin(e) {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     
     try {

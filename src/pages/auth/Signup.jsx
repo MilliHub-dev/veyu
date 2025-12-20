@@ -618,11 +618,14 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { axios, notify } = useContext(GlobalStore);
   const { checkEmail, user_type, addToPayload, setUserType, payload, nextStep, setSkipStep } = useContext(SignupContext);
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (isLoading) return;
+    setIsLoading(true);
     try {
       // For regular email/password signup, ensure email verification is not skipped
       setSkipStep(prev => ({ ...prev, email: false }));
@@ -630,6 +633,7 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
+        setIsLoading(false);
         return notify({
           title: 'Invalid Email',
           color: 'red',
@@ -638,6 +642,7 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
       }
 
       if (password !== confirmPassword) {
+        setIsLoading(false);
         return notify({
           title: 'Password Mismatch',
           color: 'red',
@@ -646,6 +651,7 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
       }
 
       if (password.length < 8) {
+        setIsLoading(false);
         return notify({
           title: 'Weak Password',
           color: 'red',
@@ -660,6 +666,7 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
       const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
       if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+        setIsLoading(false);
         return notify({
           title: 'Weak Password',
           color: 'red',
@@ -694,6 +701,8 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
         color: 'red',
         body: err.message
       });
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -848,6 +857,8 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
             colorScheme="orange"
             bg="primary"
             rightIcon={<ArrowRight size={20} />}
+            isLoading={isLoading}
+            loadingText="Checking..."
             _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
             transition="all 0.2s"
             py={6}
@@ -950,6 +961,7 @@ const SignupStep = ({ type }) => {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     
     console.log('🚀 SIGNUP FORM SUBMITTED');
@@ -1929,6 +1941,8 @@ const SignupStep = ({ type }) => {
   }
 
   async function verifyCode() {
+    if (isVerifying) return;
+
     // Enhanced validation
     if (!otp) {
       notify({
@@ -2025,29 +2039,40 @@ const SignupStep = ({ type }) => {
 
       // Check business profile completion status for business users
       let redirectPath;
+      let notificationMessage;
+      
       if (userType === 'customer') {
-        redirectPath = '/dashboard';
+        // Customer flow: Verify -> Login -> Marketplace
+        // We logout the user so they have to log in explicitly
+        authService.logout();
+        redirectPath = '/login';
+        notificationMessage = 'Your account is verified. Please log in to continue.';
       } else if (userType === 'mechanic' || userType === 'dealer') {
+        // Business flow: Verify -> Business Profile -> Login -> Dashboard
         // For business users, check if business profile is complete
         const completionStatus = authService.getBusinessProfileCompletionStatus();
         
         if (completionStatus.needsCompletion) {
           // Business profile is incomplete, redirect to business profile setup
+          // Keep session active for profile setup
           redirectPath = '/business-profile';
+          notificationMessage = 'Your email is verified. Let\'s set up your business profile...';
         } else {
-          // Business profile is complete, redirect to dashboard
-          redirectPath = '/dashboard';
+          // Business profile is complete (rare case here), redirect to login
+          authService.logout();
+          redirectPath = '/login';
+          notificationMessage = 'Your account is verified. Please log in to continue.';
         }
       } else {
         // Fallback for any other user types
-        redirectPath = '/dashboard';
+        authService.logout();
+        redirectPath = '/login';
+        notificationMessage = 'Your account is verified. Please log in to continue.';
       }
 
       notify({
         title: 'Email Verified Successfully!',
-        description: redirectPath === '/business-profile'
-          ? 'Your business account is now verified. Let\'s set up your business profile...'
-          : 'Your account is now verified. Taking you to your dashboard...',
+        description: notificationMessage,
         status: 'success',
         duration: 5000,
         isClosable: true,
@@ -2056,21 +2081,14 @@ const SignupStep = ({ type }) => {
       // Set verified state to show success UI
       setIsEmailVerified(true);
 
-      console.log('Email verified, redirecting to:', redirectPath, 'for user type:', userType, 'completion status:', authService.getBusinessProfileCompletionStatus());
+      console.log('Email verified, redirecting to:', redirectPath, 'for user type:', userType);
 
       setTimeout(() => {
         navigate(redirectPath, {
           replace: true,
           state: {
             fromEmailVerification: true,
-            userType: userType,
-            userData: {
-              email: emailToVerify,
-              first_name: payload?.first_name,
-              last_name: payload?.last_name,
-              phone_number: payload?.phone_number,
-              user_type: userType
-            }
+            userType: userType
           }
         });
       }, 2000);
