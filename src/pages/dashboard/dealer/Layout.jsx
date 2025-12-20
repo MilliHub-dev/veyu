@@ -157,7 +157,7 @@ function DealerDashboardLayout({children, hideSidebar, ...props}) {
                     </Box>
                   </HStack>
                   <HStack spacing={2}>
-                    <Button as={Link} to={'/dashboard/settings'} variant="solid" colorScheme="blue">Settings</Button>
+                    <Button as={Link} to={'/settings'} variant="solid" colorScheme="blue">Settings</Button>
                     <Button as={Link} to={'/inventory'} colorScheme="blue">Manage Inventory</Button>
                   </HStack>
                 </Flex>
