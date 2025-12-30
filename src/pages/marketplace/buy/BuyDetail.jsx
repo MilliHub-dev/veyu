@@ -18,7 +18,7 @@ import { ChatPopup } from "../../../components/chat";
 import { objectifyJSON, jsonifyObject } from "../../../utils";
 import { apiClient } from '../../../services/api';
 import { HiMiniReceiptPercent, HiShieldCheck, HiTruck, HiClock, HiPhone } from 'react-icons/hi2';
-import { FaCartPlus, FaHeart, FaShare, FaEye, FaStar, FaCheckCircle } from 'react-icons/fa';
+import { FaCartPlus, FaHeart, FaShare, FaEye, FaStar, FaCheckCircle, FaEdit } from 'react-icons/fa';
 import { MdVerified, MdLocationOn, MdSpeed, MdLocalGasStation } from 'react-icons/md';
 import { BsCalendar3, BsGearFill } from 'react-icons/bs';
 
@@ -48,6 +48,14 @@ export const BuyDetail = ({ }) => {
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+
+  // Check if current user is the owner
+  const isOwner = authUser?.id && (
+    authUser.id === listing?.user_id || 
+    authUser.id === listing?.dealer_id ||
+    authUser.id === listing?.vehicle?.dealer?.user_id ||
+    authUser.id === listing?.vehicle?.dealer?.uuid
+  );
 
   // Helper function to format date as "X days ago"
   const getTimeAgo = (dateString) => {
@@ -766,60 +774,76 @@ export const BuyDetail = ({ }) => {
 
               {/* Action Buttons */}
               <VStack spacing={3}>
-                <Button
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    const isAuthenticated = await checkAuth();
-                    if (!isAuthenticated) {
-                      notify({
-                        title: 'Login Required',
-                        body: 'Please log in to proceed to checkout',
-                        color: 'orange',
-                        duration: 3000,
-                      });
-                      setTimeout(() => {
-                        navigate(`/login?next=${encodeURIComponent(`/checkout/pay?listingId=${listingId}`)}`);
-                      }, 1000);
-                      return;
-                    }
-                    console.log('🔍 Buy Now - Redirecting to checkout with listingId:', listingId);
-                    const checkoutUrl = `/checkout/pay?listingId=${listingId}`;
-                    console.log('🔍 Buy Now - Checkout URL:', checkoutUrl);
-                    navigate(checkoutUrl);
-                  }}
-                  bg={'#F4A950'}
-                  color="white"
-                  size="lg"
-                  w={'100%'}
-                  _hover={{ bg: '#E09940' }}
-                  leftIcon={<FaCheckCircle />}
-                >
-                  Buy Now
-                </Button>
-
-                <Flex gap={2} w="100%">
-                  <Button
-                    variant="outline"
-                    colorScheme="orange"
-                    flex={1}
-                    leftIcon={isAddingToCart ? <Spinner size="sm" /> : <FaCartPlus />}
-                    onClick={addToCart}
-                    isLoading={isAddingToCart}
-                    loadingText="Adding..."
-                    isDisabled={isAddingToCart}
-                  >
-                    Add to Cart
-                  </Button>
-                  <Button
-                    onClick={() => setPopupState(true)}
-                    variant={'outline'}
-                    colorScheme="blue"
-                    flex={1}
-                    leftIcon={<HiPhone />}
-                  >
-                    Message
-                  </Button>
-                </Flex>
+                {isOwner ? (
+                    <Button
+                        onClick={() => navigate(`/dashboard/inventory/edit/${listing?.uuid || listing?.id}`)}
+                        bg={'blue.500'}
+                        color="white"
+                        size="lg"
+                        w={'100%'}
+                        _hover={{ bg: 'blue.600' }}
+                        leftIcon={<FaEdit />}
+                    >
+                        Edit Listing
+                    </Button>
+                ) : (
+                    <>
+                        <Button
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            const isAuthenticated = await checkAuth();
+                            if (!isAuthenticated) {
+                              notify({
+                                title: 'Login Required',
+                                body: 'Please log in to proceed to checkout',
+                                color: 'orange',
+                                duration: 3000,
+                              });
+                              setTimeout(() => {
+                                navigate(`/login?next=${encodeURIComponent(`/checkout/pay?listingId=${listingId}`)}`);
+                              }, 1000);
+                              return;
+                            }
+                            console.log('🔍 Buy Now - Redirecting to checkout with listingId:', listingId);
+                            const checkoutUrl = `/checkout/pay?listingId=${listingId}`;
+                            console.log('🔍 Buy Now - Checkout URL:', checkoutUrl);
+                            navigate(checkoutUrl);
+                          }}
+                          bg={'#F4A950'}
+                          color="white"
+                          size="lg"
+                          w={'100%'}
+                          _hover={{ bg: '#E09940' }}
+                          leftIcon={<FaCheckCircle />}
+                        >
+                          Buy Now
+                        </Button>
+        
+                        <Flex gap={2} w="100%">
+                          <Button
+                            variant="outline"
+                            colorScheme="orange"
+                            flex={1}
+                            leftIcon={isAddingToCart ? <Spinner size="sm" /> : <FaCartPlus />}
+                            onClick={addToCart}
+                            isLoading={isAddingToCart}
+                            loadingText="Adding..."
+                            isDisabled={isAddingToCart}
+                          >
+                            Add to Cart
+                          </Button>
+                          <Button
+                            onClick={() => setPopupState(true)}
+                            variant={'outline'}
+                            colorScheme="blue"
+                            flex={1}
+                            leftIcon={<HiPhone />}
+                          >
+                            Message
+                          </Button>
+                        </Flex>
+                    </>
+                )}
               </VStack>
 
               {/* Trust Indicators */}

@@ -981,10 +981,6 @@ const SignupStep = ({ type }) => {
       provider: 'veyu',
     };
 
-    // TEMPORARY DEBUG: Always add business_name
-    newPayload.business_name = business_name ? business_name.trim() : 'Test Business Name';
-    
-    console.log('FORCE ADDED business_name to payload:', newPayload.business_name);
     console.log('Final user_type:', newPayload.user_type);
     console.log('Original user_type:', user_type);
     console.log('Original business_name from form:', business_name);
@@ -1611,7 +1607,7 @@ const SignupStep = ({ type }) => {
         // Check business profile completion status for business users
         let redirectPath;
         if (userData.user_type === 'customer') {
-          redirectPath = '/dashboard';
+          redirectPath = '/login';
         } else if (userData.user_type === 'mechanic' || userData.user_type === 'dealer') {
           // For business users, check if business profile is complete
           const completionStatus = authService.getBusinessProfileCompletionStatus();
@@ -1631,7 +1627,9 @@ const SignupStep = ({ type }) => {
           title: 'Email Already Verified',
           description: redirectPath === '/business-profile'
             ? 'Your email is already verified. Let\'s complete your business profile...'
-            : 'Your email is already verified. Redirecting to your dashboard...',
+            : redirectPath === '/login' 
+              ? 'Your email is already verified. Please log in...'
+              : 'Your email is already verified. Redirecting to your dashboard...',
           status: 'success',
           duration: 3000,
           isClosable: true,

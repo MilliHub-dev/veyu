@@ -1,5 +1,5 @@
 import { Fragment, useContext, useEffect, useState } from "react"
-import { useParams, Link } from "react-router-dom"
+import { useParams, Link, useNavigate } from "react-router-dom"
 import { GlobalStore } from "../../../App";
 import { LocationBreadcrumb, DatePicker, ReviewCard, RatingCard, ListingItemCard } from "../../../components";
 import { ListingDetailSkeleton } from "../../../components/loaders";
@@ -7,7 +7,7 @@ import { BusinessLogo } from "../../../components/BusinessLogo";
 import { 
   ChevronLeft, ChevronRight, Star, Users, MapPin, Calendar,
   DoorOpen, Zap, Gauge, Key, Camera, Music, Phone, Heart, Share2,
-  Smartphone, Sun, BatteryCharging, Shield, Clock, CheckCircle, MessageCircle
+  Smartphone, Sun, BatteryCharging, Shield, Clock, CheckCircle, MessageCircle, Edit
 } from 'lucide-react'
 import { objectifyJSON } from "../../../utils";
 import {
@@ -558,12 +558,55 @@ export default function RentalDetails() {
 
 const BookingForm = ({ listing, ...props }) => {
   const {authUser, axios, notify, commaInt, otherContext, setOtherContext} = useContext(GlobalStore);
+  const navigate = useNavigate();
   const [from, setFrom] = useState(otherContext?.rental?.from);
   const [until, setUntil] = useState(otherContext?.rental?.until);
   const [where, setLocation] = useState(otherContext?.rental?.where);
   const [needsDriver, setNeedsDriver] = useState(false);
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+
+  // Check if current user is the owner
+  const isOwner = authUser?.id && (
+    authUser.id === listing?.user_id || 
+    authUser.id === listing?.dealer_id ||
+    authUser.id === listing?.vehicle?.dealer?.user_id ||
+    authUser.id === listing?.vehicle?.dealer?.uuid
+  );
+
+  if (isOwner) {
+    return (
+      <Box {...props}>
+        <Card 
+          bg={bgColor} 
+          border="2px" 
+          borderColor="#F4A950" 
+          borderRadius="2xl" 
+          position="sticky" 
+          top="20px"
+          shadow="2xl"
+        >
+          <CardHeader p={6} pb={4}>
+             <Heading size="md" color="#F4A950">Manage Listing</Heading>
+          </CardHeader>
+
+          <CardBody p={6}>
+            <VStack spacing={4} align="stretch">
+             <Text>You are the owner of this listing.</Text>
+             <Button
+                onClick={() => navigate(`/dashboard/inventory/edit/${listing?.uuid || listing?.id}`)}
+                colorScheme="blue"
+                width="full"
+                leftIcon={<Edit size={16} />}
+             >
+                Edit Listing
+             </Button>
+            </VStack>
+          </CardBody>
+        </Card>
+      </Box>
+    )
+  }
 
   const calculateDays = () => {
     if (from && until) {

@@ -64,7 +64,7 @@ import { GlobalStore } from '../App';
 import { FcCheckmark } from 'react-icons/fc';
 import VerificationFormModal from './VerificationFormModal';
 import authService from '../services/authService';
-import { Leaf, Star } from 'lucide-react';
+import { Leaf, Star, Edit } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { ChevronLeftIcon, StarIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon, CalendarIcon, TimeIcon } from '@chakra-ui/icons';
 import { motion } from 'framer-motion';
@@ -1125,7 +1125,15 @@ export function TimePicker({ value, onChange, format = "12h", showSeconds = fals
 
 
 export const ListingItemCard = ({ listing, ...props }) => {
-    const {commaInt} = useContext(GlobalStore);
+    const {commaInt, authUser} = useContext(GlobalStore);
+    const navigate = useNavigate();
+
+    // Check if current user is the owner
+    const isOwner = authUser?.id && (
+        authUser.id === listing?.user_id || 
+        authUser.id === listing?.dealer_id ||
+        authUser.id === listing?.vehicle?.dealer?.user_id
+    );
     
     // Add defensive checks for listing and vehicle
     if (!listing) {
@@ -1281,6 +1289,38 @@ export const ListingItemCard = ({ listing, ...props }) => {
                         >
                             {vehicle?.condition || 'New'}
                         </Badge>
+
+                        {/* Edit Button for Owner */}
+                        {isOwner && (
+                            <IconButton
+                                position="absolute"
+                                top={4}
+                                right={24}
+                                zIndex={3}
+                                icon={<Edit size={16} />}
+                                size="md"
+                                bg="white"
+                                color="blue.500"
+                                borderRadius="full"
+                                boxShadow="lg"
+                                border="1px solid"
+                                borderColor="blue.200"
+                                _hover={{ 
+                                    bg: 'blue.50',
+                                    color: 'blue.600',
+                                    transform: 'scale(1.1)',
+                                    borderColor: 'blue.300'
+                                }}
+                                _active={{ transform: 'scale(0.95)' }}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    navigate(`/dashboard/inventory/edit/${listing?.uuid || listing?.id}`);
+                                }}
+                                aria-label="Edit listing"
+                                title="Edit Listing"
+                            />
+                        )}
 
                         {/* Heart Icon for Favorites */}
                         <IconButton
