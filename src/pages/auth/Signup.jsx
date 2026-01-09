@@ -979,7 +979,16 @@ const SignupStep = ({ type }) => {
       confirm_password: payload?.confirm_password, // Use API-compliant field name
       user_type: user_type || 'customer',
       provider: 'veyu',
+      action: 'create-account', // Required field per API documentation
+      // Ensure business_name is sent even if empty, to satisfy potential backend key presence requirements
+      business_name: business_name?.trim() || '',
     };
+
+    // For non-business users, we should NOT send business_name at all if it's empty
+    // This prevents backend confusion for customer accounts
+    if ((!user_type || user_type === 'customer') && !newPayload.business_name) {
+      delete newPayload.business_name;
+    }
 
     console.log('Final user_type:', newPayload.user_type);
     console.log('Original user_type:', user_type);
@@ -1128,8 +1137,75 @@ const SignupStep = ({ type }) => {
             break; // Success, exit retry loop
           } catch (registrationError) {
             console.log(`Registration attempt ${retryCount + 1} failed:`, registrationError.message);
+            
+            // Log detailed error response for debugging 500 errors
+            if (registrationError.response) {
+              console.error('🚨 Detailed Server Error Response:', {
+                status: registrationError.response.status,
+                data: registrationError.response.data,
+                headers: registrationError.response.headers
+              });
+            } else if (registrationError.data) {
+               // ApiError might have data property directly
+                console.error('🚨 ApiError Data:', registrationError.data);
+             }
 
-            // Handle specific error cases that shouldn't be retried
+             // RECOVERY STRATEGY: 
+             // If we get a 500 Internal Server Error, but the user says the account IS created in DB,
+             // it means the transaction succeeded but a post-process (like email sending) failed.
+             // We should attempt to LOGIN immediately to see if the account exists.
+             // Check for 500 status in various places (response, code, message, ApiError status)
+             const isServerError = 
+               registrationError.status === 500 || 
+               registrationError.response?.status === 500 || 
+               registrationError.code === 500 ||
+               registrationError.message?.includes('500') ||
+               registrationError.message?.includes('Internal Server Error');
+
+             console.log('Error check:', { 
+               status: registrationError.status, 
+               responseStatus: registrationError.response?.status,
+               message: registrationError.message,
+               isServerError 
+             });
+
+             if (isServerError) {
+                console.log('🔄 500 Server Error detected. Attempting auto-login recovery...');
+                
+                // Don't show failure notification yet, show checking status
+                notify({
+                  title: 'Finalizing account creation...',
+                  description: 'Verifying your account setup.',
+                  status: 'info',
+                  duration: 5000,
+                  isClosable: true
+                });
+
+                try {
+                  // Small delay to let DB settle if needed
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  
+                  console.log('🔄 Attempting recovery login for:', newPayload.email);
+                  const recoveryLoginData = await authService.login(newPayload.email, newPayload.password);
+                  
+                  if (recoveryLoginData) {
+                    console.log('✅ Auto-login recovery SUCCESSFUL! Account exists despite 500 error.');
+                    
+                    // Normalize the data structure
+                    registrationData = recoveryLoginData.data || recoveryLoginData;
+                    
+                    // Mark as created so we exit the main loop
+                    accountCreated = true;
+                    break;
+                  }
+                } catch (loginError) {
+                  console.error('❌ Auto-login recovery failed:', loginError.message);
+                  // If login also fails (e.g. 401), then the account really wasn't created properly
+                  // We'll let the original 500 error be thrown below
+                }
+             }
+  
+              // Handle specific error cases that shouldn't be retried
             if (registrationError.message?.includes('already exists') ||
               registrationError.message?.includes('duplicate')) {
               throw new Error('An account with this email already exists. Please sign in instead.');
@@ -1234,15 +1310,6 @@ const SignupStep = ({ type }) => {
           // Store the token for authenticated API calls during verification
           localStorage.setItem('veyu_access_token', token);
           localStorage.setItem('veyu_user_data', JSON.stringify(userData));
-
-          // Store auth data in the old format too for compatibility
-          localStorage.setItem('veyu-auth-user', JSON.stringify({
-            token: token,
-            email: userData.email,
-            user_type: userData.user_type,
-            email_verified: false,
-            ...userData
-          }));
 
           notify({
             title: 'Account Created Successfully!',
@@ -1548,10 +1615,11 @@ const SignupStep = ({ type }) => {
           w="full"
           colorScheme="orange"
           bg="primary"
-          rightIcon={<ArrowRight size={20} />}
+          rightIcon={!isLoading ? <ArrowRight size={20} /> : undefined}
           isLoading={isLoading}
+          isDisabled={isLoading}
           loadingText="Creating Account..."
-          _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
+          _hover={!isLoading ? { transform: 'translateY(-2px)', shadow: 'lg' } : {}}
           transition="all 0.2s"
           py={6}
         >
@@ -1635,7 +1703,13 @@ const SignupStep = ({ type }) => {
           isClosable: true,
         });
 
-        setTimeout(() => navigate(redirectPath, { replace: true }), 2000);
+        setTimeout(() => navigate(redirectPath, { 
+          replace: true,
+          state: {
+            fromEmailVerification: true,
+            userType: userData.user_type
+          }
+        }), 2000);
         return true;
       }
       
@@ -2018,8 +2092,6 @@ const SignupStep = ({ type }) => {
         ...verificationResponse
       };
 
-      localStorage.setItem('veyu-auth-user', JSON.stringify(updatedAuth));
-
       // Also update the new format if we have user data
       const existingUserData = localStorage.getItem('veyu_user_data');
       if (existingUserData) {
@@ -2115,7 +2187,13 @@ const SignupStep = ({ type }) => {
             setTimeout(() => {
               const userType = payload?.user_type || 'customer';
               const redirectPath = userType === 'customer' ? '/dashboard' : '/business-profile';
-              navigate(redirectPath, { replace: true });
+              navigate(redirectPath, { 
+                replace: true,
+                state: {
+                  fromEmailVerification: true,
+                  userType: userType
+                }
+              });
             }, 2000);
             return;
           } else {

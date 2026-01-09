@@ -82,9 +82,13 @@ const BusinessProfileGuard = ({ children }) => {
     return children;
   }
 
-  // TEMPORARILY DISABLED: Business profile completion check
-  // Always allow access - the dashboard will handle any profile requirements
-  console.log('BusinessProfileGuard: Allowing access (profile check disabled)');
+  if (completionStatus.needsCompletion) {
+    console.log('BusinessProfileGuard: Profile incomplete, but allowing access to dashboard (restricted to signup only)');
+    // We no longer redirect to /business-profile here because that page is now restricted to the signup flow only.
+    // Users should complete their profile via the dashboard settings if needed.
+    return children;
+  }
+
   return children;
 };
 

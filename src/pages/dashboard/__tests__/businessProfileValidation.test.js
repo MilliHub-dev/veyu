@@ -17,8 +17,7 @@ describe('Business Profile Validation', () => {
         email: 'dealer@test.com'
       };
       
-      // Set in both storage locations that authService checks
-      localStorage.setItem('veyu-auth-user', JSON.stringify(dealerUser));
+      // Set in storage location that authService checks
       localStorage.setItem('veyu_user_data', JSON.stringify(dealerUser));
       
       const isValid = authService.validateBusinessNameRequired();
@@ -33,8 +32,7 @@ describe('Business Profile Validation', () => {
         email: 'mechanic@test.com'
       };
       
-      // Set in both storage locations that authService checks
-      localStorage.setItem('veyu-auth-user', JSON.stringify(mechanicUser));
+      // Set in storage location that authService checks
       localStorage.setItem('veyu_user_data', JSON.stringify(mechanicUser));
       
       const isValid = authService.validateBusinessNameRequired();
@@ -49,8 +47,7 @@ describe('Business Profile Validation', () => {
         email: 'business@test.com'
       };
       
-      // Set in both storage locations that authService checks
-      localStorage.setItem('veyu-auth-user', JSON.stringify(businessUser));
+      // Set in storage location that authService checks
       localStorage.setItem('veyu_user_data', JSON.stringify(businessUser));
       
       const isValid = authService.validateBusinessNameRequired();

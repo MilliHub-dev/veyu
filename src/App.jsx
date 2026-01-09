@@ -164,7 +164,6 @@ function App() {
       const enhancedUserData = enhanceUserWithCompletionStatus(safeUserData);
 
       // Store user data in both formats for compatibility
-      localStorage.setItem("veyu-auth-user", JSON.stringify({ ...data, user: enhancedUserData }));
       localStorage.setItem("veyu_user_data", JSON.stringify(enhancedUserData));
 
       // Store tokens using TokenManager for consistency with graceful handling
@@ -387,7 +386,7 @@ function App() {
       <ErrorBoundary>
         <GlobalStore.Provider value={context}>
           <LoadScript googleMapsApiKey="AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0" libraries={['places', 'maps']}>
-            <Router>
+            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <Suspense fallback={<LoadingSpinner fullscreen message="Veyu is Loading..." />}>
                 <Routes>
                   {authUser ? (
@@ -395,7 +394,11 @@ function App() {
                       {/* Dealer Dashboard */}
                       {authUser.user_type === "dealer" ? (
                         <>
-                          <Route element={<DealerDashboardLayout />}>
+                          <Route element={
+                            <BusinessProfileGuard>
+                              <DealerDashboardLayout />
+                            </BusinessProfileGuard>
+                          }>
                             <Route path="/dashboard" element={<DealerDashboard />} />
                             <Route path="/orders" element={<OrderListAdmin />} />
                             <Route path="/inventory" element={<Outlet />}>
@@ -430,7 +433,11 @@ function App() {
                       ) : authUser.user_type === "mechanic" ? (
                         /* Mechanic Dashboard */
                         <>
-                          <Route element={<MechanicDashboardLayout />}>
+                          <Route element={
+                            <BusinessProfileGuard>
+                              <MechanicDashboardLayout />
+                            </BusinessProfileGuard>
+                          }>
                             <Route path="/dashboard" element={<MechanicDashboard />} />
                             <Route path="/bookings" element={<BookingsAdmin />} />
                             <Route path="/analytics" element={<MechanicAnalytics />} />

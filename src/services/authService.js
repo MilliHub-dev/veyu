@@ -76,8 +76,9 @@ class AuthService {
         action: 'create-account', // Required field as per API spec
       };
       
-      // TEMPORARY DEBUG: Always add business_name
-      payload.business_name = userData.business_name || 'Test Business Name';
+      if (userData.business_name) {
+        payload.business_name = userData.business_name;
+      }
 
       // Check for empty or invalid required fields
       if (!payload.password || payload.password.trim() === '') {
@@ -113,8 +114,10 @@ class AuthService {
         testPayload.phone_number = payload.phone_number;
       }
       
-      // TEMPORARY DEBUG: Always add business_name to testPayload
-      testPayload.business_name = payload.business_name || 'Test Business Name';
+      // Add business_name if it exists
+      if (payload.business_name) {
+        testPayload.business_name = payload.business_name;
+      }
       
       // Validate all required fields according to auth.md specification
       const apiRequiredFields = ['email', 'password', 'confirm_password', 'first_name', 'last_name', 'user_type', 'provider', 'action'];
@@ -768,7 +771,8 @@ class AuthService {
    * @returns {boolean} True if user is a business user with unverified email
    */
   needsBusinessProfileCompletion() {
-    return this.needsBusinessProfileSetup();
+    const user = this.getCurrentUser();
+    return needsBusinessProfileCompletion(user);
   }
 
   /**
@@ -863,7 +867,9 @@ class AuthService {
       const userType = user.user_type || 'customer';
       
       if (userType === 'dealer' || userType === 'mechanic') {
-        return this.isEmailVerified() ? '/dashboard' : '/business-profile';
+        // Business profile is now only part of the signup flow
+        // We do not redirect existing users to business-profile from login
+        return '/dashboard';
       }
       
       // Handle missing email gracefully - use fallback
@@ -976,8 +982,7 @@ class AuthService {
       };
       
       try {
-        // Update all storage locations to ensure synchronization
-        localStorage.setItem('veyu-auth-user', JSON.stringify(updatedUser));
+        // Update storage to ensure synchronization
         localStorage.setItem('veyu_user_data', JSON.stringify(updatedUser));
         
         console.log('✅ Business name updated successfully', {

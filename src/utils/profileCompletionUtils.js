@@ -175,20 +175,6 @@ export const updateBusinessProfileCompletionStatus = (isComplete) => {
     // Update both storage formats for compatibility
     localStorage.setItem('veyu_user_data', JSON.stringify(updatedUser));
 
-    // Update the old format if it exists
-    const oldAuthData = localStorage.getItem('veyu-auth-user');
-    if (oldAuthData) {
-      try {
-        const authData = JSON.parse(oldAuthData);
-        const updatedAuthData = {
-          ...authData,
-          user: updatedUser
-        };
-        localStorage.setItem('veyu-auth-user', JSON.stringify(updatedAuthData));
-      } catch (e) {
-        console.error('❌ Error updating veyu-auth-user:', e);
-      }
-    }
 
     console.log('✅ Updated business profile completion status:', isComplete);
 
@@ -272,21 +258,6 @@ export const syncProfileCompletionStatus = (apiUserData) => {
   // Update localStorage with the complete user data including email verification status
   localStorage.setItem('veyu_user_data', JSON.stringify(enhancedApiData));
 
-  // Update the old format if it exists for backward compatibility
-  const oldAuthData = localStorage.getItem('veyu-auth-user');
-  if (oldAuthData) {
-    try {
-      const authData = JSON.parse(oldAuthData);
-      const updatedAuthData = {
-        ...authData,
-        user: enhancedApiData
-      };
-      localStorage.setItem('veyu-auth-user', JSON.stringify(updatedAuthData));
-    } catch (e) {
-      console.error('Error updating veyu-auth-user during sync:', e);
-    }
-  }
-
   console.log('✅ Synchronized user data with API response', {
     userId: enhancedApiData.id,
     userType: enhancedApiData.user_type,
@@ -363,9 +334,9 @@ export const getRedirectUrl = (user, defaultUrl = '/dashboard') => {
       return defaultUrl;
     }
 
-    if (shouldRedirectToBusinessProfile(user)) {
-      return '/business-profile';
-    }
+    // Since business-profile is now restricted to signup flow only,
+    // we should not redirect users there automatically during normal navigation.
+    // If they need to edit their profile, they should do it from the dashboard settings.
     return defaultUrl;
   } catch (error) {
     console.error('❌ Error determining redirect URL:', error);
@@ -403,20 +374,6 @@ export const updateEmailVerificationStatus = (isVerified) => {
     // Update both storage formats for compatibility
     localStorage.setItem('veyu_user_data', JSON.stringify(updatedUser));
 
-    // Update the old format if it exists
-    const oldAuthData = localStorage.getItem('veyu-auth-user');
-    if (oldAuthData) {
-      try {
-        const authData = JSON.parse(oldAuthData);
-        const updatedAuthData = {
-          ...authData,
-          user: updatedUser
-        };
-        localStorage.setItem('veyu-auth-user', JSON.stringify(updatedAuthData));
-      } catch (e) {
-        console.error('❌ Error updating veyu-auth-user:', e);
-      }
-    }
 
     console.log('✅ Updated email verification status:', isVerified);
 

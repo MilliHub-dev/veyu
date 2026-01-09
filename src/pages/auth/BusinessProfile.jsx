@@ -47,7 +47,7 @@ import { useContext, useRef, useState, useEffect } from "react";
 import { GlobalStore } from "../../App";
 import { SignupContext } from "./Signup";
 import { motion } from 'framer-motion';
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 
 import authService from "../../services/authService";
 import dealershipService from "../../services/dealershipService";
@@ -71,6 +71,7 @@ function BusinessProfile({ onSubmit, ...props }) {
   const [isVerifying, setIsVerifying] = useState(false);
   const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Handle logout with confirmation
   const handleLogout = () => {
@@ -186,7 +187,6 @@ function BusinessProfile({ onSubmit, ...props }) {
           if (user && !user.business_name) {
             const updatedUser = { ...user, business_name: profileData.business_name };
             localStorage.setItem('veyu_user_data', JSON.stringify(updatedUser));
-            localStorage.setItem('veyu-auth-user', JSON.stringify(updatedUser));
             console.log('✅ Updated localStorage with business name from API');
           }
         }
@@ -332,6 +332,27 @@ function BusinessProfile({ onSubmit, ...props }) {
   useEffect(() => {
     const initializeBusinessProfile = async () => {
       try {
+        // Verify user is in signup flow
+        const fromRegistration = location.state?.fromRegistration;
+        const fromEmailVerification = location.state?.fromEmailVerification;
+        const hasSignupPayload = !!payload;
+        
+        if (!fromRegistration && !fromEmailVerification && !hasSignupPayload) {
+          console.warn('Access denied: Business profile is only accessible during signup flow');
+          toast({
+            title: 'Access Denied',
+            description: 'Business profile setup is only available during the signup process.',
+            status: 'warning',
+            duration: 5000,
+            isClosable: true,
+          });
+          navigate('/signup', { 
+            replace: true,
+            state: { message: 'Please complete the signup process to set up your business profile.' } 
+          });
+          return;
+        }
+
         // Basic authentication check - just verify token exists
         const isAuthenticated = await ensureAuthentication();
         if (!isAuthenticated) {
@@ -689,7 +710,7 @@ function BusinessProfile({ onSubmit, ...props }) {
       }
       
       // Get current user data - authentication already verified above
-      const authUser = JSON.parse(localStorage.getItem('veyu-auth-user'));
+      const authUser = JSON.parse(localStorage.getItem('veyu_user_data'));
       if (!authUser) {
         console.error('No user data found during profile setup');
         // Re-check authentication if user data is missing
@@ -699,7 +720,7 @@ function BusinessProfile({ onSubmit, ...props }) {
         }
         
         // Try to get user data again after authentication check
-        const refreshedAuthUser = JSON.parse(localStorage.getItem('veyu-auth-user'));
+        const refreshedAuthUser = JSON.parse(localStorage.getItem('veyu_user_data'));
         if (!refreshedAuthUser) {
           toast({
             title: 'Authentication Error',
@@ -895,19 +916,9 @@ function BusinessProfile({ onSubmit, ...props }) {
           is_verified: true, // Alternative verification field
         };
         
-        // Update both storage locations FIRST before calling onAuthenticated
-        // veyu_user_data stores just the user object
+        // Update storage with verified status
         localStorage.setItem('veyu_user_data', JSON.stringify(verifiedUser));
         
-        // veyu-auth-user stores the full auth structure with user nested inside
-        const authData = {
-          user: verifiedUser,
-          tokens: {
-            access: authService.getAccessToken(),
-            refresh: TokenManager.getRefreshToken()
-          }
-        };
-        localStorage.setItem('veyu-auth-user', JSON.stringify(authData));
         console.log('✅ Updated user data in localStorage with email verification status');
         
         // Update business profile completion status using authService

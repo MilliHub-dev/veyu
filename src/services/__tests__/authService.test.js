@@ -535,11 +535,6 @@ describe('AuthService - Business Profile Completion Status', () => {
         
         expect(result).toBe(true);
         // Verify that setItem was called twice (for both storage keys)
-        expect(localStorageMock.setItem).toHaveBeenCalledTimes(2);
-        expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          'veyu-auth-user',
-          expect.stringContaining('"business_name":"New Business"')
-        );
         expect(localStorageMock.setItem).toHaveBeenCalledWith(
           'veyu_user_data',
           expect.stringContaining('"business_name":"New Business"')
@@ -558,7 +553,7 @@ describe('AuthService - Business Profile Completion Status', () => {
         
         expect(result).toBe(true);
         expect(localStorageMock.setItem).toHaveBeenCalledWith(
-          'veyu-auth-user',
+          'veyu_user_data',
           expect.stringContaining('"business_name":"New Business"')
         );
       });
