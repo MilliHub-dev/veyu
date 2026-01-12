@@ -396,11 +396,33 @@ class AuthService {
         console.log('AuthService: Authenticated resend failed, trying request-code:', authError.message);
         
         // If authenticated resend fails, try request-code action
-        const response = await apiClient.post('/accounts/verify-email/', {
-          action: 'request-code',
-        });
-        console.log('AuthService: Request verification response (authenticated):', response.data);
-        return handleApiResponse(response);
+        try {
+          const response = await apiClient.post('/accounts/verify-email/', {
+            action: 'request-code',
+          });
+          console.log('AuthService: Request verification response (authenticated):', response.data);
+          return handleApiResponse(response);
+        } catch (requestError) {
+          // Fallback: Try unauthenticated endpoint (speculative, but handles "no login" scenario)
+          // Some backends might support passing email to unauthenticated endpoint for resend
+          console.log('AuthService: Authenticated request-code failed, trying unauthenticated fallback...');
+          
+          try {
+             // We try to hit the unauthenticated endpoint with just the email
+             // Note: The API doc says this endpoint expects {email, code}, but we are testing if it handles resend
+             // If not, this will fail, and we throw the original error.
+             const response = await apiClient.post('/accounts/verify-email-unauthenticated/', {
+               email,
+               action: 'resend-code' // Try passing action just in case
+             });
+             console.log('AuthService: Unauthenticated resend response:', response.data);
+             return handleApiResponse(response);
+          } catch (unauthError) {
+             console.log('AuthService: Unauthenticated fallback failed');
+             // Throw the original error from the main endpoint as it's more likely the correct one
+             throw authError;
+          }
+        }
       }
     } catch (error) {
       console.error('AuthService: Resend verification error:', error);

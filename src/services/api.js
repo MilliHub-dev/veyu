@@ -121,6 +121,7 @@ apiClient.interceptors.request.use(
       '/accounts/password/reset/',
       '/accounts/password/reset/validate/',
       '/accounts/password/reset/confirm/',
+      '/accounts/verify-email-unauthenticated/',
       '/token/',
       '/token/refresh/',
       '/token/verify/'

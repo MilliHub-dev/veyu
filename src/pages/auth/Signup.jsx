@@ -49,6 +49,7 @@ import { CenteredLayout, OTPField } from "../../components";
 import { redirect, useNavigate, useSearchParams, useParams, Link as RLink } from "react-router-dom";
 import { RiCircleFill, RiCircleLine, RiMailCloseFill, RiMailFill, RiMessage2Line, RiMessage3Line, RiMessageLine } from "react-icons/ri";
 import authService from '../../services/authService';
+import { TokenManager } from '../../services/api';
 import { FcSms, FcVoicemail } from "react-icons/fc";
 import { FaGoogle, FaFacebook, FaArrowRight, FaEye, FaEyeSlash } from "react-icons/fa";
 import { RxChatBubble, RxEnvelopeOpen } from "react-icons/rx";
@@ -1057,11 +1058,11 @@ const SignupStep = ({ type }) => {
     console.log('Final signup payload (after cleanup):', JSON.stringify(newPayload, null, 2));
 
     // Basic validation
-    if (!first_name || !last_name) {
+    if (!first_name || !last_name || !phone_number) {
       setIsLoading(false);
       return notify({
-        title: 'Error',
-        description: 'Please fill in all required fields',
+        title: 'Missing Information',
+        description: 'Please fill in all required fields, including your phone number.',
         status: 'error',
         duration: 5000,
         isClosable: true
@@ -1483,7 +1484,7 @@ const SignupStep = ({ type }) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} method="post">
+    <form onSubmit={handleSubmit} method="post" noValidate>
       <VStack spacing={6}>
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="full">
           <FormControl isRequired>
@@ -1658,108 +1659,69 @@ const SignupStep = ({ type }) => {
   // Check if user is already verified
   const checkVerificationStatus = async (token) => {
     try {
-      console.log('Checking verification status with token:', token ? 'present' : 'missing');
-      
-      if (!token) {
-        console.log('No token available, skipping verification status check');
-        return false;
-      }
+      if (!token) return false;
 
       const userData = await authService.getProfile();
-      console.log('Profile data received:', { email_verified: userData?.email_verified, user_type: userData?.user_type });
-
+      
       if (userData?.email_verified) {
-        console.log('Email already verified, setting verified state');
         setIsEmailVerified(true);
-        
-        // Check business profile completion status for business users
-        let redirectPath;
-        if (userData.user_type === 'customer') {
-          redirectPath = '/login';
-        } else if (userData.user_type === 'mechanic' || userData.user_type === 'dealer') {
-          // For business users, check if business profile is complete
-          const completionStatus = authService.getBusinessProfileCompletionStatus();
-          
-          if (completionStatus.needsCompletion) {
-            // Business profile is incomplete, redirect to business profile setup
-            redirectPath = '/business-profile';
-          } else {
-            // Business profile is complete, redirect to dashboard
-            redirectPath = '/dashboard';
-          }
-        } else {
-          redirectPath = '/dashboard';
-        }
-
-        notify({
-          title: 'Email Already Verified',
-          description: redirectPath === '/business-profile'
-            ? 'Your email is already verified. Let\'s complete your business profile...'
-            : redirectPath === '/login' 
-              ? 'Your email is already verified. Please log in...'
-              : 'Your email is already verified. Redirecting to your dashboard...',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
-        });
-
-        setTimeout(() => navigate(redirectPath, { 
-          replace: true,
-          state: {
-            fromEmailVerification: true,
-            userType: userData.user_type
-          }
-        }), 2000);
         return true;
       }
       
-      console.log('Email not yet verified, proceeding with verification flow');
       return false;
     } catch (error) {
-      console.error('Error checking verification status:', error);
-      
-      // Handle specific errors
-      if (error.response?.status === 401) {
-        console.log('Token invalid/expired, proceeding with verification flow');
-        // Token is invalid, but that's okay - we'll proceed with email verification
-        return false;
-      } else if (error.response?.status === 404) {
-        console.log('Profile not found, proceeding with verification flow');
-        return false;
-      } else if (error.message?.includes('timeout') || error.message?.includes('Network')) {
-        console.log('Network error checking status, proceeding with verification flow');
-        // Network issues, but don't block the verification flow
-        return false;
-      }
-      
-      // For other errors, log but don't block the flow
-      console.log('Other error checking verification status, proceeding anyway:', error.message);
+      // Silently fail for polling
       return false;
     }
   };
 
+  // Poll for verification status
+  useEffect(() => {
+    if (isEmailVerified) return;
+
+    const pollInterval = setInterval(() => {
+      const token = TokenManager.getAccessToken();
+      if (token) {
+        checkVerificationStatus(token);
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [isEmailVerified]);
+
   useEffect(() => {
     const initializeVerification = async () => {
       try {
-        const authData = localStorage.getItem('veyu-auth-user');
-        let auth = {};
+        // Try to get user data from both storage locations
+        const userDataStr = localStorage.getItem('veyu_user_data');
+        const authDataStr = localStorage.getItem('veyu-auth-user');
         
-        // Safely parse auth data
-        if (authData) {
+        let user = {};
+        
+        // Try parsing veyu_user_data first (newer standard)
+        if (userDataStr) {
           try {
-            auth = JSON.parse(authData);
+            user = JSON.parse(userDataStr);
           } catch (error) {
-            console.error('Failed to parse auth data:', error);
-            auth = {};
+            console.error('Failed to parse veyu_user_data:', error);
+          }
+        } 
+        // Fallback to veyu-auth-user
+        else if (authDataStr) {
+          try {
+            user = JSON.parse(authDataStr);
+          } catch (error) {
+            console.error('Failed to parse veyu-auth-user:', error);
           }
         }
         
-        const token = auth?.token || auth?.api_token;
+        // Get token using TokenManager which checks multiple locations
+        const token = TokenManager.getAccessToken();
 
-        // Set email from auth or payload with validation
+        // Set email from user data or payload with validation
         let emailToUse = '';
-        if (auth?.email) {
-          emailToUse = auth.email;
+        if (user.email) {
+          emailToUse = user.email;
         } else if (payload?.email) {
           emailToUse = payload.email;
         }
@@ -1797,26 +1759,21 @@ const SignupStep = ({ type }) => {
 
         // Check if already verified (only if we have a token)
         if (token) {
-          console.log('Token found, checking verification status...');
           const isVerified = await checkVerificationStatus(token);
+          
+          // Only send email if not already verified
           if (!isVerified) {
-            // Don't automatically request code - it was already sent during signup
-            console.log('Not verified, but verification code was already sent during signup');
-            notify({
-              title: 'Check Your Email',
-              description: `A verification code was sent to ${emailToUse} during signup. Please check your inbox.`,
-              status: 'info',
-              duration: 5000,
-              isClosable: true,
-            });
+            console.log('Triggering verification email send...');
+            await requestCode(true);
           }
         } else {
-          // If no token, don't request code - it was already sent during signup
-          console.log('No token found, but verification code was already sent during signup');
+          // If no token, we can't check status or easily resend without login.
+          // This is a problem. But if we just signed up, we SHOULD have a token.
+          console.warn('No token found in ConfirmationStep after signup. This is unexpected.');
           notify({
-            title: 'Check Your Email',
-            description: `A verification code was sent to ${emailToUse} during signup. Please check your inbox and spam folder.`,
-            status: 'info',
+            title: 'Session Warning',
+            description: 'We could not verify your session. You may need to log in to verify your email.',
+            status: 'warning',
             duration: 5000,
             isClosable: true,
           });
@@ -1849,20 +1806,8 @@ const SignupStep = ({ type }) => {
 
     setIsResending(true);
     try {
-      const authData = localStorage.getItem('veyu-auth-user');
-      let auth = {};
-      
-      // Safely parse auth data
-      if (authData) {
-        try {
-          auth = JSON.parse(authData);
-        } catch (error) {
-          console.error('Failed to parse auth data in requestCode:', error);
-          auth = {};
-        }
-      }
-      
-      const token = auth?.token || auth?.api_token;
+      // Get token using TokenManager
+      const token = TokenManager.getAccessToken();
       const emailToVerify = email || payload?.email;
 
       // Enhanced validation
@@ -1878,70 +1823,23 @@ const SignupStep = ({ type }) => {
 
       console.log('Requesting verification code for:', emailToVerify, 'isResend:', isResend);
 
-      // Start the countdown timer only after successful request
+      // Start the countdown timer
       let time = 60;
 
-      // Handle initial vs resend requests differently
-      let response;
+      // Always call the API to send the code
+      // The user complained that we didn't trigger verify email.
+      // So we will always trigger it here.
       
-      if (!isResend) {
-        // For initial request, verification code was already sent during signup
-        console.log('Initial verification code was already sent during signup, no need to request again');
-        
-        notify({
-          title: 'Verification Code Ready',
-          description: `A verification code was sent to ${emailToVerify} during signup. Please check your inbox and spam folder.`,
-          status: 'info',
-          duration: 5000,
-          isClosable: true,
-        });
-        
-        // Start timer without making API call
-        setCodeTimer(time);
-
-        if (timer.current) {
-          clearInterval(timer.current);
-        }
-
-        timer.current = setInterval(() => {
-          setCodeTimer(prevTime => {
-            const newTime = prevTime - 1;
-            if (newTime <= 0) {
-              clearInterval(timer.current);
-              return 0;
-            }
-            return newTime;
-          });
-        }, 1000);
-        
-        return; // Exit early, no API call needed for initial load
-      }
-      
-      // For resend requests, we need authentication
       try {
-        if (!token) {
-          throw new Error('Authentication required to resend verification codes. Please sign in to your account and try again.');
-        }
+        // We no longer strictly check for token here to allow for potential unauthenticated resend fallback
+        // if (!token) {
+        //    console.warn('No token available for resendEmailVerification');
+        //    throw new Error('Authentication required to send verification codes. Please sign in.');
+        // }
         
-        response = await authService.resendEmailVerification(emailToVerify);
-
-        // Only start timer after successful API call
-        setCodeTimer(time);
-
-        if (timer.current) {
-          clearInterval(timer.current);
-        }
-
-        timer.current = setInterval(() => {
-          setCodeTimer(prevTime => {
-            const newTime = prevTime - 1;
-            if (newTime <= 0) {
-              clearInterval(timer.current);
-              return 0;
-            }
-            return newTime;
-          });
-        }, 1000);
+        // Call the API
+        const response = await authService.resendEmailVerification(emailToVerify);
+        console.log('Verification code request successful:', response);
 
         notify({
           title: 'Verification Code Sent!',
@@ -1951,7 +1849,24 @@ const SignupStep = ({ type }) => {
           isClosable: true,
         });
 
-        console.log('Verification code request successful:', response);
+        // Start timer after successful API call
+        setCodeTimer(time);
+
+        if (timer.current) {
+          clearInterval(timer.current);
+        }
+
+        timer.current = setInterval(() => {
+          setCodeTimer(prevTime => {
+            const newTime = prevTime - 1;
+            if (newTime <= 0) {
+              clearInterval(timer.current);
+              return 0;
+            }
+            return newTime;
+          });
+        }, 1000);
+
 
       } catch (apiError) {
         console.error('API error requesting verification code:', apiError);
@@ -2052,20 +1967,8 @@ const SignupStep = ({ type }) => {
 
     setIsVerifying(true);
     try {
-      const authData = localStorage.getItem('veyu-auth-user');
-      let auth = {};
-      
-      // Safely parse auth data
-      if (authData) {
-        try {
-          auth = JSON.parse(authData);
-        } catch (error) {
-          console.error('Failed to parse auth data in verifyCode:', error);
-          auth = {};
-        }
-      }
-      
-      const token = auth?.token || auth?.api_token;
+      // Get token using TokenManager
+      const token = TokenManager.getAccessToken();
       const emailToVerify = email || payload?.email;
 
       // Enhanced email validation
@@ -2086,11 +1989,25 @@ const SignupStep = ({ type }) => {
       console.log('Email verification successful:', verificationResponse);
 
       // Update local storage with verified status
+      // We need to fetch the current stored user data first
+      let auth = {};
+      const authData = localStorage.getItem('veyu-auth-user');
+      if (authData) {
+        try {
+          auth = JSON.parse(authData);
+        } catch (e) { console.error('Error parsing auth data', e); }
+      }
+
       const updatedAuth = {
         ...auth,
         email_verified: true,
         ...verificationResponse
       };
+
+      // Update legacy auth storage if it exists
+      if (authData) {
+         localStorage.setItem('veyu-auth-user', JSON.stringify(updatedAuth));
+      }
 
       // Also update the new format if we have user data
       const existingUserData = localStorage.getItem('veyu_user_data');
@@ -2259,9 +2176,24 @@ const SignupStep = ({ type }) => {
             Email Verified!
           </Heading>
           <Text fontSize="md" color="gray.600" maxW="400px" lineHeight="tall">
-            Your email has been successfully verified. Redirecting you now...
+            Your email has been successfully verified. You can now log in.
           </Text>
         </VStack>
+        <Button
+          size="lg"
+          w="full"
+          colorScheme="orange"
+          bg="primary"
+          onClick={() => {
+            authService.logout();
+            navigate('/login');
+          }}
+          _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
+          transition="all 0.2s"
+          py={6}
+        >
+          Go to Login
+        </Button>
       </VStack>
     );
   }
@@ -2294,44 +2226,27 @@ const SignupStep = ({ type }) => {
           Verify Your Email
         </Heading>
         <Text fontSize="md" color="gray.600" maxW="400px" lineHeight="tall">
-          We've sent a 6-digit verification code to
+          We've sent a verification link to
         </Text>
         <Text fontSize="md" fontWeight="semibold" color="primary">
           {email || payload?.email}
         </Text>
+        <Text fontSize="sm" color="gray.500">
+          Please check your email and click the link to verify your account.
+        </Text>
       </VStack>
 
-      {/* OTP Input Section */}
-      <Box w="full" py={2}>
-        <OTPField value={otp} onChange={val => setOTP(val)} />
-      </Box>
-
-      {/* Verify Button */}
-      <Button
-        onClick={verifyCode}
-        isDisabled={!otp || otp.length < 6}
-        isLoading={isVerifying}
-        loadingText="Verifying..."
-        size="lg"
-        w="full"
-        colorScheme="orange"
-        bg="primary"
-        rightIcon={<CheckCircle size={20} />}
-        _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
-        _disabled={{
-          bg: 'gray.300',
-          cursor: 'not-allowed',
-          transform: 'none'
-        }}
-        transition="all 0.2s"
-        py={6}
-      >
-        Verify Email
-      </Button>
+      {/* Loading Indicator */}
+      <VStack spacing={4} w="full" py={8}>
+        <Progress size="xs" isIndeterminate w="full" colorScheme="orange" borderRadius="full" />
+        <Text fontSize="sm" fontWeight="medium" color="gray.500" fontStyle="italic">
+          Waiting for verification...
+        </Text>
+      </VStack>
 
       {/* Resend Section */}
       <HStack spacing={1} fontSize="sm" color="gray.600">
-        <Text>Didn't receive the code?</Text>
+        <Text>Didn't receive the email?</Text>
         <Button
           variant="link"
           colorScheme="orange"
@@ -2345,7 +2260,7 @@ const SignupStep = ({ type }) => {
             cursor: 'not-allowed'
           }}
         >
-          {timeout > 0 ? `Resend in ${timeout}s` : 'Resend code'}
+          {timeout > 0 ? `Resend in ${timeout}s` : 'Resend email'}
         </Button>
       </HStack>
 
