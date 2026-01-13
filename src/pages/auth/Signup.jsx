@@ -43,7 +43,7 @@ import {
   useSteps
 } from "@chakra-ui/react";
 import { useContext, useRef, useState, createContext, useEffect } from "react";
-import { GlobalStore } from "../../App";
+import { GlobalStore } from "../../contexts/GlobalStore";
 import { motion } from 'framer-motion';
 import { CenteredLayout, OTPField } from "../../components";
 import { redirect, useNavigate, useSearchParams, useParams, Link as RLink } from "react-router-dom";
@@ -985,6 +985,14 @@ const SignupStep = ({ type }) => {
       business_name: business_name?.trim() || '',
     };
 
+    // If business account and no business name provided, use a default temporary name
+    if ((user_type === 'dealer' || user_type === 'mechanic') && !newPayload.business_name) {
+      // Use user's name as default business name
+      const defaultName = `${first_name} ${last_name}`.trim() || 'Business Account';
+      newPayload.business_name = defaultName;
+      console.log('Injecting temporary business name:', newPayload.business_name);
+    }
+
     // For non-business users, we should NOT send business_name at all if it's empty
     // This prevents backend confusion for customer accounts
     if ((!user_type || user_type === 'customer') && !newPayload.business_name) {
@@ -1070,6 +1078,7 @@ const SignupStep = ({ type }) => {
     }
 
     // Validate business name for business accounts
+    /*
     if ((user_type === 'dealer' || user_type === 'mechanic') && (!business_name || !business_name.trim())) {
       setIsLoading(false);
       return notify({
@@ -1080,6 +1089,7 @@ const SignupStep = ({ type }) => {
         isClosable: true
       });
     }
+    */
 
     try {
       addToPayload({ ...newPayload });
@@ -1249,6 +1259,11 @@ const SignupStep = ({ type }) => {
           user_type: newPayload.user_type,
           ...registrationData
         };
+business_name
+        // Ensure business_name is preserved from form data if missing/empty in API response
+        if (newPayload.business_name && !userData.business_name) {
+          userData.business_name = newPayload.business_name;
+        }
 
         // Check if we have a token and if email is already verified
         const token = registrationData?.token || registrationData?.access_token || registrationData?.api_token;
@@ -1546,8 +1561,8 @@ const SignupStep = ({ type }) => {
           </FormControl>
         </SimpleGrid>
 
-        {/* Business Name field - only for business accounts */}
-        {(user_type === 'dealer' || user_type === 'mechanic') && (
+        {/* Business Name field - only for business accounts - COMMENTED OUT AS REQUESTED */}
+        {/* {(user_type === 'dealer' || user_type === 'mechanic') && (
           <FormControl isRequired>
             <FormLabel color="gray.700" fontWeight="semibold">
               Business Name
@@ -1579,7 +1594,7 @@ const SignupStep = ({ type }) => {
               Enter your official business name as registered
             </Text>
           </FormControl>
-        )}
+        )} */}
 
         <FormControl isRequired>
           <FormLabel color="gray.700" fontWeight="semibold">
@@ -1652,6 +1667,7 @@ const SignupStep = ({ type }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [email, setEmail] = useState('');
+  const [userType, setUserType] = useState('customer'); // Default to customer
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const timer = useRef();
   const navigate = useNavigate();
@@ -1663,10 +1679,16 @@ const SignupStep = ({ type }) => {
 
       const userData = await authService.getProfile();
       
-      if (userData?.email_verified) {
-        setIsEmailVerified(true);
-        return true;
-      }
+        if (userData?.email_verified) {
+          console.log('Email already verified, updating auth state');
+          // Update global auth state to ensure protected routes work (Business users only)
+          if (['dealer', 'mechanic'].includes(userData.user_type)) {
+            onAuthenticated(userData);
+            setUserType(userData.user_type);
+          }
+          setIsEmailVerified(true);
+          return true;
+        }
       
       return false;
     } catch (error) {
@@ -1724,6 +1746,13 @@ const SignupStep = ({ type }) => {
           emailToUse = user.email;
         } else if (payload?.email) {
           emailToUse = payload.email;
+        }
+        
+        // Set user type
+        if (user.user_type) {
+          setUserType(user.user_type);
+        } else if (payload?.user_type) {
+          setUserType(payload.user_type);
         }
 
         if (!emailToUse) {
@@ -1988,6 +2017,21 @@ const SignupStep = ({ type }) => {
 
       console.log('Email verification successful:', verificationResponse);
 
+      // Fetch fresh profile to ensure global state is synced
+      try {
+        const freshProfile = await authService.getProfile();
+        if (freshProfile) {
+          console.log('Updating global auth state with verified profile');
+          // Only auto-login business users to continue flow
+          if (['dealer', 'mechanic'].includes(freshProfile.user_type)) {
+            onAuthenticated(freshProfile);
+            setUserType(freshProfile.user_type);
+          }
+        }
+      } catch (profileError) {
+        console.error('Failed to sync profile after verification:', profileError);
+      }
+
       // Update local storage with verified status
       // We need to fetch the current stored user data first
       let auth = {};
@@ -2046,7 +2090,8 @@ const SignupStep = ({ type }) => {
           notificationMessage = 'Your email is verified. Let\'s set up your business profile...';
         } else {
           // Business profile is complete (rare case here), redirect to login
-          authService.logout();
+          // Do NOT logout here for business users to ensure smooth flow
+          // authService.logout(); 
           redirectPath = '/login';
           notificationMessage = 'Your account is verified. Please log in to continue.';
         }
@@ -2070,16 +2115,8 @@ const SignupStep = ({ type }) => {
 
       console.log('Email verified, redirecting to:', redirectPath, 'for user type:', userType);
 
-      setTimeout(() => {
-        navigate(redirectPath, {
-          replace: true,
-          state: {
-            fromEmailVerification: true,
-            userType: userType
-          }
-        });
-      }, 2000);
-
+      // Removed auto-redirect timeout from verifyCode as it is now handled by the useEffect hook
+      // This prevents conflicting redirects and potential logout issues
     } catch (error) {
       console.error('Email verification error:', error);
       
@@ -2155,6 +2192,41 @@ const SignupStep = ({ type }) => {
     }
   }
 
+  // Automatic redirect for business users after verification
+  useEffect(() => {
+    if (isEmailVerified && ['mechanic', 'dealer'].includes(userType)) {
+      const timeout = setTimeout(async () => {
+        // Authenticate the user to switch to protected routes
+        try {
+          const freshProfile = await authService.getProfile();
+          if (freshProfile) {
+            console.log('Delayed authentication for business user redirect');
+            
+            // Preserve business_name from payload if missing in freshProfile
+            if (payload?.business_name && !freshProfile.business_name) {
+              console.log('Preserving business_name from payload:', payload.business_name);
+              freshProfile.business_name = payload.business_name;
+            }
+
+            // Update the global auth state first
+            await onAuthenticated(freshProfile);
+            
+            // Short delay to ensure state propagates before navigation
+            // This prevents race condition where router sees unauthenticated state
+            setTimeout(() => {
+               navigate('/business-profile', { state: { fromEmailVerification: true } });
+            }, 100);
+          }
+        } catch (error) {
+          console.error('Failed to authenticate during redirect:', error);
+          // Fallback to login if something goes wrong
+          navigate('/login');
+        }
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [isEmailVerified, userType, navigate, onAuthenticated, payload]);
+
   if (isEmailVerified) {
     return (
       <VStack spacing={8} textAlign="center" py={4}>
@@ -2176,7 +2248,9 @@ const SignupStep = ({ type }) => {
             Email Verified!
           </Heading>
           <Text fontSize="md" color="gray.600" maxW="400px" lineHeight="tall">
-            Your email has been successfully verified. You can now log in.
+            {['mechanic', 'dealer'].includes(userType) 
+              ? 'Your email has been successfully verified. Redirecting to profile setup...' 
+              : 'Your email has been successfully verified. You can now log in.'}
           </Text>
         </VStack>
         <Button
@@ -2184,15 +2258,38 @@ const SignupStep = ({ type }) => {
           w="full"
           colorScheme="orange"
           bg="primary"
-          onClick={() => {
-            authService.logout();
-            navigate('/login');
+          // For business users, proceed to profile setup without logging out
+          onClick={async () => {
+            if (['mechanic', 'dealer'].includes(userType)) {
+              // Ensure we are authenticated before navigating manually
+              try {
+                const freshProfile = await authService.getProfile();
+                if (freshProfile) {
+                  // Preserve business_name from payload if missing in freshProfile
+                  if (payload?.business_name && !freshProfile.business_name) {
+                    console.log('Preserving business_name from payload (manual click):', payload.business_name);
+                    freshProfile.business_name = payload.business_name;
+                  }
+                  
+                  await onAuthenticated(freshProfile);
+                  setTimeout(() => {
+                    navigate('/business-profile', { state: { fromEmailVerification: true } });
+                  }, 100);
+                }
+              } catch (e) {
+                console.error('Error in manual business redirect:', e);
+              }
+            } else {
+              // For customers, logout and go to login
+              authService.logout();
+              navigate('/login');
+            }
           }}
           _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
           transition="all 0.2s"
           py={6}
         >
-          Go to Login
+          {['mechanic', 'dealer'].includes(userType) ? 'Complete Business Profile' : 'Go to Login'}
         </Button>
       </VStack>
     );

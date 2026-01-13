@@ -252,8 +252,36 @@ export const enhanceUserWithCompletionStatus = (user) => {
 export const syncProfileCompletionStatus = (apiUserData) => {
   if (!apiUserData) return null;
 
+  // Retrieve existing user data from localStorage to preserve fields like business_name
+  let existingUser = {};
+  try {
+    const existingData = localStorage.getItem('veyu_user_data');
+    if (existingData) {
+      existingUser = JSON.parse(existingData);
+    }
+  } catch (e) {
+    console.error('Error reading existing user data for sync', e);
+  }
+
   // Ensure the API data has the completion status field and email verification status
   const enhancedApiData = enhanceUserWithCompletionStatus(apiUserData);
+
+  // Preserve business_name if missing in API response but present in localStorage
+  if (!enhancedApiData.business_name && existingUser.business_name) {
+    console.log('Preserving business_name from localStorage during sync');
+    enhancedApiData.business_name = existingUser.business_name;
+    
+    // Re-evaluate completion status since it depends on business_name
+    // We need to manually update business_profile_completed if we added business_name
+    if (enhancedApiData.user_type === 'dealer' || enhancedApiData.user_type === 'mechanic') {
+        const hasBusinessName = true;
+        const hasContactInfo = (enhancedApiData.business_address && enhancedApiData.business_address.trim() !== '') ||
+          (enhancedApiData.business_phone && enhancedApiData.business_phone.trim() !== '') ||
+          (enhancedApiData.business_email && enhancedApiData.business_email.trim() !== '');
+        
+        enhancedApiData.business_profile_completed = hasBusinessName && hasContactInfo;
+    }
+  }
 
   // Update localStorage with the complete user data including email verification status
   localStorage.setItem('veyu_user_data', JSON.stringify(enhancedApiData));

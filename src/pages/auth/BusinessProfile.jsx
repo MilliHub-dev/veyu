@@ -44,7 +44,7 @@ import {
   PinInputField
 } from "@chakra-ui/react";
 import { useContext, useRef, useState, useEffect } from "react";
-import { GlobalStore } from "../../App";
+import { GlobalStore } from "../../contexts/GlobalStore";
 import { SignupContext } from "./Signup";
 import { motion } from 'framer-motion';
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
@@ -60,7 +60,7 @@ const MotionCard = motion(Box);
 
 function BusinessProfile({ onSubmit, ...props }) {
   const { payload } = useContext(SignupContext);
-  const { onAuthenticated, axios, logout, notify } = useContext(GlobalStore);
+  const { onAuthenticated, axios, notify } = useContext(GlobalStore);
   const [logoPreview, setLogoPreview] = useState('');
   const [params] = useSearchParams();
   const user_type = params.get('user_type') || 'dealer';
@@ -74,13 +74,14 @@ function BusinessProfile({ onSubmit, ...props }) {
   const location = useLocation();
 
   // Handle logout with confirmation
-  const handleLogout = () => {
+  const handleLogout = async () => {
     const confirmLogout = window.confirm(
       'Are you sure you want to logout? Any unsaved changes to your business profile will be lost.'
     );
     
     if (confirmLogout) {
-      logout();
+      await authService.logout();
+      window.location.href = '/login';
     }
   };
   
@@ -169,6 +170,9 @@ function BusinessProfile({ onSubmit, ...props }) {
           hasServices: !!profileData.services?.length
         });
         
+        // Add debug log to verify business_name from API
+        console.log('DEBUG: Business name from API:', profileData.business_name);
+        
         // Update the business profile state with fetched data
         setBusinessProfile(prev => ({
           ...prev,
@@ -204,7 +208,8 @@ function BusinessProfile({ onSubmit, ...props }) {
   const checkAndPromptForBusinessName = () => {
     try {
       const user = authService.getCurrentUser();
-      const businessName = authService.getBusinessName();
+      // Check directly on user object or business profile state
+      const businessName = user?.business_name || businessProfile.business_name;
       
       if (!businessName) {
         const userType = user?.user_type || 'business';
@@ -337,6 +342,9 @@ function BusinessProfile({ onSubmit, ...props }) {
         const fromEmailVerification = location.state?.fromEmailVerification;
         const hasSignupPayload = !!payload;
         
+        // RELAXED CHECK: Allow access if the user is authenticated, even if not directly from registration flow
+        // This supports users logging in with incomplete profiles
+        /* 
         if (!fromRegistration && !fromEmailVerification && !hasSignupPayload) {
           console.warn('Access denied: Business profile is only accessible during signup flow');
           toast({
@@ -352,6 +360,7 @@ function BusinessProfile({ onSubmit, ...props }) {
           });
           return;
         }
+        */
 
         // Basic authentication check - just verify token exists
         const isAuthenticated = await ensureAuthentication();
@@ -744,10 +753,10 @@ function BusinessProfile({ onSubmit, ...props }) {
       let profileData;
       let headers = {};
       
-      // Always use JSON format for now to avoid FormData issues with arrays
-      // Get business name from user data or fetched profile data
+      // Get business name from state (editable field) or fallback to user data
       const currentUser = authService.getCurrentUser();
-      const businessName = currentUser?.business_name || businessProfile.business_name;
+      // PRIORITY: businessProfile.business_name (from input) -> currentUser.business_name -> null
+      const businessName = businessProfile.business_name || currentUser?.business_name;
       
       // Determine core service flags based on selected services
       // This matches the API's expected format with boolean flags
@@ -765,25 +774,53 @@ function BusinessProfile({ onSubmit, ...props }) {
           ['Trade-In Services', 'Trade In', 'Vehicle Trade-In'].includes(s)
         )
       };
-      
-      profileData = {
-        business_name: businessName,
-        headline: businessProfile.headline,
-        about: businessProfile.about || '',
-        contact_phone: businessProfile.contact_phone,
-        contact_email: businessProfile.contact_email,
-        services: businessProfile.services,
-        // Add core service boolean flags required by API
-        offers_purchase: coreServices.offers_purchase,
-        offers_rental: coreServices.offers_rental,
-        offers_drivers: coreServices.offers_drivers,
-        offers_trade_in: coreServices.offers_trade_in,
-        // Location will be set from settings page later
-      };
-      
-      // TODO: Handle logo upload separately if needed
+
       if (businessProfile.logo) {
-        console.log('Logo upload will be handled separately - using JSON for now');
+        console.log('📸 Logo detected, using FormData for submission');
+        profileData = new FormData();
+        
+        // Append all fields to FormData
+        profileData.append('business_name', businessName);
+        if (businessProfile.headline) profileData.append('headline', businessProfile.headline);
+        if (businessProfile.about) profileData.append('about', businessProfile.about);
+        profileData.append('contact_phone', businessProfile.contact_phone);
+        profileData.append('contact_email', businessProfile.contact_email);
+        
+        // Handle services array
+        // Some backends expect array items as individual keys: services=Item1&services=Item2
+        // Others expect JSON string: services=["Item1", "Item2"]
+        // Django DRF typically works best with multiple keys for list fields in FormData
+        businessProfile.services.forEach(service => {
+          profileData.append('services', service);
+        });
+
+        // Add core service flags
+        profileData.append('offers_purchase', coreServices.offers_purchase);
+        profileData.append('offers_rental', coreServices.offers_rental);
+        profileData.append('offers_drivers', coreServices.offers_drivers);
+        profileData.append('offers_trade_in', coreServices.offers_trade_in);
+        
+        // Append Logo
+        profileData.append('logo', businessProfile.logo);
+        
+        // Set headers for multipart/form-data (axios usually sets this automatically with FormData)
+        headers = { 'Content-Type': 'multipart/form-data' };
+      } else {
+        console.log('📝 No logo, using JSON for submission');
+        profileData = {
+          business_name: businessName,
+          headline: businessProfile.headline,
+          about: businessProfile.about || '',
+          contact_phone: businessProfile.contact_phone,
+          contact_email: businessProfile.contact_email,
+          services: businessProfile.services,
+          // Add core service boolean flags required by API
+          offers_purchase: coreServices.offers_purchase,
+          offers_rental: coreServices.offers_rental,
+          offers_drivers: coreServices.offers_drivers,
+          offers_trade_in: coreServices.offers_trade_in,
+          // Location will be set from settings page later
+        };
       }
       
       // Debug current form state
@@ -924,13 +961,13 @@ function BusinessProfile({ onSubmit, ...props }) {
         // Update business profile completion status using authService
         authService.updateBusinessProfileCompletionStatus(true);
         
-        // Business flow: Signup -> Verify -> Business Profile -> Login -> Dashboard
-        // After profile setup, logout and redirect to login
-        console.log('✅ Business profile setup complete. Logging out and redirecting to login.');
+        // Business flow: Signup -> Verify -> Business Profile -> Dashboard
+        // After profile setup, redirect to dashboard
+        console.log('✅ Business profile setup complete. Redirecting to dashboard.');
         
         toast({
           title: 'Profile Setup Complete!',
-          description: 'Your business profile is ready. Please log in to access your dashboard.',
+          description: 'Your business profile is ready. Redirecting to your dashboard...',
           status: 'success',
           duration: 5000,
           isClosable: true,
@@ -938,10 +975,8 @@ function BusinessProfile({ onSubmit, ...props }) {
         
         // Delay slightly to let the user see the success message
         setTimeout(() => {
-          // Use context logout to clear global state and storage
-          logout(); 
-          console.log('🚀 Executing redirect to: /login');
-          navigate('/login');
+          console.log('🚀 Executing redirect to: /dashboard');
+          navigate('/dashboard');
         }, 2000);
       } else {
         throw new Error(data.message || 'Failed to set up business profile');
@@ -1295,7 +1330,7 @@ function BusinessProfile({ onSubmit, ...props }) {
                           <Avatar
                             size="2xl"
                             src={logoPreview}
-                            name={getBusinessName()}
+                            name={businessProfile.business_name || getBusinessName()}
                             bg="orange.100"
                             color="#F4A950"
                             border="4px solid"
@@ -1349,24 +1384,28 @@ function BusinessProfile({ onSubmit, ...props }) {
                         </Text>
                       </VStack>
 
-                      {/* Business Name - Display from signup */}
-                      <FormControl>
+                      {/* Business Name - Editable (moved from Signup) */}
+                      <FormControl isRequired>
                         <FormLabel color="gray.700" fontWeight="semibold">
                           {user_type === 'mechanic' ? 'Auto Shop Name' : 'Business Name'}
                         </FormLabel>
                         <Input
-                          value={businessProfile.business_name || getBusinessName()}
-                          isReadOnly
+                          value={businessProfile.business_name}
+                          onChange={(e) => changeValue('business_name', e.target.value)}
+                          placeholder={user_type === 'mechanic' ? 'Enter auto shop name' : 'Enter business name'}
                           size="lg"
-                          bg="gray.100"
+                          bg="gray.50"
                           border="2px solid"
                           borderColor={borderColor}
-                          color="gray.600"
-                          cursor="not-allowed"
-                          _hover={{ borderColor: 'gray.300' }}
+                          _hover={{ borderColor: 'orange.300' }}
+                          _focus={{ 
+                            borderColor: '#F4A950', 
+                            bg: 'white',
+                            shadow: '0 0 0 1px #F4A950'
+                          }}
                         />
                         <Text fontSize="xs" color="gray.500" mt={1}>
-                          Business name was set during signup. Contact support to change it.
+                          Enter your official business name
                         </Text>
                       </FormControl>
 
@@ -1671,14 +1710,14 @@ function BusinessProfile({ onSubmit, ...props }) {
                       <Avatar
                         size="xl"
                         src={logoPreview}
-                        name={getBusinessName()}
+                        name={businessProfile.business_name || getBusinessName()}
                         bg="orange.100"
                         color="#F4A950"
                       />
                       
                       <VStack spacing={2} textAlign="center">
                         <Text fontWeight="bold" color="gray.800">
-                          {getBusinessName()}
+                          {businessProfile.business_name || getBusinessName()}
                         </Text>
                         <Text fontSize="sm" color={textColor}>
                           {businessProfile.headline || 'Your business headline'}

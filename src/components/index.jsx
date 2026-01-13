@@ -60,7 +60,7 @@ import { LuMapPin } from 'react-icons/lu'
 import { RxCaretLeft, RxCaretRight, RxTimer } from 'react-icons/rx';
 import { TbManualGearbox } from 'react-icons/tb';
 import { BsFillPatchCheckFill } from 'react-icons/bs';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import { FcCheckmark } from 'react-icons/fc';
 import VerificationFormModal from './VerificationFormModal';
 import authService from '../services/authService';

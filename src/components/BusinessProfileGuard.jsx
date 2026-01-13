@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import authService from '../services/authService';
 import { LoadingSpinner } from './loaders';
 
@@ -83,10 +83,8 @@ const BusinessProfileGuard = ({ children }) => {
   }
 
   if (completionStatus.needsCompletion) {
-    console.log('BusinessProfileGuard: Profile incomplete, but allowing access to dashboard (restricted to signup only)');
-    // We no longer redirect to /business-profile here because that page is now restricted to the signup flow only.
-    // Users should complete their profile via the dashboard settings if needed.
-    return children;
+    console.log('BusinessProfileGuard: Profile incomplete, redirecting to /business-profile');
+    return <Navigate to="/business-profile" replace />;
   }
 
   return children;

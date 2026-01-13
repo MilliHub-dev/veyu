@@ -11,6 +11,7 @@ import VeyuTheme from "./theme.jsx";
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { Autocomplete, LoadScript } from "@react-google-maps/api";
 import { enhanceUserWithCompletionStatus } from "./utils/profileCompletionUtils";
+import { GlobalStore } from "./contexts/GlobalStore";
 
 // Lazy-loaded pages (split chunks)
 const Layout = lazy(() => import("./pages/Layout"));
@@ -85,7 +86,6 @@ const WalletDepositPage = lazy(() => import("./pages/marketplace/wallet/Deposit"
 const WalletTransactionsPage = lazy(() => import("./pages/marketplace/wallet/Transactions"));
 const WalletWithdrawalPage = lazy(() => import("./pages/marketplace/wallet/Withdraw"));
 
-export const GlobalStore = createContext({});
 
 function App() {
   const toast = useToast();
@@ -394,11 +394,7 @@ function App() {
                       {/* Dealer Dashboard */}
                       {authUser.user_type === "dealer" ? (
                         <>
-                          <Route element={
-                            <BusinessProfileGuard>
-                              <DealerDashboardLayout />
-                            </BusinessProfileGuard>
-                          }>
+                          <Route element={<DealerDashboardLayout />}>
                             <Route path="/dashboard" element={<DealerDashboard />} />
                             <Route path="/orders" element={<OrderListAdmin />} />
                             <Route path="/inventory" element={<Outlet />}>
@@ -433,11 +429,7 @@ function App() {
                       ) : authUser.user_type === "mechanic" ? (
                         /* Mechanic Dashboard */
                         <>
-                          <Route element={
-                            <BusinessProfileGuard>
-                              <MechanicDashboardLayout />
-                            </BusinessProfileGuard>
-                          }>
+                          <Route element={<MechanicDashboardLayout />}>
                             <Route path="/dashboard" element={<MechanicDashboard />} />
                             <Route path="/bookings" element={<BookingsAdmin />} />
                             <Route path="/analytics" element={<MechanicAnalytics />} />
@@ -498,9 +490,6 @@ function App() {
                         </Route>
                       )}
 
-                      {/* Business Profile Setup Route - for post-signup business profile completion */}
-                      <Route path="/business-profile" element={<BusinessProfileSetup />} />
-
                       {/* Wallet Routes */}
                       <Route
                         element={
@@ -541,6 +530,7 @@ function App() {
                       <Route path="/login" element={<LoginView />} />
                       <Route path="/signup" element={<SignupView />} />
                       <Route path="/signup/business" element={<BusinessSignupView />} />
+                      <Route path="/business-profile" element={<BusinessProfileSetup />} />
                       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
                       <Route path="/terms-of-service" element={<TermsOfServicePage />} />
                       <Route path="/*" element={<LandingPage />} />
@@ -556,4 +546,5 @@ function App() {
   );
 }
 
+export { GlobalStore };
 export default App;

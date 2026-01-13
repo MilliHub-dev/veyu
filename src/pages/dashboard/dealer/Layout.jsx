@@ -110,7 +110,7 @@ function DealerDashboardLayout({children, hideSidebar, ...props}) {
   return (
     <DealershipContext.Provider value={context}>
     <Stack>
-      <DealerNavbar sidebarOpen={sidebarOpen} setSidebarState={setSidebarState} hideSidebar={hideSidebar} />
+      <DealerNavbar sidebarOpen={sidebarOpen} setSidebarState={setSidebarState} hideSidebar={hideSidebar} dealership={dealership} />
 
       <Flex minH="100vh" position="relative">
         <Fragment>

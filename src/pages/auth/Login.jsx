@@ -27,7 +27,7 @@ import {
   SimpleGrid
 } from "@chakra-ui/react";
 import { useContext, useState } from "react";
-import { GlobalStore } from "../../App";
+import { GlobalStore } from "../../contexts/GlobalStore";
 import { motion } from 'framer-motion';
 import { 
   FaGoogle, 

@@ -482,13 +482,17 @@ export const CustomerNavbar = ({ props }) => {
 }
 
 
-export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
+export const DealerNavbar = ({ sidebarOpen, setSidebarState, dealership, ...props }) => {
   const [navIsOpen, setNavState] = useState(false);
   const [searchIsOpen, setSearchState] = useState(false);
   const { authUser, onLogout, logout } = useContext(GlobalStore);
   const [isMobile] = useMediaQuery('(max-width: 768px)');
   const isLoggedIn = Boolean(authUser);
   const navigate = useNavigate();
+
+  // Use dealership logo if available, fallback to authUser logo or name
+  const logoSrc = dealership?.logo || authUser?.logo;
+  const displayName = dealership?.business_name || getUserDisplayName(authUser);
 
   window.onscroll = (ev) => {
     if (window.scrollY > 1000) {
@@ -598,9 +602,10 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
               <Box alignItems="center" justifyContent="center" display="flex" flexDirection="column" p={3}>
                 <Avatar
                   size="lg"
-                  name={getUserDisplayName(authUser)}
+                  src={logoSrc}
+                  name={displayName}
                 />
-                <Heading my={1} size="sm" color="black"> {getUserDisplayName(authUser)} </Heading>
+                <Heading my={1} size="sm" color="black"> {displayName} </Heading>
                 <Text color="black"> {getUserEmail(authUser)} </Text>
               </Box>
               <Divider my={2} />
