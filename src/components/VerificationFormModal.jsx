@@ -26,6 +26,7 @@ import {
 import { CloudUpload, FileText, X } from 'lucide-react';
 import { GlobalStore } from '../App';
 import authService from '../services/authService';
+import { ApiError } from '../services/api';
 
 const VerificationFormModal = ({ isOpen, onClose, businessType, onSuccess }) => {
   const { notify } = useContext(GlobalStore);
@@ -136,17 +137,32 @@ const VerificationFormModal = ({ isOpen, onClose, businessType, onSuccess }) => 
       onClose();
     } catch (error) {
       console.error('Verification error:', error);
-      console.error('Error response:', error.response?.data);
       
       let errorMessage = 'Submission failed. Please try again.';
+      let fieldErrors = null;
       
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
+      if (error instanceof ApiError) {
+        // Handle custom ApiError
+        console.log('Handling ApiError:', error);
+        console.log('ApiError Data:', error.data);
+        
+        if (error.status === 400 && error.data) {
+          fieldErrors = error.data;
+          errorMessage = 'Please fix the errors below and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      } else if (error.response) {
+        // Handle raw axios error (fallback)
+        console.error('Error response:', error.response?.data);
         errorMessage = error.response.data?.detail || 
                       error.response.data?.message || 
                       error.response.statusText ||
                       `Server responded with status ${error.response.status}`;
+        
+        if (error.response.status === 400) {
+          fieldErrors = error.response.data;
+        }
       } else if (error.request) {
         // The request was made but no response was received
         console.error('No response received:', error.request);
@@ -158,18 +174,26 @@ const VerificationFormModal = ({ isOpen, onClose, businessType, onSuccess }) => 
       }
       
       notify({
-        title: 'Error',
+        title: 'Verification Failed',
         body: errorMessage,
         color: 'red',
         timeout: 8000
       });
 
       // Show field-specific errors if available
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
+      if (fieldErrors) {
+        // If the errors are wrapped in an "errors" key (some frameworks do this)
+        const errors = fieldErrors.errors || fieldErrors;
+        
         Object.keys(errors).forEach(field => {
+          // Skip non-field errors if already shown in main message
+          if (field === 'detail' || field === 'message' || field === 'error') return;
+          
           const errorText = Array.isArray(errors[field]) ? errors[field][0] : errors[field];
           console.error(`Field error (${field}):`, errorText);
+          
+          // Only show toast for fields that might not be obvious
+          // or if there are too many errors, just show the first few
           notify({
             title: `${field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Error`,
             body: errorText,
