@@ -327,7 +327,7 @@ const VerificationFormModal = ({ isOpen, onClose, businessType, onSuccess }) => 
                       type="tel"
                       value={formData.business_phone}
                       onChange={(e) => handleInputChange('business_phone', e.target.value)}
-                      placeholder="+2348012345678"
+                      placeholder="2348012345678"
                     />
                   </FormControl>
 

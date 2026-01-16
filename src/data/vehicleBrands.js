@@ -6,7 +6,7 @@ export const carBrands = {
   "Chevrolet": ["Silverado", "Equinox", "Tahoe", "Traverse", "Malibu", "Camaro", "Corvette", "Suburban", "Colorado", "Blazer", "Trax", "Spark", "Bolt", "Impala"],
   "Nissan": ["Altima", "Sentra", "Rogue", "Pathfinder", "Frontier", "Titan", "Murano", "Armada", "Kicks", "Versa", "Maxima", "370Z", "GT-R", "Leaf"],
   "BMW": ["3 Series", "5 Series", "7 Series", "X1", "X3", "X5", "X7", "M3", "M5", "i4", "iX", "Z4", "4 Series", "8 Series", "X6", "2 Series"],
-  "Mercedes-Benz": ["C-Class", "E-Class", "S-Class", "GLA", "GLC", "GLE", "GLS", "A-Class", "CLA", "CLS", "G-Class", "AMG GT", "EQS", "EQE", "Maybach"],
+  "Mercedes-Benz": ["C-Class", "E-Class", "S-Class", "GLA","GLK", "GLC", "GLE", "GLS", "A-Class", "CLA", "CLS", "G-Class", "AMG GT", "EQS", "EQE", "Maybach"],
   "Audi": ["A3", "A4", "A6", "A8", "Q3", "Q5", "Q7", "Q8", "e-tron", "TT", "R8", "S4", "S6", "RS5", "RS7"],
   "Lexus": ["ES", "IS", "LS", "RX", "NX", "GX", "LX", "UX", "RC", "LC", "GS"],
   "Hyundai": ["Elantra", "Sonata", "Tucson", "Santa Fe", "Palisade", "Kona", "Venue", "Ioniq", "Veloster", "Accent", "Genesis"],
