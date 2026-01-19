@@ -224,7 +224,11 @@ export const RentListing = ({ props }) => {
     }
 
     const filters = [
-        <CarBrandFilter key="brand" onChange={applyFilter} />,
+        <CarBrandFilter 
+            key="brand" 
+            onChange={applyFilter} 
+            category={vehicleCategories.find(c => c.id === vehicleCategory)?.apiValue || 'car'}
+        />,
         <PriceFilter key="price" onChange={applyFilter} />,
         <TransmissionFilter key="transmission" onChange={applyFilter} />,
         <FuelSystemFilter key="fuel" onChange={applyFilter} />,

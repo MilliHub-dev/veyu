@@ -677,6 +677,7 @@ export function CreateRentalForm({ formData, setFormData, vehicleCategory = 'car
     bike: { brand: 'Bike Brand', model: 'Bike Model', placeholder: 'eg Yamaha R15 V3' },
     boat: { brand: 'Boat Brand', model: 'Boat Model', placeholder: 'eg Sea Ray Sundancer' },
     aircraft: { brand: 'Aircraft Brand', model: 'Aircraft Model', placeholder: 'eg Cessna 172' },
+    uav: { brand: 'UAV Brand', model: 'UAV Model', placeholder: 'eg DJI Mavic 3' },
   };
 
   const labels = vehicleLabels[vehicleCategory] || vehicleLabels.car;

@@ -230,6 +230,15 @@ export default function AddListing() {
         form.append('fuel_system', formData?.engine_type || 'outboard');
         form.append('seats', formData?.capacity || '6');
         form.append('doors', '0');
+      } else if (category === 'uav') {
+        // UAV-specific fields
+        form.append('uav_type', formData?.uav_type || 'quadcopter');
+        
+        // Backend expects these fields - provide UAV-appropriate defaults
+        form.append('transmission', 'N/A');
+        form.append('fuel_system', 'Electric');
+        form.append('seats', '0');
+        form.append('doors', '0');
       }
 
       // Convert features to a properly formatted array
@@ -421,6 +430,15 @@ export default function AddListing() {
                           borderColor="cornflowerblue"
                           borderRadius="10px" py={5}
                         >✈️ Aircraft</Button>
+
+                        <Button onClick={() => setFormData({ ...formData, vehicle_category: 'uav' })}
+                          bgColor={formData?.vehicle_category === 'uav' ? 'primary' : 'white'}
+                          color={formData?.vehicle_category === 'uav' ? 'white' : 'primary'}
+                          borderWidth={2}
+                          colorScheme={'blue'}
+                          borderColor="cornflowerblue"
+                          borderRadius="10px" py={5}
+                        >🚁 UAV</Button>
                       </SimpleGrid>
                     </FormControl>
 

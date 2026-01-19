@@ -88,11 +88,8 @@ export const ServiceFilter = ({ onChange, onClose }) => {
 }
 
 
-export const CarBrandFilter = ({ onChange, onClose }) => {
-    const brands = [
-        'BMW', 'Audi', 'Toyota', 'Mercedis', 'Nissan', 'Mazda', 'Honda',
-        'Peugeot', 'Opel', 'Volkswagen', 'Innoson', 'Ford',
-    ]
+export const CarBrandFilter = ({ onChange, onClose, category = 'car' }) => {
+    const brands = getBrandNames(category) || [];
     const [isOpen, setOpenState] = useState(false);
     const [value, setValue] = useState([]);
 
@@ -139,7 +136,16 @@ export const CarBrandFilter = ({ onChange, onClose }) => {
             <MenuList maxH="300px" overflowY="auto">
                 <Box>
                     <Text p={3} size="md"> Select Make </Text>
-                    {brands.map((brand) => <MenuItem key={brand} selected={value.includes(brand)} value={brand} onInput={addOrRemoveBrand} as={Checkbox}> {brand} </MenuItem>)}
+                    {
+                        brands.map((brand) => 
+                            <MenuItem
+                             key={brand}
+                             selected={value.includes(brand)}
+                             value={brand}
+                             onInput={addOrRemoveBrand}
+                             as={Checkbox}
+                            > {brand} </MenuItem>
+                    )}
                 </Box>
                 <Box px={2} display={'block'} mt={2}>
                     <Button

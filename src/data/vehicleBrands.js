@@ -111,6 +111,18 @@ export const aircraftBrands = {
   "Other": ["Other"]
 };
 
+export const uavBrands = {
+  "DJI": ["Mavic", "Phantom", "Inspire", "Matrice", "Mini", "Air"],
+  "Autel Robotics": ["Evo", "Dragonfish"],
+  "Parrot": ["Anafi", "Bebop"],
+  "Skydio": ["2", "X2"],
+  "Yuneec": ["Typhoon", "H520"],
+  "Holy Stone": ["HS720", "HS100"],
+  "Syma": ["X5C", "X8 Pro"],
+  "Hubsan": ["Zino", "X4"],
+  "Other": ["Other"]
+};
+
 // Helper function to get brands for a vehicle category
 export const getBrandsForCategory = (category) => {
   switch (category) {
@@ -123,6 +135,9 @@ export const getBrandsForCategory = (category) => {
       return boatBrands;
     case 'aircraft':
       return aircraftBrands;
+    case 'uav':
+    case 'uavs':
+      return uavBrands;
     default:
       return carBrands;
   }
