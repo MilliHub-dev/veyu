@@ -89,6 +89,7 @@ import {
   MdCalendarMonth,
 } from "react-icons/md"
 import { BsWallet2 } from "react-icons/bs"
+import { formatCurrency } from "../utils";
 
 
 export const ComboBox = ({ defaultOptions, onSelect }) => {
@@ -1123,7 +1124,6 @@ export function TimePicker({ value, onChange, format = "12h", showSeconds = fals
   )
 }
 
-
 export const ListingItemCard = ({ listing, ...props }) => {
     const {commaInt, authUser} = useContext(GlobalStore);
     const navigate = useNavigate();
@@ -2153,8 +2153,24 @@ export function ImageCarousel({ images, ...props }) {
   const [currentImage, setCurrentImage] = useState(0)
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  if (!images){
-    return null;
+  if (!images || images.length === 0){
+    return (
+        <Box 
+            w={'100%'} 
+            h={'400px'} 
+            bg="gray.100" 
+            display="flex" 
+            alignItems="center" 
+            justifyContent="center" 
+            borderRadius="10px"
+            {...props}
+        >
+            <VStack color="gray.400">
+                <Box fontSize="4xl">🚗</Box>
+                <Text>No images available</Text>
+            </VStack>
+        </Box>
+    );
   }
 
   const nextImage = () => {
@@ -2178,9 +2194,10 @@ export function ImageCarousel({ images, ...props }) {
                     backgroundPositionY: '45%',
                 }}
                 w={'100%'}
-                minH={'400px'}
+                h={'400px'}
                 cursor="zoom-in"
                 onClick={onOpen}
+                {...props}
             ></Box>
 
             <IconButton

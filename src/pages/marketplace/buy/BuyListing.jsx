@@ -121,17 +121,24 @@ const BuyListing = ({ }) => {
     }
 
     async function getData(url = `/listings/buy/`) {
-        const res = await axios.get(url,);
-        let _data = objectifyJSON(res.data);
+        try {
+            const res = await axios.get(url,);
+            let _data = objectifyJSON(res.data);
 
-        setData(_data.data);
-        setListings(_data?.data?.results);
+            setData(_data.data);
+            setListings(_data?.data?.results || []);
 
-        if (!res.status === 200) {
-            notify({
-                title: 'Error',
-                body: data?.message || "Something went wrong"
-            })
+            if (res.status !== 200) {
+                notify({
+                    title: 'Error',
+                    body: _data?.message || "Something went wrong"
+                })
+            }
+        } catch (error) {
+            console.error("Error fetching buy listings:", error);
+            setListings([]);
+            // Optional: Handle specific errors like 401 if needed, 
+            // but usually buy listings should be public.
         }
     }
 

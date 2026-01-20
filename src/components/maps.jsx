@@ -1,4 +1,4 @@
-import {Map, Marker, APIProvider,  } from "@vis.gl/react-google-maps";
+import {Map, Marker, APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
 import {
     Box, Heading,
     Button,
@@ -35,16 +35,38 @@ import { useSearchParams, Link } from "react-router-dom";
 
 
 export const MapComponent = ({ location, style, ref, ...props }) => {
+  const [libraries] = useState(['places']);
+  
+  // Defensive check for location
+  if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
+    return (
+      <Box 
+        h="100%" 
+        w="100%" 
+        bg="gray.100" 
+        display="flex" 
+        alignItems="center" 
+        justifyContent="center" 
+        borderRadius="md"
+        {...style}
+      >
+        <Text color="gray.500">Map location unavailable</Text>
+      </Box>
+    );
+  }
+
   return (
     <APIProvider
      apiKey={'AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0'}
+     libraries={libraries}
     >
       <Map
         mapId="fe2d2f3f932f354f"
         style={{ width: "100%", height: "100%", color: 'green', ...style }}
-        center={location}
-        class="rounded"
-        zoom={11}
+        defaultCenter={location}
+        className="rounded"
+        defaultZoom={11}
+        gestureHandling={'cooperative'}
       >
         <Marker position={location} />
       </Map>
@@ -52,9 +74,7 @@ export const MapComponent = ({ location, style, ref, ...props }) => {
   );
 };
 
-
-
-export const CustomPlacesAutocomplete = ({ value, onPlaceChange, inputProps, ...props }) => {
+const PlacesAutocompleteInner = ({ value, onPlaceChange, inputProps, ...props }) => {
   const [inputValue, setInputValue] = useState(value);
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -65,17 +85,21 @@ export const CustomPlacesAutocomplete = ({ value, onPlaceChange, inputProps, ...
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
   const mapRef = useRef(null);
+  
+  const placesLib = useMapsLibrary('places');
 
   useEffect(() => {
-    if (window.google && !autocompleteService.current) {
-      autocompleteService.current = new window.google.maps.places.AutocompleteService();
+    if (!placesLib || !window.google) return;
+
+    if (!autocompleteService.current) {
+      autocompleteService.current = new placesLib.AutocompleteService();
     }
 
-    if (window.google && mapRef.current && !placesService.current) {
+    if (mapRef.current && !placesService.current) {
       const dummyMap = new window.google.maps.Map(mapRef.current);
-      placesService.current = new window.google.maps.places.PlacesService(dummyMap);
+      placesService.current = new placesLib.PlacesService(dummyMap);
     }
-  }, []);
+  }, [placesLib]);
 
   const fetchPredictions = (input) => {
     if (!autocompleteService.current || input.length < 2) {
@@ -115,11 +139,11 @@ export const CustomPlacesAutocomplete = ({ value, onPlaceChange, inputProps, ...
             const state = location.address_components.find(comp => comp.types.includes('administrative_area_level_1'))
             const coords = {
               place_id: place.place_id,
-              country: country.short_name,
-              state: state.short_name,
-              city: city.long_name,
+              country: country ? country.short_name : '',
+              state: state ? state.short_name : '',
+              city: city ? city.long_name : '',
               formatted_address: location.formatted_address,
-              zip_code: postal_code?.long_name,
+              zip_code: postal_code ? postal_code.long_name : '',
               lat,
               lng,
             }
@@ -179,6 +203,15 @@ export const CustomPlacesAutocomplete = ({ value, onPlaceChange, inputProps, ...
     </Box>
   );
 };
+
+export const CustomPlacesAutocomplete = (props) => {
+    return (
+        <APIProvider apiKey={'AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0'} libraries={['places']}>
+            <PlacesAutocompleteInner {...props} />
+        </APIProvider>
+    );
+};
+
 
 
 

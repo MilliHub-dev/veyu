@@ -15,7 +15,7 @@ import { GlobalStore } from "../../../App";
 import { ImageCarousel, LocationBreadcrumb, ListingItemCard } from "../../../components";
 import { ListingDetailSkeleton } from "../../../components/loaders";
 import { ChatPopup } from "../../../components/chat";
-import { objectifyJSON, jsonifyObject } from "../../../utils";
+import { objectifyJSON, jsonifyObject, formatCurrency } from "../../../utils";
 import { apiClient } from '../../../services/api';
 import { HiMiniReceiptPercent, HiShieldCheck, HiTruck, HiClock, HiPhone } from 'react-icons/hi2';
 import { FaCartPlus, FaHeart, FaShare, FaEye, FaStar, FaCheckCircle, FaEdit } from 'react-icons/fa';

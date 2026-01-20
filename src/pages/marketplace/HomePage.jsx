@@ -252,10 +252,28 @@ export default function MainPage() {
       
       // If it's a 401 error, the user might not be authenticated
       if (error.response?.status === 401) {
-        console.log('User not authenticated, skipping personalized data');
-        // Set empty data instead of showing error
-        setRecentlyViewed([]);
-        setTopDeals({ rentals: [], sales: [], services: [] });
+        console.log('User not authenticated, fetching public data');
+        try {
+          // Fallback to general listings as featured might be empty
+          const res = await apiClient.get('/listings/');
+          const data = objectifyJSON(res.data);
+          // Handle various potential response structures
+          const listings = Array.isArray(data) ? data : (data.results || data.data || []);
+          
+          const sales = listings.filter(l => l.listing_type === 'sale' || l.listing_type === 'buy');
+          const rentals = listings.filter(l => l.listing_type === 'rent' || l.listing_type === 'rental');
+          
+          setTopDeals({
+              sales: sales.length > 0 ? sales : listings.filter(l => !l.listing_type || l.listing_type === 'sale'),
+              rentals: rentals,
+              services: []
+          });
+          setRecentlyViewed([]);
+        } catch (e) {
+           console.error("Error fetching public data", e);
+           setRecentlyViewed([]);
+           setTopDeals({ rentals: [], sales: [], services: [] });
+        }
       }
     }
   }

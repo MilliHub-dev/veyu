@@ -13,7 +13,7 @@ import {
 import { MapComponent } from "../../../components/maps";
 import { BackButton } from "../../../components/nav";
 import { ChatPopup } from "../../../components/chat";
-import { objectifyJSON, jsonifyObject } from "../../../utils";
+import { objectifyJSON, jsonifyObject, formatCurrency } from "../../../utils";
 import { GlobalStore } from "../../../App";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { usePaystackPayment, PaystackButton } from 'react-paystack';

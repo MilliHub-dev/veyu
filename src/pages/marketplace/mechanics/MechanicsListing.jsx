@@ -6,7 +6,7 @@ import {
 } from "@chakra-ui/react";
 import { useContext, useEffect, useState, Fragment } from "react";
 import { GlobalStore } from "../../../App";
-import { objectifyJSON } from "../../../utils";
+import { objectifyJSON, formatCurrency } from "../../../utils";
 import { Link } from "react-router-dom";
 import { SearchIcon, ChevronDownIcon } from '@chakra-ui/icons';
 import { Search, Filter, SlidersHorizontal, MapPin, Wrench, Users, Clock, Star, Award, Phone, MessageCircle } from 'lucide-react';

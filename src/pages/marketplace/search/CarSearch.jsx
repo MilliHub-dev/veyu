@@ -53,10 +53,15 @@ export const CarSearchPage = ({ props }) => {
     }
 
     async function getData(){
-        const res = await axios.get(`/listings/find/?find=${find}`);
-        const data = objectifyJSON(res.data);
-        setSearchResults(data?.data);
-        setMatches(data?.data?.results);
+        try {
+            const res = await axios.get(`/listings/find/?find=${find}`);
+            const data = objectifyJSON(res.data);
+            setSearchResults(data?.data);
+            setMatches(data?.data?.results || []);
+        } catch (error) {
+            console.error("Error fetching search results:", error);
+            setMatches([]);
+        }
     }
 
     
