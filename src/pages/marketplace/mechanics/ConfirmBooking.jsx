@@ -288,7 +288,7 @@ const ConfirmBooking = () => {
                       <Icon as={CreditCard} color="#F4A950" boxSize={5} />
                       <Box flex={1}>
                         <Text fontWeight="semibold" fontSize="sm" color="gray.700">Booking Fee</Text>
-                        <Text fontSize="lg" fontWeight="bold" color="#F4A950">₦5,000</Text>
+                        <Text fontSize="lg" fontWeight="bold" color="#F4A950">{formatCurrency(5000, 'NGN')}</Text>
                       </Box>
                     </HStack>
 
@@ -332,7 +332,7 @@ const ConfirmBooking = () => {
                 <AlertIcon />
                 <Box fontSize="sm">
                   <Text fontWeight="semibold" mb={1}>Important Information:</Text>
-                  <Text>• The ₦5,000 booking fee is a consultation charge</Text>
+                  <Text>• The {formatCurrency(5000, 'NGN')} booking fee is a consultation charge</Text>
                   <Text>• This fee does not cover actual service costs</Text>
                   <Text>• Service pricing will be discussed on-site</Text>
                   <Text>• Refundable if mechanic doesn't show up</Text>

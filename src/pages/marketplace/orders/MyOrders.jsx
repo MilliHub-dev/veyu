@@ -337,7 +337,7 @@ function MyOrders() {
                             </Text>
                             <VStack align="start" spacing={0}>
                               <Text fontSize="sm" fontWeight="700" color="green.600">
-                                ₦{commaInt(order?.total || order?.sub_total)}
+                                {formatCurrency(order?.total || order?.sub_total, order?.currency || order?.order_item?.currency)}
                               </Text>
                               {order?.paid ? (
                                 <Badge colorScheme="green" size="xs">

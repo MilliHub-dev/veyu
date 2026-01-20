@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { GlobalStore } from "../../../App";
-import { objectifyJSON } from "../../../utils";
+import { objectifyJSON, formatCurrency } from "../../../utils";
 import { useParams, useNavigate } from "react-router-dom";
 import { BusinessLogo } from "../../../components/BusinessLogo";
 import {
@@ -19,7 +19,7 @@ import { MapComponent, CustomPlacesAutocomplete } from "../../../components/maps
 import { CashMoneyIcon, TopRatedBadgeIcon } from "../../../components/icons";
 import { ListingDetailSkeleton } from "../../../components/loaders";
 
-const ServiceAccordion = ({ service, ...props }) => {
+const ServiceAccordion = ({ service, currency, ...props }) => {
   const { isOpen, onToggle } = useDisclosure();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -45,7 +45,7 @@ const ServiceAccordion = ({ service, ...props }) => {
                 <Icon as={DollarSign} color="#F4A950" boxSize={4} />
                 <Text fontWeight="bold" color="#F4A950">
                   {service?.charge > 0 
-                    ? `₦${parseInt(service?.charge).toLocaleString()}`
+                    ? formatCurrency(service?.charge, currency)
                     : "Free consultation"
                   }
                 </Text>
@@ -458,7 +458,7 @@ export const MechanicDetailPage = ({ }) => {
                         <Heading size="md" color="#F4A950">Available Services</Heading>
                         {mechanic?.services?.length > 0 ? (
                           mechanic.services.map((service) => (
-                            <ServiceAccordion key={service?.uuid} service={service} />
+                            <ServiceAccordion key={service?.uuid} service={service} currency={mechanic?.currency} />
                           ))
                         ) : (
                           <Card bg="gray.50" border="1px" borderColor={borderColor}>
@@ -590,7 +590,7 @@ export const MechanicDetailPage = ({ }) => {
                   <Alert status="info" borderRadius="lg">
                     <AlertIcon />
                     <Box fontSize="sm">
-                      <Text fontWeight="semibold">Booking Fee: ₦5,000</Text>
+                      <Text fontWeight="semibold">Booking Fee: {formatCurrency(5000, 'NGN')}</Text>
                       <Text>Consultation fee (does not include service costs)</Text>
                     </Box>
                   </Alert>

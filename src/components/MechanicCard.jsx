@@ -7,6 +7,7 @@ import { Star, MapPin, Clock, Award, MessageCircle, Calendar, Wrench, Shield } f
 import { TopRatedBadgeIcon } from "./icons";
 import { motion } from "framer-motion";
 import { BusinessLogo } from "./BusinessLogo";
+import { formatCurrency } from "../utils";
 
 const MotionCard = motion(Card);
 
@@ -165,7 +166,7 @@ export const MechanicCard = ({ mechanic, ...props }) => {
                         <SimpleGrid columns={3} spacing={4} py={3} bg="gray.50" borderRadius="lg">
                             <Stat textAlign="center">
                                 <StatNumber fontSize="lg" fontWeight="bold" color="#F4A950">
-                                    ₦{parseInt(mechanic?.price_start || 5000).toLocaleString()}
+                                    {formatCurrency(mechanic?.price_start || 5000, mechanic?.currency)}
                                 </StatNumber>
                                 <StatLabel fontSize="xs" color="gray.600">Starting from</StatLabel>
                             </Stat>

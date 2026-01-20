@@ -9,7 +9,7 @@ import {
   DoorOpen, Zap, Gauge, Key, Camera, Music, Phone, Heart, Share2,
   Smartphone, Sun, BatteryCharging, Shield, Clock, CheckCircle, MessageCircle, Edit
 } from 'lucide-react'
-import { objectifyJSON } from "../../../utils";
+import { objectifyJSON, formatCurrency } from "../../../utils";
 import {
   Box, Container, Grid, Heading, Text, Button, HStack, VStack, Divider, List, ListItem, Stack,
   Image, Avatar, Badge, Flex, Icon, Progress, SimpleGrid, Input, Select, Switch, IconButton,
@@ -640,7 +640,7 @@ const BookingForm = ({ listing, ...props }) => {
           <Flex justify="space-between" align="center">
             <VStack align="start" spacing={0}>
               <Heading size="2xl" color="#F4A950">
-                ₦{commaInt(basePrice)}
+                {formatCurrency(basePrice, listing?.currency)}
               </Heading>
               <Text color="gray.600" fontSize="sm">
                 per {listing?.payment_cycle || 'day'}
@@ -708,7 +708,7 @@ const BookingForm = ({ listing, ...props }) => {
                 <Flex justify="space-between" align="center">
                   <VStack align="start" spacing={1}>
                     <Text fontWeight="medium">Need a driver?</Text>
-                    <Text fontSize="sm" color="gray.600">+₦2,000 per day</Text>
+                    <Text fontSize="sm" color="gray.600">+{formatCurrency(2000, listing?.currency)} per day</Text>
                   </VStack>
                   <Switch 
                     colorScheme="orange" 
@@ -724,23 +724,23 @@ const BookingForm = ({ listing, ...props }) => {
               <CardBody p={4}>
                 <VStack spacing={2} align="stretch">
                   <Flex justify="space-between">
-                    <Text>₦{commaInt(basePrice)} × {totalDays} day{totalDays !== 1 ? 's' : ''}</Text>
-                    <Text>₦{commaInt(basePrice * totalDays)}</Text>
+                    <Text>{formatCurrency(basePrice, listing?.currency)} × {totalDays} day{totalDays !== 1 ? 's' : ''}</Text>
+                    <Text>{formatCurrency(basePrice * totalDays, listing?.currency)}</Text>
                   </Flex>
                   {needsDriver && (
                     <Flex justify="space-between">
                       <Text>Driver fee</Text>
-                      <Text>₦{commaInt(driverFee)}</Text>
+                      <Text>{formatCurrency(driverFee, listing?.currency)}</Text>
                     </Flex>
                   )}
                   <Flex justify="space-between">
                     <Text>Service fee</Text>
-                    <Text>₦{commaInt(serviceFee)}</Text>
+                    <Text>{formatCurrency(serviceFee, listing?.currency)}</Text>
                   </Flex>
                   <Divider />
                   <Flex justify="space-between" fontWeight="bold" fontSize="lg">
                     <Text>Total</Text>
-                    <Text color="#F4A950">₦{commaInt(totalPrice)}</Text>
+                    <Text color="#F4A950">{formatCurrency(totalPrice, listing?.currency)}</Text>
                   </Flex>
                 </VStack>
               </CardBody>

@@ -14,7 +14,7 @@ import { RiClockwiseLine, RiGasStationLine, RiFilterLine } from "react-icons/ri"
 import { RxTimer } from "react-icons/rx"
 import { TbManualGearbox } from "react-icons/tb"
 import { ListingItemCard, DatePicker } from "../../../components"
-import { objectifyJSON } from "../../../utils"
+import { objectifyJSON, formatCurrency } from "../../../utils"
 import { ListingSkeleton } from "../../../components/loaders"
 import { CustomPlacesAutocomplete } from "../../../components/maps"
 import { MapPin, Calendar as CalendarIcon, Search as SearchIcon, Filter, SlidersHorizontal, Car, Clock, Users, Zap, Plane, Ship, Bike, Radio } from "lucide-react";
@@ -238,8 +238,10 @@ export const RentListing = ({ props }) => {
     const bgColor = useColorModeValue('white', 'gray.800');
     const borderColor = useColorModeValue('gray.200', 'gray.600');
 
-    return(
-        <Fragment>
+    const cheapestListing = listings?.length > 0 ? listings.reduce((prev, curr) => (Number(prev.price || 0) < Number(curr.price || 0) ? prev : curr), listings[0]) : null;
+
+    return (
+        <Box minH="100vh" bg="gray.50">
             <Container maxWidth={'container.xl'} py={6}>
                 {/* Hero Section */}
                 <VStack spacing={6} mb={8}>
@@ -525,7 +527,7 @@ export const RentListing = ({ props }) => {
                         <HStack spacing={2}>
                             <Icon as={Car} color="#F4A950" />
                             <Text fontSize="sm" color="gray.600">
-                                Starting from ₦5,000/day
+                                Starting from {formatCurrency(5000, 'NGN')}/day
                             </Text>
                         </HStack>
                     )}
@@ -608,7 +610,7 @@ export const RentListing = ({ props }) => {
                     </CardBody>
                 </Card>
             </Container>
-        </Fragment>
+        </Box>
     )
 }
 

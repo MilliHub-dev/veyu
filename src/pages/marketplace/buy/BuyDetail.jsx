@@ -739,10 +739,10 @@ export const BuyDetail = ({ }) => {
               <Box mb={6}>
                 <Flex alignItems="baseline" gap={2} mb={2}>
                   <Heading size={'2xl'} color="#F4A950">
-                    ₦{commaInt(listing?.price)}
+                    {formatCurrency(listing?.price, listing?.currency)}
                   </Heading>
                   <Text color="gray.500" textDecoration="line-through" fontSize="lg">
-                    ₦{commaInt(listing?.price * 1.15)}
+                    {formatCurrency(listing?.price * 1.15, listing?.currency)}
                   </Text>
                 </Flex>
 

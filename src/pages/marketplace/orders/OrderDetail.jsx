@@ -285,22 +285,24 @@ function OrderDetail() {
               <CardBody>
                 <VStack spacing={3} align="stretch">
                   <HStack justify="space-between">
-                    <Text color="gray.600">Subtotal:</Text>
-                    <Text fontWeight="600">₦{commaInt(order?.sub_total)}</Text>
+                    <Text color="gray.600">Subtotal</Text>
+                    <Text fontWeight="600">{formatCurrency(order?.sub_total, order?.currency || order?.order_item?.currency)}</Text>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text color="gray.600">Service Fee:</Text>
-                    <Text fontWeight="600">₦{commaInt(order?.service_fee || 0)}</Text>
+                    <Text color="gray.600">Service Fee</Text>
+                    <Text fontWeight="600">{formatCurrency(order?.service_fee || 0, order?.currency || order?.order_item?.currency)}</Text>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text color="gray.600">Tax:</Text>
-                    <Text fontWeight="600">₦{commaInt(order?.tax || 0)}</Text>
+                    <Text color="gray.600">Tax</Text>
+                    <Text fontWeight="600">{formatCurrency(order?.tax || 0, order?.currency || order?.order_item?.currency)}</Text>
                   </HStack>
                   <Divider />
                   <HStack justify="space-between">
-                    <Text fontSize="lg" fontWeight="bold">Total:</Text>
-                    <Text fontSize="lg" fontWeight="bold" color="green.600">
-                      ₦{commaInt(order?.total || order?.sub_total)}
+                    <Text fontWeight="bold" fontSize="lg">
+                      Total
+                    </Text>
+                    <Text fontWeight="bold" fontSize="lg" color="green.600">
+                      {formatCurrency(order?.total || order?.sub_total, order?.currency || order?.order_item?.currency)}
                     </Text>
                   </HStack>
                   <HStack justify="space-between">

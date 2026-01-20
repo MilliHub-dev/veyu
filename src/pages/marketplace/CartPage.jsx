@@ -29,7 +29,7 @@ import {
  } from "@chakra-ui/react";
 import { useContext, useEffect, useState } from "react";
 import { GlobalStore } from "../../App";
-import { jsonifyObject, objectifyJSON } from "../../utils";
+import { jsonifyObject, objectifyJSON, formatCurrency } from "../../utils";
 import { useSearchParams, NavLink, Link } from "react-router-dom";
 // import { SearchIcon, StarIcon, ZapIcon } from '@chakra-ui/icons';
 import { RiGasStationLine, RiHeart2Fill, RiHeart2Line, RiMessage2Line, RiSearch2Line } from 'react-icons/ri'
@@ -432,7 +432,7 @@ export const CartPage = ({ props }) => {
                                                                     <HStack spacing={1}>
                                                                         <DollarSign size={16} color="green" />
                                                                         <Text fontSize="sm" fontWeight="700" color="green.600">
-                                                                            ₦{commaInt(order?.total || order?.sub_total || order?.order_item?.price)}
+                                                                            {formatCurrency(order?.total || order?.sub_total || order?.order_item?.price, order?.currency || order?.order_item?.currency)}
                                                                         </Text>
                                                                     </HStack>
                                                                     {order?.paid ? (
@@ -788,7 +788,7 @@ export const CartPage = ({ props }) => {
 
                                                 <Box flex={1}>
                                                     <Heading size="sm"  my={1}> {rental?.vehicle?.name} <Tag> {rental?.vehicle?.condition} </Tag> </Heading>
-                                                    <Text my={1} className="bold"> ₦{commaInt(rental?.price)}/{rental?.cycle} </Text>
+                                                    <Text my={1} className="bold"> {formatCurrency(rental?.price, rental?.currency)}/{rental?.cycle} </Text>
                                                     {/* <Text my={1}> {rental?.status} </Text> */}
                                                 </Box>
 
@@ -818,7 +818,7 @@ export const CartPage = ({ props }) => {
 
                                                 <Box flex={1}>
                                                     <Heading size="sm"  my={1}> {booking?.mechanic} </Heading>
-                                                    <Text my={1}> ₦{commaInt(booking?.sub_total)} <Text as="small">(sub total)</Text></Text>
+                                                    <Text my={1}> {formatCurrency(booking?.sub_total, booking?.currency)} <Text as="small">(sub total)</Text></Text>
                                                     {
                                                         booking?.services?.map((service, idx) => 
                                                             <Tag key={service}> {service} </Tag>

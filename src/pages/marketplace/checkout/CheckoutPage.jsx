@@ -2,7 +2,7 @@ import {useState, useEffect, useContext} from 'react';
 import {motion} from "framer-motion";
 import {useParams, useSearchParams, Link, useNavigate} from 'react-router-dom';
 import {GlobalStore} from "../../../App";
-import {objectifyJSON, jsonifyObject} from "../../../utils";
+import {objectifyJSON, jsonifyObject, formatCurrency} from "../../../utils";
 import {
   Box,
   Container,
@@ -324,7 +324,10 @@ function CheckoutPage({ props }) {
       console.log('Fees:', data.fees);
       if(res.status === 200){
         setListing(data.listing);
-        changeValue({amount: parseInt(data.listing.price)})
+        changeValue({
+          amount: parseInt(data.listing.price),
+          currency: data.listing.currency || 'NGN'
+        })
         setOrder(data.fees || {});
         setError(null);
       }
@@ -1149,7 +1152,7 @@ function CheckoutPage({ props }) {
                       {listing?.title}
                     </Heading>
                     <Text fontSize="2xl" fontWeight="bold" color="blue.600">
-                      ₦{commaInt(listing?.price)}
+                      {formatCurrency(listing?.price, listing?.currency)}
                     </Text>
                   </VStack>
 
@@ -1186,29 +1189,29 @@ function CheckoutPage({ props }) {
                     
                     <HStack justify="space-between">
                       <Text color="gray.600">Vehicle Price</Text>
-                      <Text fontWeight="semibold">₦{commaInt(listing?.price)}</Text>
+                      <Text fontWeight="semibold">{formatCurrency(listing?.price, listing?.currency)}</Text>
                     </HStack>
                     
                     <HStack justify="space-between">
                       <Text color="gray.600">Service Fee</Text>
-                      <Text fontWeight="semibold">₦{commaInt(order?.service_fee || 0)}</Text>
+                      <Text fontWeight="semibold">{formatCurrency(order?.service_fee || 0, listing?.currency)}</Text>
                     </HStack>
                     
                     <HStack justify="space-between">
                       <Text color="gray.600">Tax</Text>
-                      <Text fontWeight="semibold">₦{commaInt(order?.tax || 0)}</Text>
+                      <Text fontWeight="semibold">{formatCurrency(order?.tax || 0, listing?.currency)}</Text>
                     </HStack>
                     
                     <HStack justify="space-between">
                       <Text color="gray.600">Inspection Fee</Text>
-                      <Text fontWeight="semibold">₦{commaInt(order?.inspection_fee || 0)}</Text>
+                      <Text fontWeight="semibold">{formatCurrency(order?.inspection_fee || 0, listing?.currency)}</Text>
                     </HStack>
 
                     <Divider />
                     
                     <HStack justify="space-between">
                       <Text fontSize="lg" fontWeight="bold" color="gray.900">Total</Text>
-                      <Text fontSize="lg" fontWeight="bold" color="blue.600">₦{commaInt(total)}</Text>
+                      <Text fontSize="lg" fontWeight="bold" color="blue.600">{formatCurrency(total, listing?.currency)}</Text>
                     </HStack>
                   </VStack>
 

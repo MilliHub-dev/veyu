@@ -328,7 +328,7 @@ export const MechanicListPage = ({ props }) => {
             <HStack spacing={2}>
               <Icon as={Wrench} color="#F4A950" />
               <Text fontSize="sm" color="gray.600">
-                Services from ₦2,000
+                Services from {formatCurrency(2000, 'NGN')}
               </Text>
             </HStack>
           )}

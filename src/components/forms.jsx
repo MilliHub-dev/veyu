@@ -19,6 +19,7 @@ import {
   FormLabel,
   InputGroup,
   InputLeftElement,
+  InputLeftAddon,
   InputRightAddon,
   // FadeIn,
   Badge,
@@ -35,7 +36,7 @@ import {CloseIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon, CheckIcon} from 
 import {BackButton} from './nav';
 import {GlobalStore} from '../App';
 import { getBrandNames, getModelsForBrand } from '../data/vehicleBrands';
-import {objectifyJSON} from '../utils';
+import {objectifyJSON, formatCurrency} from '../utils';
 import { 
   ArrowLeft, DeleteIcon, Upload, AlertTriangle, Zap, Clock, Settings, 
   MessageCircle, Bell, MapPin, CheckCircle, Eye, Shield, Star, Calendar
@@ -204,7 +205,7 @@ export function ListingReviewCard({ formData }) {
             
             <VStack align="end" spacing={1} ml={4}>
               <Text fontSize="3xl" fontWeight="bold" color="#F4A950">
-                ₦{Number(formData?.price || 0).toLocaleString()}
+                {formatCurrency(formData?.price || 0, formData?.currency)}
               </Text>
               {formData?.listing_type === 'rental' && (
                 <Text fontSize="sm" color="gray.500">
@@ -748,7 +749,19 @@ export function CreateRentalForm({ formData, setFormData, vehicleCategory = 'car
         <FormControl isRequired>
           <FormLabel {...labelProps}>Rental Price</FormLabel>
           <InputGroup>
-            <InputLeftElement pointerEvents="none" color="gray.500">₦</InputLeftElement>
+            <InputLeftAddon p={0} overflow="hidden" width="100px">
+              <Select
+                border="none"
+                borderRadius={0}
+                value={formData.currency || 'NGN'}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                _focus={{ boxShadow: 'none' }}
+                height="100%"
+              >
+                <option value="NGN">₦ NGN</option>
+                <option value="USD">$ USD</option>
+              </Select>
+            </InputLeftAddon>
             <Input
               type="number"
               isRequired={true}
@@ -756,6 +769,8 @@ export function CreateRentalForm({ formData, setFormData, vehicleCategory = 'car
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               {...fieldProps}
+              borderTopLeftRadius={0}
+              borderBottomLeftRadius={0}
             />
           </InputGroup>
         </FormControl>
@@ -790,6 +805,7 @@ export function CreateRentalForm({ formData, setFormData, vehicleCategory = 'car
             <option value="local-used">Used (Local)</option>
             <option value="uk-used">Used (UK)</option>
             <option value="us-used">Used (US)</option>
+            <option value="china-used">Used (China)</option>
           </Select>
         </FormControl>
 
@@ -826,20 +842,25 @@ export function CreateRentalForm({ formData, setFormData, vehicleCategory = 'car
         {/* Car-specific fields */}
         {vehicleCategory === 'car' && (
           <>
-            <FormControl isRequired>
-              <FormLabel {...labelProps}>Vehicle Type</FormLabel>
+            <FormControl>
+              <FormLabel {...labelProps}>Body Type <small>(optional)</small></FormLabel>
               <Select
-                placeholder="Select Vehicle Type"
-                value={formData.vehicle_type || formData.body}
-                name="vehicle_type"
-                onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value, body: e.target.value })}
+                placeholder="Select Body Type"
+                value={formData.body_type}
+                name="body_type"
+                onChange={(e) => setFormData({ ...formData, body_type: e.target.value })}
                 {...selectProps}
               >
-                <option value="sedan">Sedan</option>
                 <option value="suv">SUV</option>
+                <option value="sedan">Sedan</option>
+                <option value="hatchback">Hatchback</option>
                 <option value="coupe">Coupe</option>
                 <option value="convertible">Convertible</option>
-                <option value="truck">Truck</option>
+                <option value="pickup">Pickup</option>
+                <option value="van">Van/Minivan</option>
+                <option value="wagon">Wagon</option>
+                <option value="luxury">Luxury</option>
+                <option value="sport">Sports Car</option>
               </Select>
             </FormControl>
 
@@ -1304,7 +1325,19 @@ export function EditListingForm({ formData, setFormData }) {
         <FormControl isRequired>
           <FormLabel {...labelProps}>Rental Price</FormLabel>
           <InputGroup>
-            <InputLeftElement pointerEvents="none" color="gray.500">₦</InputLeftElement>
+            <InputLeftAddon p={0} overflow="hidden" width="100px">
+              <Select
+                border="none"
+                borderRadius={0}
+                value={formData.currency || 'NGN'}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                _focus={{ boxShadow: 'none' }}
+                height="100%"
+              >
+                <option value="NGN">₦ NGN</option>
+                <option value="USD">$ USD</option>
+              </Select>
+            </InputLeftAddon>
             <Input
               type="number"
               isRequired={true}
@@ -1312,6 +1345,8 @@ export function EditListingForm({ formData, setFormData }) {
               value={formData?.price}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               {...fieldProps}
+              borderTopLeftRadius={0}
+              borderBottomLeftRadius={0}
             />
           </InputGroup>
         </FormControl>
@@ -1361,20 +1396,25 @@ export function EditListingForm({ formData, setFormData }) {
           />
         </FormControl>
 
-        <FormControl isRequired>
-          <FormLabel {...labelProps}>Vehicle Type</FormLabel>
+        <FormControl>
+          <FormLabel {...labelProps}>Body Type <small>(optional)</small></FormLabel>
           <Select
-            placeholder="Select Vehicle Type"
-            value={formData?.vehicle?.type}
-            name="vehicle_type"
-            onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, vehicle_type: e.target.value} })}
+            placeholder="Select Body Type"
+            value={formData?.vehicle?.body_type}
+            name="body_type"
+            onChange={(e) => setFormData({ ...formData, vehicle: {...formData.vehicle, body_type: e.target.value} })}
             {...selectProps}
           >
-            <option value="sedan">Sedan</option>
             <option value="suv">SUV</option>
+            <option value="sedan">Sedan</option>
+            <option value="hatchback">Hatchback</option>
             <option value="coupe">Coupe</option>
             <option value="convertible">Convertible</option>
-            <option value="truck">Truck</option>
+            <option value="pickup">Pickup</option>
+            <option value="van">Van/Minivan</option>
+            <option value="wagon">Wagon</option>
+            <option value="luxury">Luxury</option>
+            <option value="sport">Sports Car</option>
           </Select>
         </FormControl>
 
@@ -1657,7 +1697,19 @@ export function CreateSaleForm({ formData, setFormData, vehicleCategory = 'car' 
         <FormControl isRequired>
           <FormLabel {...labelProps}>Price</FormLabel>
           <InputGroup>
-            <InputLeftElement pointerEvents="none" color="gray.500">₦</InputLeftElement>
+            <InputLeftAddon p={0} overflow="hidden" width="100px">
+              <Select
+                border="none"
+                borderRadius={0}
+                value={formData.currency || 'NGN'}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                _focus={{ boxShadow: 'none' }}
+                height="100%"
+              >
+                <option value="NGN">₦ NGN</option>
+                <option value="USD">$ USD</option>
+              </Select>
+            </InputLeftAddon>
             <Input
               type="number"
               isRequired={true}
@@ -1665,6 +1717,8 @@ export function CreateSaleForm({ formData, setFormData, vehicleCategory = 'car' 
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               {...fieldProps}
+              borderTopLeftRadius={0}
+              borderBottomLeftRadius={0}
             />
           </InputGroup>
         </FormControl>
@@ -1683,26 +1737,32 @@ export function CreateSaleForm({ formData, setFormData, vehicleCategory = 'car' 
             <option value="local-used">Used (Local)</option>
             <option value="uk-used">Used (UK)</option>
             <option value="us-used">Used (US)</option>
+            <option value="china-used">Used (China)</option>
           </Select>
         </FormControl>
       
         {/* Car-specific fields */}
         {vehicleCategory === 'car' && (
           <>
-            <FormControl isRequired>
-              <FormLabel {...labelProps}>Vehicle Type</FormLabel>
+            <FormControl>
+              <FormLabel {...labelProps}>Body Type <small>(optional)</small></FormLabel>
               <Select
-                placeholder="Select Vehicle Type"
-                value={formData.body}
-                name="vehicle_type"
-                onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value, body: e.target.value })}
+                placeholder="Select Body Type"
+                value={formData.body_type}
+                name="body_type"
+                onChange={(e) => setFormData({ ...formData, body_type: e.target.value })}
                 {...selectProps}
               >
-                <option value="sedan">Sedan</option>
                 <option value="suv">SUV</option>
+                <option value="sedan">Sedan</option>
+                <option value="hatchback">Hatchback</option>
                 <option value="coupe">Coupe</option>
                 <option value="convertible">Convertible</option>
-                <option value="truck">Truck</option>
+                <option value="pickup">Pickup</option>
+                <option value="van">Van/Minivan</option>
+                <option value="wagon">Wagon</option>
+                <option value="luxury">Luxury</option>
+                <option value="sport">Sports Car</option>
               </Select>
             </FormControl>
             

@@ -495,10 +495,13 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, dealership, ...prop
   const displayName = dealership?.business_name || getUserDisplayName(authUser);
 
   window.onscroll = (ev) => {
+    const navbar = document.getElementById('navbar');
+    if (!navbar) return;
+    
     if (window.scrollY > 1000) {
-      document.getElementById('navbar').classList.add('scrolled');
+      navbar.classList.add('scrolled');
     } else {
-      document.getElementById('navbar').classList.remove('scrolled');
+      navbar.classList.remove('scrolled');
     }
   }
 

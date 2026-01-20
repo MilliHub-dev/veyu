@@ -72,7 +72,7 @@ const InspectionPayment = () => {
     if (walletBalance < inspection.inspection_fee) {
       toast({
         title: 'Insufficient Balance',
-        description: `You need ₦${inspection.inspection_fee.toLocaleString()} but have ₦${walletBalance.toLocaleString()}`,
+        description: `You need ${formatCurrency(inspection.inspection_fee, 'NGN')} but have ${formatCurrency(walletBalance, 'NGN')}`,
         status: 'error',
         duration: 5000,
       });

@@ -1803,7 +1803,7 @@ export const ListingItemCard = ({ listing, ...props }) => {
                         <Flex alignItems="center" justifyContent="space-between">
                             <VStack align="start" spacing={0}>
                                 <Text fontSize="2xl" fontWeight="bold" color="#F4A950">
-                                    ₦{commaInt(listing?.price)}
+                                    {formatCurrency(listing?.price, listing?.currency)}
                                 </Text>
                                 {listing?.listing_type === 'rental' && (
                                     <Text fontSize="xs" color="gray.500" fontWeight="medium">

@@ -349,7 +349,7 @@ const InspectionSlipPage = () => {
                   />
                   <InfoItem
                     label="Amount Paid"
-                    value={`₦${paidAmount?.toLocaleString() || 'N/A'}`}
+                    value={formatCurrency(paidAmount, 'NGN')}
                     valueColor="green.600"
                   />
                   {inspStatus && (

@@ -20,6 +20,20 @@ export function jsonifyObject(dataobject){
     return data
 }
 
+
+export function formatCurrency(amount, currency = 'NGN') {
+    const symbol = currency === 'USD' ? '$' : '₦';
+    try {
+        return `${symbol}${Number(amount || 0).toLocaleString()}`;
+    } catch {
+        return `${symbol}0`;
+    }
+}
+
+export function getCurrencySymbol(currency) {
+    return currency === 'USD' ? '$' : '₦';
+}
+
 export function objectifyJSON(datastring){
     let data = datastring;
     if (typeof data === 'object'){

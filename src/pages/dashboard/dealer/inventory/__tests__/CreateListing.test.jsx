@@ -45,7 +45,9 @@ vi.mock('../../../../../components/forms', () => ({
         year: '2023', 
         price: '10000',
         fuel_system: 'Electric',
-        transmission: 'Automatic'
+        transmission: 'Automatic',
+        currency: 'USD',
+        body_type: 'suv'
       })}>
         Fill Valid Data
       </button>
@@ -130,6 +132,7 @@ describe('CreateListing', () => {
     
     // Check key fields in FormData
     expect(formData.get('vehicle_category')).toBe('uav');
+    expect(formData.get('vehicle_type')).toBe('uav');
     expect(formData.get('brand')).toBe('Test Brand');
     expect(formData.get('uav_type')).toBe('quadcopter'); // Default check
     expect(formData.get('fuel_system')).toBe('Electric'); // UAV default
@@ -151,6 +154,8 @@ describe('CreateListing', () => {
     const fillButton = screen.getByText('Fill Valid Data');
     fireEvent.click(fillButton);
 
+    await waitFor(() => expect(screen.getByPlaceholderText('Brand')).toHaveValue('Test Brand'));
+
     // 3. Click Continue
     const continueButton = screen.getByText('Continue');
     fireEvent.click(continueButton);
@@ -163,9 +168,11 @@ describe('CreateListing', () => {
     const formData = mockAxios.post.mock.calls[0][1];
     
     expect(formData.get('vehicle_category')).toBe('car');
+    expect(formData.get('vehicle_type')).toBe('car');
     expect(formData.get('brand')).toBe('Test Brand');
+    expect(formData.get('currency')).toBe('USD');
     expect(formData.get('fuel_system')).toBe('Electric'); // From our fill button
-    expect(formData.get('body')).toBe('sedan'); // Default
+    expect(formData.get('body_type')).toBe('suv'); // From our fill button
   });
 
   it('selects Bike category and submits payload correctly', async () => {
@@ -191,6 +198,7 @@ describe('CreateListing', () => {
 
     const formData = mockAxios.post.mock.calls[0][1];
     expect(formData.get('vehicle_category')).toBe('bike');
+    expect(formData.get('vehicle_type')).toBe('bike');
     expect(formData.get('seats')).toBe('2'); // Bike default
     expect(formData.get('doors')).toBe('0'); // Bike default
   });
@@ -218,6 +226,7 @@ describe('CreateListing', () => {
 
     const formData = mockAxios.post.mock.calls[0][1];
     expect(formData.get('vehicle_category')).toBe('boat');
+    expect(formData.get('vehicle_type')).toBe('boat');
     expect(formData.get('boat_type')).toBe('motorboat'); // Default
     expect(formData.get('hull_material')).toBe('fiberglass'); // Default
   });
@@ -245,6 +254,7 @@ describe('CreateListing', () => {
 
     const formData = mockAxios.post.mock.calls[0][1];
     expect(formData.get('vehicle_category')).toBe('aircraft');
+    expect(formData.get('vehicle_type')).toBe('plane');
     expect(formData.get('aircraft_type')).toBe('single-engine'); // Default
     expect(formData.get('doors')).toBe('2'); // Aircraft default
   });

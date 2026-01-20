@@ -153,7 +153,7 @@ export default function AddListing() {
       }
 
       const condition = formData?.condition || formData?.usage || 'used';
-      const vehicleType = formData?.vehicle_type || formData?.body || 'sedan';
+      const bodyType = formData?.body_type || '';
       const fuel = formData?.fuel_system || formData?.fuel || 'petrol';
 
       // Create FormData with individual fields (not nested JSON)
@@ -164,12 +164,19 @@ export default function AddListing() {
       form.append('listing_type', formData?.listing_type === 'rental' ? 'rental' : 'sale');
       form.append('title', formData.title || `${formData.brand} ${formData.model} ${formData.year}`);
       form.append('price', formData.price.toString());
+      form.append('currency', formData.currency || 'NGN');
       form.append('payment_cycle', formData?.listing_type === 'rental' ? (formData?.payment_cycle || 'daily') : 'single');
       form.append('notes', formData?.notes || '');
 
       // Vehicle category (car, bike, boat, aircraft)
       const category = formData?.vehicle_category?.toLowerCase() || 'car';
       form.append('vehicle_category', category);
+
+      // Map category to backend vehicle_type
+      let backendVehicleType = category;
+      if (category === 'aircraft') backendVehicleType = 'plane';
+      
+      form.append('vehicle_type', backendVehicleType);
 
       // Vehicle fields (flattened)
       form.append('name', formData.title || `${formData.brand} ${formData.model}`);
@@ -185,8 +192,7 @@ export default function AddListing() {
         form.append('fuel_system', fuel);
         form.append('transmission', formData?.transmission || 'automatic');
         form.append('mileage', (formData?.mileage || '0').toString());
-        form.append('body', vehicleType);
-        form.append('vehicle_type', vehicleType);
+        form.append('body_type', bodyType);
 
         // Required car-specific fields
         form.append('vin', formData?.vin || 'N/A');
@@ -266,16 +272,6 @@ export default function AddListing() {
       featuresArray.forEach(feature => {
         form.append('features', feature);
       });
-
-      // Debug: Log all FormData entries
-      console.log('=== LISTING CREATION DEBUG ===');
-      console.log('FormData entries:');
-      const formDataObj = {};
-      for (let [key, value] of form.entries()) {
-        formDataObj[key] = value;
-        console.log(`  ${key}: ${value}`);
-      }
-      console.log('=== END DEBUG ===');
 
       const res = await axios.post(
         '/admin/dealership/listings/create/',
@@ -481,7 +477,7 @@ export default function AddListing() {
                 {currentStep === 1 && (
                   <VStack spacing={8} w="full">
                     <ImageUploader
-                      title="of your car"
+                      title="of your Vehicle"
                       limit={12}
                       description="See image upload guidelines"
                       onUpload={(files) => {
