@@ -63,7 +63,12 @@ function ImageCarousel({ images, ...props }) {
   useEffect(() => {
     setTimeout(() => setLoadingState(false), 500);
     if (images){
-      setImageList(images)
+      const normalized = (Array.isArray(images) ? images : []).map(img => {
+           if (typeof img === 'string') return { url: img };
+           if (!img) return { url: '' };
+           return { url: img.url || img.file || img.image || img.src || '' };
+      }).filter(img => img.url);
+      setImageList(normalized)
     }
   }, [images])
 
@@ -203,7 +208,13 @@ export default function RentalDetails() {
         const res = await axios.get(`/listings/rentals/${listingId}/`);
         let data = objectifyJSON(res.data);
         if (res.status === 200){
-          setListing(data.data.listing);
+          let listingData = data.data.listing;
+          if (listingData?.vehicle?.images && Array.isArray(listingData.vehicle.images)) {
+              listingData.vehicle.images = listingData.vehicle.images.map(img => 
+                  typeof img === 'string' ? { url: img } : img
+              );
+          }
+          setListing(listingData);
           setRecommended(data.data.recommended);
           let rats = [], _reviews = data.data.listing.vehicle.dealer.reviews;
           setReviews(_reviews)

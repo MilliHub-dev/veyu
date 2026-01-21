@@ -69,10 +69,16 @@ function Navbar() {
 function ImageCarousel({ images }) {
   const [currentImage, setCurrentImage] = useState(0)
 
+  const normalizedImages = (Array.isArray(images) ? images : []).map(img => {
+      if (typeof img === 'string') return { url: img };
+      if (!img) return { url: '' };
+      return { url: img.url || img.file || img.image || img.src || '' };
+  }).filter(img => img.url);
+
   return (
     <Box position="relative">
       <Image
-        src={images[currentImage] || "/placeholder.svg?height=400&width=800"}
+        src={normalizedImages[currentImage]?.url || "/placeholder.svg?height=400&width=800"}
         alt="Vehicle"
         w="full"
         h="400px"
@@ -86,7 +92,7 @@ function ImageCarousel({ images }) {
         transform="translateX(-50%)"
         spacing={2}
       >
-        {images.map((_, index) => (
+        {normalizedImages.map((_, index) => (
           <Box
             key={index}
             w={2}
@@ -104,7 +110,7 @@ function ImageCarousel({ images }) {
         left={4}
         top="50%"
         transform="translateY(-50%)"
-        onClick={() => setCurrentImage((prev) => (prev > 0 ? prev - 1 : images.length - 1))}
+        onClick={() => setCurrentImage((prev) => (prev > 0 ? prev - 1 : normalizedImages.length - 1))}
         variant="solid"
         colorScheme="blackAlpha"
         aria-label="Previous image"
@@ -115,7 +121,7 @@ function ImageCarousel({ images }) {
         right={4}
         top="50%"
         transform="translateY(-50%)"
-        onClick={() => setCurrentImage((prev) => (prev < images.length - 1 ? prev + 1 : 0))}
+        onClick={() => setCurrentImage((prev) => (prev < normalizedImages.length - 1 ? prev + 1 : 0))}
         variant="solid"
         colorScheme="blackAlpha"
         aria-label="Next image"

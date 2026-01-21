@@ -51,6 +51,7 @@ import {
   AlertIcon,
   useOutsideClick,
 } from '@chakra-ui/react';
+import { formatCurrency } from '../utils';
 import { BusinessLogo } from './BusinessLogo';
 import {Fragment, useContext, useEffect, useState, useRef} from 'react';
 import { RiGasStationLine, RiHeart2Fill, RiHeart2Line, RiSearch2Line } from 'react-icons/ri'
@@ -89,7 +90,6 @@ import {
   MdCalendarMonth,
 } from "react-icons/md"
 import { BsWallet2 } from "react-icons/bs"
-import { formatCurrency } from "../utils";
 
 
 export const ComboBox = ({ defaultOptions, onSelect }) => {
@@ -1171,7 +1171,12 @@ export const ListingItemCard = ({ listing, ...props }) => {
             return;
         }
         
-        const images = vehicle?.images || [];
+        const rawImages = vehicle?.images || [];
+        const images = (Array.isArray(rawImages) ? rawImages : []).map(img => {
+             if (typeof img === 'string') return { url: img };
+             if (!img) return { url: '' };
+             return { url: img.url || img.file || img.image || img.src || '' };
+        }).filter(img => img.url);
         const firstImage = images[0];
         
         if (firstImage?.url) {
@@ -1186,7 +1191,13 @@ export const ListingItemCard = ({ listing, ...props }) => {
     function nextImage(idx){
         if (!vehicle || !vehicle.images) return;
         
-        let images = vehicle.images || []
+        let rawImages = vehicle.images || []
+        let images = (Array.isArray(rawImages) ? rawImages : []).map(img => {
+             if (typeof img === 'string') return { url: img };
+             if (!img) return { url: '' };
+             return { url: img.url || img.file || img.image || img.src || '' };
+        }).filter(img => img.url);
+        
         if (images.length === 0) return;
         
         let newIndex = index + idx;
@@ -2153,7 +2164,13 @@ export function ImageCarousel({ images, ...props }) {
   const [currentImage, setCurrentImage] = useState(0)
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  if (!images || images.length === 0){
+  const normalizedImages = (Array.isArray(images) ? images : []).map(img => {
+      if (typeof img === 'string') return { url: img };
+      if (!img) return { url: '' };
+      return { url: img.url || img.file || img.image || img.src || '' };
+  }).filter(img => img.url);
+
+  if (!normalizedImages || normalizedImages.length === 0){
     return (
         <Box 
             w={'100%'} 
@@ -2173,125 +2190,122 @@ export function ImageCarousel({ images, ...props }) {
     );
   }
 
-  const nextImage = () => {
-    setCurrentImage((prev) => (prev + 1) % images?.length)
+  const nextImage = (e) => {
+    e?.stopPropagation();
+    setCurrentImage((prev) => (prev + 1) % normalizedImages?.length)
   }
 
-  const previousImage = () => {
-    setCurrentImage((prev) => (prev - 1 + images?.length) % images?.length)
+  const previousImage = (e) => {
+    e?.stopPropagation();
+    setCurrentImage((prev) => (prev - 1 + normalizedImages?.length) % normalizedImages?.length)
   }
 
   return (
-    <Box>
-        <Box position="relative" mb={4}>
+    <Box w="100%" overflow="hidden">
+        <Box position="relative" mb={4} borderRadius="10px" overflow="hidden">
             <Box
                 sx={{
-                    backgroundImage: `url(${images[currentImage]?.url})`,
+                    backgroundImage: `url(${normalizedImages[currentImage]?.url})`,
                     borderRadius: '10px',
                     backgroundRepeat: 'no-repeat',
                     backgroundSize: 'cover',
-                    backgroundPositionX: '50%',
-                    backgroundPositionY: '45%',
+                    backgroundPosition: 'center',
                 }}
                 w={'100%'}
                 h={'400px'}
                 cursor="zoom-in"
                 onClick={onOpen}
+                transition="transform 0.3s ease"
+                _hover={{ transform: 'scale(1.02)' }}
                 {...props}
-            ></Box>
+            />
 
             <IconButton
-            fontSize={"35px"}
-            rounded={"full"}
-            style={{background: 'rgba(0, 0, 0, 0.43)', color: '#fff'}}
-            aria-label="Previous image"
-            icon={<ChevronLeftIcon />}
-            position="absolute"
-            left={2}
-            top="50%"
-            transform="translateY(-50%)"
-            onClick={previousImage}
-            bg="white"
-            _hover={{ bg: 'gray.100' }}
+                fontSize={"35px"}
+                rounded={"full"}
+                style={{background: 'rgba(0, 0, 0, 0.43)', color: '#fff'}}
+                aria-label="Previous image"
+                icon={<ChevronLeftIcon />}
+                position="absolute"
+                left={2}
+                top="50%"
+                transform="translateY(-50%)"
+                onClick={previousImage}
+                bg="white"
+                _hover={{ bg: 'gray.100', color: 'black' }}
+                zIndex={2}
             />
         
             <IconButton
-            fontSize={"35px"}
-            rounded={"full"}
-            style={{background: 'rgba(0, 0, 0, 0.43)', color: '#fff'}}
-            aria-label="Next image"
-            icon={<ChevronRightIcon />}
-            position="absolute"
-            right={2}
-            top="50%"
-            transform="translateY(-50%)"
-            onClick={nextImage}
-            bg="white"
-            _hover={{ bg: 'gray.100' }}
+                fontSize={"35px"}
+                rounded={"full"}
+                style={{background: 'rgba(0, 0, 0, 0.43)', color: '#fff'}}
+                aria-label="Next image"
+                icon={<ChevronRightIcon />}
+                position="absolute"
+                right={2}
+                top="50%"
+                transform="translateY(-50%)"
+                onClick={nextImage}
+                bg="white"
+                _hover={{ bg: 'gray.100', color: 'black' }}
+                zIndex={2}
             />
         </Box>
 
-        <HStack spacing={2} overflowX="scroll" w='100%' pb={2}>
-        {images?.map((img, index) => (
-            <AspectRatio
-            key={index}
-            ratio={4/3}
-            w="24"
-            minW="24"
-            cursor="pointer"
-            onClick={() => setCurrentImage(index)}
-            >
-            {
-                images?.length > 4 ? (
-                    <Fragment>
-                        {
-                            index > 3 ? (null):(
-                                <Image
-                                    src={img?.url}
-                                    alt={`Thumbnail ${index + 1}`}
-                                    objectFit="cover"
-                                    borderRadius="md"
-                                    borderWidth={2}
-                                    borderColor={currentImage === index ? 'blue.500' : 'transparent'}
-                                />
-                            )
-                        }
-                        {index === 3 &&
-                        <Image
-                                src={img.url}
-                                alt={`Thumbnail ${index + 1}`}
-                                objectFit="cover"
-                                borderRadius="md"
-                                borderWidth={2}
-                                borderColor={currentImage === index ? 'blue.500' : 'transparent'}
-                            />
-                        }
-                    </Fragment>
-                ) : (
+        <HStack 
+            spacing={2} 
+            overflowX="auto" 
+            w="100%" 
+            maxW="100%" 
+            pb={2}
+            css={{
+                '&::-webkit-scrollbar': {
+                    height: '4px',
+                },
+                '&::-webkit-scrollbar-track': {
+                    background: '#f1f1f1',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                    background: '#888',
+                    borderRadius: '2px',
+                },
+            }}
+        >
+            {normalizedImages?.map((img, index) => (
+                <AspectRatio
+                    key={index}
+                    ratio={4/3}
+                    w="24"
+                    minW="24"
+                    cursor="pointer"
+                    onClick={() => setCurrentImage(index)}
+                    borderRadius="md"
+                    overflow="hidden"
+                    borderWidth={2}
+                    borderColor={currentImage === index ? 'blue.500' : 'transparent'}
+                >
                     <Image
                         src={img?.url}
                         alt={`Thumbnail ${index + 1}`}
                         objectFit="cover"
-                        borderRadius="md"
-                        borderWidth={2}
-                        borderColor={currentImage === index ? 'blue.500' : 'transparent'}
                     />
-                )
-            }
-            </AspectRatio>
-        ))}
+                </AspectRatio>
+            ))}
         </HStack>
 
-        <Modal isOpen={isOpen} onClose={onClose} size="4xl">
-        <ModalOverlay />
-        <ModalContent>
+        <Modal isOpen={isOpen} onClose={onClose} size="4xl" isCentered>
+        <ModalOverlay bg="blackAlpha.900" />
+        <ModalContent bg="transparent" boxShadow="none">
             <ModalBody p={0}>
             <AspectRatio ratio={4/3}>
                 <Box position="relative">
                 <Image
-                    src={images[currentImage].url}
+                    src={normalizedImages[currentImage]?.url}
                     alt={`Car image ${currentImage + 1}`}
-                    objectFit="cover"
+                    objectFit="contain"
+                    w="100%"
+                    h="100%"
                 />
                 <IconButton
                     aria-label="Previous image"
@@ -2301,6 +2315,9 @@ export function ImageCarousel({ images, ...props }) {
                     top="50%"
                     transform="translateY(-50%)"
                     onClick={previousImage}
+                    bg="whiteAlpha.400"
+                    color="white"
+                    _hover={{ bg: 'whiteAlpha.600' }}
                 />
                 <IconButton
                     aria-label="Next image"
@@ -2310,6 +2327,9 @@ export function ImageCarousel({ images, ...props }) {
                     top="50%"
                     transform="translateY(-50%)"
                     onClick={nextImage}
+                    bg="whiteAlpha.400"
+                    color="white"
+                    _hover={{ bg: 'whiteAlpha.600' }}
                 />
                 </Box>
             </AspectRatio>

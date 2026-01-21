@@ -43,10 +43,16 @@ import {
   Wrap,
   WrapItem,
   Tag,
+  Skeleton,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
 } from '@chakra-ui/react';
 import { BusinessLogo } from '../../components/BusinessLogo';
+import { ListingItemCard } from '../../components';
 import {useState, useEffect, useContext} from 'react';
-import {useParams, } from 'react-router-dom';
+import {useParams, useNavigate} from 'react-router-dom';
 import {GlobalStore} from '../../App';
 import {BackButton} from '../../components/nav';
 import {objectifyJSON, jsonifyObject} from '../../utils';
@@ -55,9 +61,11 @@ import {
   MessageSquare,  Bell, ShoppingCart, User,
   MoreVertical, Building2, CheckCircle, Share2,
   ThumbsUp, ThumbsDown, Filter, TrendingUp,
-  Calendar, Award, Shield
+  Calendar, Award, Shield, Phone, Mail, Globe
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { apiClient } from '../../services/api';
+import ChatService from '../../services/chatService';
 
 
 function Stats({ number, label }) {
@@ -140,7 +148,7 @@ function RatingCard({ dealer }) {
             <HStack justify="space-between">
               <HStack spacing={2}>
                 <Text fontWeight="bold" fontSize="2xl" color="#F4A950">
-                  {dealer?.rating || '4.8'}
+                  {dealer?.rating || 'N/A'}
                 </Text>
                 <VStack spacing={0} align="start">
                   <HStack spacing={1}>
@@ -148,44 +156,57 @@ function RatingCard({ dealer }) {
                       <Star
                         key={i}
                         size={16}
-                        fill={i < Math.floor(dealer?.rating || 4.8) ? "#F4A950" : "none"}
-                        color={i < Math.floor(dealer?.rating || 4.8) ? "#F4A950" : "gray.300"}
+                        fill={i < Math.floor(dealer?.rating || 0) ? "#F4A950" : "none"}
+                        color={i < Math.floor(dealer?.rating || 0) ? "#F4A950" : "gray.300"}
                       />
                     ))}
                   </HStack>
                   <Text fontSize="xs" color="gray.500">
-                    {dealer?.reviews?.length || 127} reviews
+                    {dealer?.reviews?.length || 0} reviews
                   </Text>
                 </VStack>
               </HStack>
-              <Badge colorScheme="green" variant="subtle" px={3} py={1} borderRadius="full">
-                <TrendingUp size={12} style={{ marginRight: '4px' }} />
-                Trending
-              </Badge>
+              {dealer?.rating > 4.5 && (
+                <Badge colorScheme="green" variant="subtle" px={3} py={1} borderRadius="full">
+                  <TrendingUp size={12} style={{ marginRight: '4px' }} />
+                  Top Rated
+                </Badge>
+              )}
             </HStack>
 
             {/* Rating Breakdown */}
             <VStack spacing={2} align="stretch">
-              {[5, 4, 3, 2, 1].map((rating) => (
-                <HStack key={rating} spacing={3} fontSize="sm">
-                  <Text minW="20px">{rating}</Text>
-                  <Star size={12} fill="#F4A950" color="#F4A950" />
-                  <Progress
-                    value={rating === 5 ? 75 : rating === 4 ? 20 : rating === 3 ? 3 : rating === 2 ? 1 : 1}
-                    size="sm"
-                    flex={1}
-                    bg="gray.100"
-                    sx={{
-                      '& > div': {
-                        bg: '#F4A950'
-                      }
-                    }}
-                  />
-                  <Text minW="30px" color="gray.500" fontSize="xs">
-                    {rating === 5 ? '95' : rating === 4 ? '25' : rating === 3 ? '4' : rating === 2 ? '2 ' : '1'}
-                  </Text>
-                </HStack>
-              ))}
+              {[5, 4, 3, 2, 1].map((rating) => {
+                 // Calculate percentage based on real data if available, else 0
+                 // Assuming dealer.rating_breakdown exists or we just show empty progress for now
+                 // For now, let's just avoid showing fake data.
+                 // If we don't have breakdown data, we can't show it accurately.
+                 // But we can try to be defensive.
+                 const count = dealer?.rating_breakdown?.[rating] || 0;
+                 const total = dealer?.reviews?.length || 1; // avoid divide by zero
+                 const percentage = (count / total) * 100;
+                 
+                 return (
+                  <HStack key={rating} spacing={3} fontSize="sm">
+                    <Text minW="20px">{rating}</Text>
+                    <Star size={12} fill="#F4A950" color="#F4A950" />
+                    <Progress
+                      value={percentage}
+                      size="sm"
+                      flex={1}
+                      bg="gray.100"
+                      sx={{
+                        '& > div': {
+                          bg: '#F4A950'
+                        }
+                      }}
+                    />
+                    <Text minW="30px" color="gray.500" fontSize="xs">
+                      {count}
+                    </Text>
+                  </HStack>
+                )
+              })}
             </VStack>
           </VStack>
 
@@ -199,7 +220,7 @@ function RatingCard({ dealer }) {
                 <Text fontSize="xs">Response</Text>
               </HStack>
               <Text fontWeight="bold" fontSize="sm" color="#F4A950">
-                ~15 min
+                {dealer?.response_time || 'N/A'}
               </Text>
             </VStack>
             <VStack spacing={1}>
@@ -208,7 +229,7 @@ function RatingCard({ dealer }) {
                 <Text fontSize="xs">Experience</Text>
               </HStack>
               <Text fontWeight="bold" fontSize="sm" color="#F4A950">
-                5+ years
+                {dealer?.experience || 'N/A'}
               </Text>
             </VStack>
           </SimpleGrid>
@@ -221,7 +242,7 @@ function RatingCard({ dealer }) {
 // Enhanced Review Card Component
 function ReviewCard({ review, isHighlighted = false }) {
   const [isHelpful, setIsHelpful] = useState(false);
-  const [helpfulCount, setHelpfulCount] = useState(review?.helpful_count || Math.floor(Math.random() * 20));
+  const [helpfulCount, setHelpfulCount] = useState(review?.helpful_count || 0);
 
   return (
     <MotionBox
@@ -249,7 +270,7 @@ function ReviewCard({ review, isHighlighted = false }) {
               <HStack spacing={3}>
                 <Avatar
                   size="md"
-                  name={review?.reviewer?.name || 'John Doe'}
+                  name={review?.reviewer?.name || 'Anonymous'}
                   src={review?.reviewer?.image}
                   border="2px solid"
                   borderColor="gray.200"
@@ -257,7 +278,7 @@ function ReviewCard({ review, isHighlighted = false }) {
                 <VStack spacing={0} align="start">
                   <HStack spacing={2}>
                     <Text fontWeight="bold" fontSize="md">
-                      {review?.reviewer?.name || 'John Doe'}
+                      {review?.reviewer?.name || 'Anonymous'}
                     </Text>
                     {review?.verified_purchase && (
                       <Badge colorScheme="green" variant="subtle" fontSize="xs">
@@ -272,15 +293,15 @@ function ReviewCard({ review, isHighlighted = false }) {
                         <Star
                           key={i}
                           size={12}
-                          fill={i < (review?.rating || 5) ? "#F4A950" : "none"}
-                          color={i < (review?.rating || 5) ? "#F4A950" : "gray.300"}
+                          fill={i < (review?.rating || 0) ? "#F4A950" : "none"}
+                          color={i < (review?.rating || 0) ? "#F4A950" : "gray.300"}
                         />
                       ))}
                     </HStack>
                     <Text>•</Text>
                     <HStack spacing={1}>
                       <Calendar size={12} />
-                      <Text>{review?.date || '2 weeks ago'}</Text>
+                      <Text>{review?.date || 'Recently'}</Text>
                     </HStack>
                   </HStack>
                 </VStack>
@@ -301,7 +322,7 @@ function ReviewCard({ review, isHighlighted = false }) {
                 </Text>
               )}
               <Text color="gray.600" lineHeight="1.6">
-                {review?.comment || "Excellent service! The team was professional and delivered exactly what was promised. The car was in perfect condition and the process was smooth from start to finish. Highly recommend this dealer to anyone looking for quality vehicles."}
+                {review?.comment || "No comment provided."}
               </Text>
             </Box>
 
@@ -345,7 +366,7 @@ function ReviewCard({ review, isHighlighted = false }) {
                 </Button>
               </HStack>
               <Text fontSize="xs" color="gray.400">
-                {review?.vehicle_type || 'Toyota Camry 2020'}
+                {review?.vehicle_type || ''}
               </Text>
             </HStack>
           </VStack>
@@ -492,6 +513,7 @@ function WriteReviewModal({ isOpen, onClose, dealer }) {
 
 export default function DealerProfile() {
   const {axios, authUser, notify} = useContext(GlobalStore);
+  const navigate = useNavigate();
   const [dealer, setDealer] = useState({});
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
@@ -502,197 +524,332 @@ export default function DealerProfile() {
   const {dealerId} = useParams();
 
   async function getData(){
-    const res = await axios.get(`/listings/dealer/${dealerId}/`);
-    const data = objectifyJSON(res.data);
+    try {
+      const res = await apiClient.get(`/listings/dealer/${dealerId}/`);
+      const data = objectifyJSON(res.data);
 
-    if (res.status === 200){
-      setDealer(data.data);
-      console.table(data.data)
-    }
-
-    // Mock reviews data - replace with actual API call
-    const mockReviews = [
-      {
-        id: 1,
-        reviewer: { name: 'Sarah Johnson', image: null },
-        rating: 5,
-        title: 'Excellent Service and Quality Cars',
-        comment: 'Outstanding experience from start to finish. The team was professional, knowledgeable, and helped me find the perfect car within my budget. The vehicle was exactly as described and in excellent condition.',
-        date: '2 weeks ago',
-        helpful_count: 15,
-        verified_purchase: true,
-        vehicle_type: 'Toyota Camry 2021',
-        tags: ['Professional', 'Quality', 'Honest Pricing']
-      },
-      {
-        id: 2,
-        reviewer: { name: 'Michael Chen', image: null },
-        rating: 5,
-        title: 'Highly Recommended Dealer',
-        comment: 'Bought my second car from this dealer and the experience was just as great as the first time. They have a wide selection of quality vehicles and their customer service is top-notch.',
-        date: '1 month ago',
-        helpful_count: 12,
-        verified_purchase: true,
-        vehicle_type: 'Honda Accord 2020',
-        tags: ['Repeat Customer', 'Great Selection']
-      },
-      {
-        id: 3,
-        reviewer: { name: 'Aisha Mohammed', image: null },
-        rating: 4,
-        title: 'Good Experience Overall',
-        comment: 'The car buying process was smooth and the staff was helpful. The only minor issue was the wait time, but the quality of service made up for it. Would definitely consider buying from them again.',
-        date: '3 weeks ago',
-        helpful_count: 8,
-        verified_purchase: true,
-        vehicle_type: 'Nissan Altima 2019',
-        tags: ['Good Service', 'Minor Wait']
-      },
-      {
-        id: 4,
-        reviewer: { name: 'David Okafor', image: null },
-        rating: 5,
-        title: 'Transparent and Trustworthy',
-        comment: 'What I appreciated most was their transparency about the vehicle history and condition. No hidden fees, no surprises. The car has been running perfectly for 6 months now.',
-        date: '6 months ago',
-        helpful_count: 20,
-        verified_purchase: true,
-        vehicle_type: 'Hyundai Elantra 2020',
-        tags: ['Transparent', 'No Hidden Fees', 'Reliable']
+      if (res.status === 200){
+        setDealer(data.data);
+        // Use real reviews if available, otherwise fallback to empty array (not mock data as user requested real data)
+        setReviews(data.data.reviews || []);
+        setFilteredReviews(data.data.reviews || []);
       }
-    ];
-
-    setReviews(mockReviews);
-    setFilteredReviews(mockReviews);
+    } catch (error) {
+      console.error("Error fetching dealer data:", error);
+      notify({
+        title: "Error",
+        body: "Failed to load dealership profile.",
+        color: "red"
+      });
+    }
   }
 
   function init(){
     getData();
-    setTimeout(() => setLoading(false), 2500)
+    // Reduce artificial delay
+    setTimeout(() => setLoading(false), 800)
   }
 
   useEffect(() => {
     init();
-  }, [])
+  }, [dealerId]) // Add dependency
+
+  const handleMessage = async () => {
+    if (!authUser) {
+      notify({
+        title: "Login Required",
+        body: "Please login to message this dealer.",
+        color: "orange"
+      });
+      return;
+    }
+
+    try {
+      // Use dealer.user_id if available. 
+      // If dealer object is the profile, it should have user_id or similar.
+      // If fetched from /listings/dealer/:id, dealerId param is likely the ID.
+      // But we need the USER ID for chat.
+      const recipientId = dealer?.user_id || dealer?.user?.id || dealer?.id; 
+      
+      if (!recipientId) {
+         notify({
+          title: "Error",
+          body: "Cannot start chat with this dealer.",
+          color: "red"
+        });
+        return;
+      }
+
+      const res = await ChatService.createNewChat(recipientId);
+      // Check for room_uuid or id in response
+      const roomId = res?.room_uuid || res?.id || res?.data?.room_uuid || res?.data?.id;
+      
+      if (roomId) {
+        navigate(`/chat/${roomId}`);
+      } else {
+        throw new Error("Invalid chat room response");
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+       notify({
+        title: "Error",
+        body: "Failed to start chat.",
+        color: "red"
+      });
+    }
+  }
 
 
   if (loading){
-    return null;
+    return (
+      <Box minH="100vh" bg="gray.50">
+        <Box h="250px" bg="gray.200" />
+        <Container maxW="container.xl" mt="-100px" pb={20}>
+           <HStack spacing={8} align="start">
+              <Skeleton height="300px" width="300px" borderRadius="xl" />
+              <VStack flex={1} spacing={4} align="stretch">
+                <Skeleton height="150px" borderRadius="xl" />
+                <Skeleton height="400px" borderRadius="xl" />
+              </VStack>
+           </HStack>
+        </Container>
+      </Box>
+    );
   }
 
+  const listings = dealer?.listings || [];
+
   return (
-    <Box minH="100vh">
+    <Box minH="100vh" bg="gray.50">
       {/* Cover Image */}
-      <Box position="relative" h="300px">
+      <Box position="relative" h="250px" bgGradient="linear(to-r, gray.800, gray.900)">
         <Image
-          src="/assets/images/features-image-1.png"
-          alt="Dealer cars"
+          src={dealer?.cover_image || "/assets/images/features-image-1.png"}
+          alt="Cover"
           w="full"
           h="full"
           objectFit="cover"
+          opacity={0.6}
+        />
+        <Box 
+            position="absolute" 
+            top={0} 
+            left={0} 
+            w="full" 
+            h="full" 
+            bgGradient="linear(to-t, rgba(0,0,0,0.7), transparent)" 
         />
 
         <BackButton
           position={'absolute'}
-          left={'30px'}
-          top={'10%'}
+          left={{ base: '4', md: '8' }}
+          top={'24px'}
           variant="solid"
+          colorScheme="whiteAlpha"
           color="white"
         />
       </Box>
 
-      <Container maxW={'1100px'} py={0}>
-        <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={8} as={Flex} alignItems="self-start">
-          {/* Main Content */}
-          <Box gridColumn="span 2">
-            {/* Profile Header */}
-            <HStack spacing={4} mb={6}>
-              
-              <Box
-                mt={'-20px'}
+      <Container maxW={'container.xl'} py={0}>
+        <Flex 
+            direction={{ base: 'column', lg: 'row' }} 
+            gap={8} 
+            mt="-80px" 
+            position="relative" 
+            zIndex={2}
+            alignItems="flex-start"
+        >
+          {/* Left Sidebar: Profile Card */}
+          <Box w={{ base: '100%', lg: '350px' }} flexShrink={0}>
+             <Card 
+                borderRadius="2xl" 
+                overflow="hidden" 
+                shadow="xl" 
                 bg="white"
-                borderRadius={'50%'}
-                zIndex={'1'}
-                p={2}
-              >
-                <BusinessLogo
-                  logoUrl={dealer?.logo}
-                  businessName={dealer?.business_name}
-                  size="xl"
-                  borderRadius="50%"
-                />
-              </Box>
+                mb={6}
+             >
+                <CardBody p={6} textAlign="center">
+                    <Box 
+                        mx="auto" 
+                        mt="-50px" 
+                        p={1} 
+                        bg="white" 
+                        borderRadius="full" 
+                        w="fit-content"
+                        shadow="md"
+                        mb={4}
+                    >
+                        <BusinessLogo
+                          logoUrl={dealer?.logo}
+                          businessName={dealer?.business_name}
+                          size="2xl"
+                          borderRadius="full"
+                        />
+                    </Box>
+                    
+                    <HStack justify="center" spacing={2} mb={1}>
+                        <Heading size="lg" color="gray.800">{dealer?.business_name}</Heading>
+                        {dealer?.is_verified && (
+                            <Badge colorScheme="blue" borderRadius="full" p={1}>
+                                <CheckCircle size={14} />
+                            </Badge>
+                        )}
+                    </HStack>
+                    
+                    <Text color="gray.500" mb={4} fontSize="sm">
+                        {dealer?.tagline || "Your trusted car partner"}
+                    </Text>
 
-              <Box flex={1}>
-                <HStack py={2}>
-                  <Text fontSize="lg" fontWeight="bold">
-                    {dealer?.business_name}
-                  </Text>
-                  <Badge colorScheme="blue">
-                    <CheckCircle size={16} />
-                  </Badge>
-                </HStack>
-                <HStack spacing={2}>
-                  <Badge variant="subtle" colorScheme="blue">
-                    Car Dealership
-                  </Badge>
-                  <HStack spacing={1}>
-                    <MapPin size={16} />
-                    <Text>Abuja, Nigeria</Text>
-                  </HStack>
-                </HStack>
-              </Box>
+                    <HStack justify="center" spacing={6} mb={6}>
+                         <Stats number={listings.length} label="Vehicles" />
+                         <Divider orientation="vertical" h="40px" />
+                         <Stats number={dealer?.reviews?.length || 0} label="Reviews" />
+                    </HStack>
+                    
+                    <VStack spacing={3} align="stretch" mb={6}>
+                        {dealer?.location && (
+                            <HStack color="gray.600" fontSize="sm">
+                                <MapPin size={16} />
+                                <Text>{dealer.location}</Text>
+                            </HStack>
+                        )}
+                        {dealer?.phone && (
+                            <HStack color="gray.600" fontSize="sm">
+                                <Phone size={16} />
+                                <Text>{dealer.phone}</Text>
+                            </HStack>
+                        )}
+                        {dealer?.email && (
+                             <HStack color="gray.600" fontSize="sm">
+                                <Mail size={16} />
+                                <Text>{dealer.email}</Text>
+                             </HStack>
+                        )}
+                        {dealer?.website && (
+                             <HStack color="gray.600" fontSize="sm">
+                                <Globe size={16} />
+                                <Text as="a" href={dealer.website} target="_blank" color="blue.500">
+                                    Visit Website
+                                </Text>
+                             </HStack>
+                        )}
+                    </VStack>
 
+                    <HStack spacing={3}>
+                        <Button 
+                            flex={1} 
+                            colorScheme="orange" 
+                            bg="#F4A950" 
+                            _hover={{ bg: 'orange.600' }}
+                            leftIcon={<MessageCircle size={18} />}
+                            borderRadius="full"
+                            onClick={handleMessage}
+                        >
+                            Message
+                        </Button>
+                        <Menu>
+                          <MenuButton
+                            as={IconButton}
+                            icon={<MoreVertical size={20} />}
+                            variant="outline"
+                            borderRadius="full"
+                            aria-label="More options"
+                          />
+                          <MenuList>
+                            <MenuItem icon={<Share2 size={16} />}>Share Profile</MenuItem>
+                            <MenuItem icon={<Shield size={16} />}>Report Dealer</MenuItem>
+                          </MenuList>
+                        </Menu>
+                    </HStack>
+                </CardBody>
+             </Card>
 
-              <HStack>
-                <Button leftIcon={<MessageCircle size={20} />} colorScheme="gray" variant="outline" borderRadius="30px"> Message </Button>
-                <Menu>
-                  <MenuButton
-                    as={IconButton}
-                    icon={<MoreVertical size={20} />}
-                    variant="ghost"
-                  />
-                  <MenuList placement="left">
-                    <MenuItem icon={<Share2 size={16} />}>Share Profile</MenuItem>
-                    <MenuItem>Report Dealer</MenuItem>
-                  </MenuList>
-                </Menu>
-              </HStack>
-            </HStack>
-
-            {/* Stats */}
-            <HStack spacing={8} mb={6}>
-              <Stats number={dealer?.listings?.length} label="Listings" />
-              <Stats number={dealer?.listings?.length} label="Deals" />
-              {/*<Stats number="180.2K" label="Followers" />
-              <Stats number="78" label="Following" />*/}
-            </HStack>
-
-            {/* Bio */}
-            <Box mb={6}>
-              <Heading size="md" my={2}>Bio </Heading>
-              <Text color="gray.600">{dealer?.about}</Text>
-            </Box>
-
-            {/* Services */}
-            <Box mb={6}>
-              <Heading size="md" my={2}>Services </Heading>
-              <Flex gap={2} flexWrap="wrap">
-                {dealer?.services?.map(service => 
-                  <ServiceTag key={service}>{service}</ServiceTag>
-                )}
-              </Flex>
-            </Box>
-
-            <Divider mb={6} />
+             <RatingCard dealer={dealer} />
           </Box>
 
-          {/* Sidebar */}
-          <Box position="relative" top={'10px'}>
-            <RatingCard dealer={dealer} />
+          {/* Main Content Area */}
+          <Box flex={1} pt={{ base: 0, lg: '80px' }} w="full">
+            <Tabs colorScheme="orange" size="lg" variant="enclosed-colored">
+                <TabList mb={6} borderBottom="1px solid" borderColor="gray.200">
+                    <Tab _selected={{ color: '#F4A950', borderColor: 'gray.200', borderBottomColor: 'white', fontWeight: 'bold' }}>Inventory ({listings.length})</Tab>
+                    <Tab _selected={{ color: '#F4A950', borderColor: 'gray.200', borderBottomColor: 'white', fontWeight: 'bold' }}>About</Tab>
+                    <Tab _selected={{ color: '#F4A950', borderColor: 'gray.200', borderBottomColor: 'white', fontWeight: 'bold' }}>Reviews</Tab>
+                </TabList>
+
+                <TabPanels>
+                    {/* Inventory Tab */}
+                    <TabPanel p={0}>
+                        {listings.length > 0 ? (
+                            <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
+                                {listings.map(listing => (
+                                    <ListingItemCard key={listing.id || listing.uuid} listing={listing} />
+                                ))}
+                            </SimpleGrid>
+                        ) : (
+                            <Alert status="info" borderRadius="lg" variant="subtle">
+                                <AlertIcon />
+                                <Box>
+                                    <AlertTitle>No vehicles listed yet</AlertTitle>
+                                    <AlertDescription display="block">
+                                        This dealership hasn't listed any vehicles for sale or rent yet.
+                                    </AlertDescription>
+                                </Box>
+                            </Alert>
+                        )}
+                    </TabPanel>
+
+                    {/* About Tab */}
+                    <TabPanel p={0}>
+                        <Card shadow="sm" borderRadius="xl" mb={6}>
+                            <CardBody>
+                                <Heading size="md" mb={4}>About Us</Heading>
+                                <Text color="gray.600" lineHeight="tall" mb={6}>
+                                    {dealer?.about || "No description provided."}
+                                </Text>
+                                
+                                <Divider mb={6} />
+                                
+                                <Heading size="md" mb={4}>Services</Heading>
+                                <Wrap spacing={3}>
+                                    {dealer?.services?.map(service => (
+                                        <WrapItem key={service}>
+                                            <ServiceTag>{service}</ServiceTag>
+                                        </WrapItem>
+                                    )) || <Text color="gray.500">No services listed.</Text>}
+                                </Wrap>
+                            </CardBody>
+                        </Card>
+                    </TabPanel>
+
+                    {/* Reviews Tab */}
+                    <TabPanel p={0}>
+                        <VStack spacing={4} align="stretch">
+                             <HStack justify="space-between" mb={2}>
+                                <Heading size="md">Customer Reviews</Heading>
+                                <Button size="sm" colorScheme="orange" variant="outline" onClick={onOpen}>
+                                    Write a Review
+                                </Button>
+                             </HStack>
+                             
+                             {reviews.length > 0 ? (
+                                reviews.map(review => (
+                                    <ReviewCard key={review.id} review={review} />
+                                ))
+                             ) : (
+                                <Alert status="info" borderRadius="lg">
+                                    <AlertIcon />
+                                    No reviews yet. Be the first to write one!
+                                </Alert>
+                             )}
+                        </VStack>
+                    </TabPanel>
+                </TabPanels>
+            </Tabs>
           </Box>
-        </SimpleGrid>
+        </Flex>
       </Container>
+      
+      <WriteReviewModal isOpen={isOpen} onClose={onClose} dealer={dealer} />
     </Box>
   )
 }

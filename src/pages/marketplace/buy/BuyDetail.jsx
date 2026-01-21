@@ -236,7 +236,13 @@ export const BuyDetail = ({ }) => {
             name: vehicleData.name || vehicleData.title || listingData.name || listingData.title,
             make: extractField(['make', 'brand', 'manufacturer']),
             model: extractField(['model', 'model_name']),
-            images: vehicleData.images || listingData.images || vehicleData.photos || listingData.photos || [],
+            images: (Array.isArray(vehicleData.images || listingData.images || vehicleData.photos || listingData.photos) 
+              ? (vehicleData.images || listingData.images || vehicleData.photos || listingData.photos) 
+              : []).map(img => {
+                  if (typeof img === 'string') return { url: img };
+                  if (!img) return { url: '' };
+                  return { url: img.url || img.file || img.image || img.src || '' };
+              }).filter(img => img.url),
             mileage: extractField(['mileage', 'odometer', 'miles', 'kilometers', 'km']),
             transmission: extractField(['transmission', 'transmission_type', 'gearbox']),
             fuel_system: extractField(['fuel_system', 'fuel_type', 'fuel', 'fuel_kind']),
@@ -630,9 +636,9 @@ export const BuyDetail = ({ }) => {
       {/* Main Content Grid */}
       <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={8} my={6}>
         {/* Left Column - Images and Details */}
-        <GridItem>
+        <GridItem minW="0">
           {/* Image Carousel */}
-          <Box mb={6}>
+          <Box mb={6} w="100%" overflow="hidden">
             <ImageCarousel
               w={'100%'}
               height={{ base: '300px', md: '400px', lg: '450px' }}
