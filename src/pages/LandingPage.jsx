@@ -393,8 +393,7 @@ function FeaturedDeals() {
           limit: 8,
           is_active: true,
           ordering: '-created_at'
-        },
-        timeout: 5000
+        }
       });
 
       if (response.data && Array.isArray(response.data.results)) {

@@ -512,93 +512,84 @@ function WriteReviewModal({ isOpen, onClose, dealer }) {
 }
 
 export default function DealerProfile() {
-  const {axios, authUser, notify} = useContext(GlobalStore);
+  const { dealerId } = useParams();
   const navigate = useNavigate();
-  const [dealer, setDealer] = useState({});
+  const [dealer, setDealer] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [reviews, setReviews] = useState([]);
-  const [filteredReviews, setFilteredReviews] = useState([]);
-  const [reviewFilter, setReviewFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
+  const toast = useToast();
+  const { authUser } = useContext(GlobalStore);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const {dealerId} = useParams();
-
-  async function getData(){
-    try {
-      const res = await apiClient.get(`/listings/dealer/${dealerId}/`);
-      const data = objectifyJSON(res.data);
-
-      if (res.status === 200){
-        setDealer(data.data);
-        // Use real reviews if available, otherwise fallback to empty array (not mock data as user requested real data)
-        setReviews(data.data.reviews || []);
-        setFilteredReviews(data.data.reviews || []);
-      }
-    } catch (error) {
-      console.error("Error fetching dealer data:", error);
-      notify({
-        title: "Error",
-        body: "Failed to load dealership profile.",
-        color: "red"
-      });
-    }
-  }
-
-  function init(){
-    getData();
-    // Reduce artificial delay
-    setTimeout(() => setLoading(false), 800)
-  }
+  const [rating, setRating] = useState(0);
+  const [title, setTitle] = useState('');
+  const [comment, setComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    init();
-  }, [dealerId]) // Add dependency
+    const getData = async () => {
+      try {
+        setLoading(true);
+        // Fetch dealer profile
+        const response = await apiClient.get(`/marketplace/dealership/${dealerId}/`);
+        
+        if (response.data) {
+          const dealerData = response.data;
+          
+          // Fetch dealer listings
+          const listingsResponse = await apiClient.get(`/marketplace/dealership/${dealerId}/listings/`);
+          const dealerListings = listingsResponse.data || [];
+          
+          // Combine data
+          setDealer({
+            ...dealerData,
+            listings: dealerListings,
+            reviews: dealerData.reviews || [], // Ensure reviews array exists
+            rating_breakdown: dealerData.rating_breakdown || {}
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching dealer data:", error);
+        toast({
+          title: "Error",
+          description: "Could not load dealership profile.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (dealerId) {
+      getData();
+    }
+  }, [dealerId, toast]);
 
   const handleMessage = async () => {
-    if (!authUser) {
-      notify({
-        title: "Login Required",
-        body: "Please login to message this dealer.",
-        color: "orange"
-      });
-      return;
-    }
-
     try {
-      // Use dealer.user_id if available. 
-      // If dealer object is the profile, it should have user_id or similar.
-      // If fetched from /listings/dealer/:id, dealerId param is likely the ID.
-      // But we need the USER ID for chat.
-      const recipientId = dealer?.user_id || dealer?.user?.id || dealer?.id; 
-      
-      if (!recipientId) {
-         notify({
-          title: "Error",
-          body: "Cannot start chat with this dealer.",
-          color: "red"
-        });
-        return;
-      }
-
-      const res = await ChatService.createNewChat(recipientId);
-      // Check for room_uuid or id in response
-      const roomId = res?.room_uuid || res?.id || res?.data?.room_uuid || res?.data?.id;
-      
-      if (roomId) {
-        navigate(`/chat/${roomId}`);
+      const chatResponse = await ChatService.createNewChat(dealer?.id);
+      if (chatResponse?.data?.room_id) {
+        navigate(`/chat/${chatResponse.data.room_id}`);
       } else {
-        throw new Error("Invalid chat room response");
+        toast({
+          title: "Error",
+          description: "Failed to start chat with dealer.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
       }
     } catch (error) {
-      console.error("Chat error:", error);
-       notify({
+      console.error("Error starting chat:", error);
+      toast({
         title: "Error",
-        body: "Failed to start chat.",
-        color: "red"
+        description: "Failed to start chat with dealer.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
       });
     }
-  }
-
+  };
 
   if (loading){
     return (

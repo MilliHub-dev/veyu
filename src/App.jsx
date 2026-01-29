@@ -5,6 +5,7 @@ import {
   useState,
   lazy,
   Suspense,
+  useCallback,
 } from "react";
 import {
   Outlet,
