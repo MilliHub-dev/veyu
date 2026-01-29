@@ -1,5 +1,18 @@
-import { createContext, Fragment, useEffect, useState, lazy, Suspense } from "react";
-import { Outlet, BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import {
+  createContext,
+  Fragment,
+  useEffect,
+  useState,
+  lazy,
+  Suspense,
+} from "react";
+import {
+  Outlet,
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import Cookies from "js-cookie";
 import axios from "axios";
 import { ChakraProvider, useToast } from "@chakra-ui/react";
@@ -8,7 +21,7 @@ import ErrorBoundary from "./components/error";
 import { LoadingSpinner } from "./components/loaders";
 import BusinessProfileGuard from "./components/BusinessProfileGuard";
 import VeyuTheme from "./theme.jsx";
-import { APIProvider } from '@vis.gl/react-google-maps';
+import { APIProvider } from "@vis.gl/react-google-maps";
 import { Autocomplete, LoadScript } from "@react-google-maps/api";
 import { enhanceUserWithCompletionStatus } from "./utils/profileCompletionUtils";
 import { GlobalStore } from "./contexts/GlobalStore";
@@ -29,11 +42,21 @@ const RentListing = lazy(() => import("./pages/marketplace/rent/RentListing"));
 const RentDetail = lazy(() => import("./pages/marketplace/rent/RentDetail"));
 const BuyListing = lazy(() => import("./pages/marketplace/buy/BuyListing"));
 const BuyDetail = lazy(() => import("./pages/marketplace/buy/BuyDetail"));
-const MechanicSearchPage = lazy(() => import("./pages/marketplace/search/MechanicSearch"));
-const CarSearchPage = lazy(() => import("./pages/marketplace/search/CarSearch"));
-const MechanicListPage = lazy(() => import("./pages/marketplace/mechanics/MechanicsListing"));
-const ConfirmMechanicBookingPage = lazy(() => import("./pages/marketplace/mechanics/ConfirmBooking"));
-const MechanicDetailPage = lazy(() => import("./pages/marketplace/mechanics/MechanicDetail"));
+const MechanicSearchPage = lazy(
+  () => import("./pages/marketplace/search/MechanicSearch"),
+);
+const CarSearchPage = lazy(
+  () => import("./pages/marketplace/search/CarSearch"),
+);
+const MechanicListPage = lazy(
+  () => import("./pages/marketplace/mechanics/MechanicsListing"),
+);
+const ConfirmMechanicBookingPage = lazy(
+  () => import("./pages/marketplace/mechanics/ConfirmBooking"),
+);
+const MechanicDetailPage = lazy(
+  () => import("./pages/marketplace/mechanics/MechanicDetail"),
+);
 const LoginView = lazy(() => import("./pages/auth/Login"));
 const SignupView = lazy(() => import("./pages/auth/Signup"));
 const BusinessSignupView = lazy(() => import("./pages/auth/BusinessProfile"));
@@ -41,10 +64,18 @@ const BusinessProfileSetup = lazy(() => import("./pages/auth/BusinessProfile"));
 const ChatLayout = lazy(() => import("./pages/marketplace/chat/Layout"));
 const ChatRoom = lazy(() => import("./pages/marketplace/chat/ChatRoom"));
 const CartPage = lazy(() => import("./pages/marketplace/CartPage"));
-const CheckoutPage = lazy(() => import("./pages/marketplace/checkout/CheckoutPage"));
-const CheckoutWithInspection = lazy(() => import("./pages/marketplace/checkout/CheckoutInspection"));
-const DocumentSigningPage = lazy(() => import("./pages/marketplace/checkout/DocumentSigningPage"));
-const NotificationsPage = lazy(() => import("./pages/marketplace/Notifications"));
+const CheckoutPage = lazy(
+  () => import("./pages/marketplace/checkout/CheckoutPage"),
+);
+const CheckoutWithInspection = lazy(
+  () => import("./pages/marketplace/checkout/CheckoutInspection"),
+);
+const DocumentSigningPage = lazy(
+  () => import("./pages/marketplace/checkout/DocumentSigningPage"),
+);
+const NotificationsPage = lazy(
+  () => import("./pages/marketplace/Notifications"),
+);
 
 // Support Pages
 const TicketList = lazy(() => import("./pages/support/TicketList"));
@@ -52,40 +83,85 @@ const CreateTicket = lazy(() => import("./pages/support/CreateTicket"));
 const TicketDetail = lazy(() => import("./pages/support/TicketDetail"));
 
 // Inspection Pages
-const InspectionSlipPage = lazy(() => import("./pages/marketplace/inspection/InspectionSlipPage"));
-const InspectionFormPage = lazy(() => import("./pages/marketplace/inspection/InspectionFormPage"));
-const DocumentPreviewPage = lazy(() => import("./pages/marketplace/inspection/DocumentPreviewPage"));
-const InspectionDetailPage = lazy(() => import("./pages/marketplace/InspectionDetailPage"));
+const InspectionSlipPage = lazy(
+  () => import("./pages/marketplace/inspection/InspectionSlipPage"),
+);
+const InspectionFormPage = lazy(
+  () => import("./pages/marketplace/inspection/InspectionFormPage"),
+);
+const DocumentPreviewPage = lazy(
+  () => import("./pages/marketplace/inspection/DocumentPreviewPage"),
+);
+const InspectionDetailPage = lazy(
+  () => import("./pages/marketplace/InspectionDetailPage"),
+);
 
 // Mechanic Dashboard
-const MechanicDashboardLayout = lazy(() => import("./pages/dashboard/mechanic/Layout"));
-const MechanicDashboard = lazy(() => import("./pages/dashboard/mechanic/MechanicDashboard"));
+const MechanicDashboardLayout = lazy(
+  () => import("./pages/dashboard/mechanic/Layout"),
+);
+const MechanicDashboard = lazy(
+  () => import("./pages/dashboard/mechanic/MechanicDashboard"),
+);
 const BookingsAdmin = lazy(() => import("./pages/dashboard/mechanic/Bookings"));
-const ServiceOfferings = lazy(() => import("./pages/dashboard/mechanic/services/ServiceOfferings"));
-const MechanicAnalytics = lazy(() => import("./pages/dashboard/mechanic/Analytics"));
-const CreateServiceOffering = lazy(() => import("./pages/dashboard/mechanic/services/CreateServiceOffering"));
-const MechanicBusinessProfile = lazy(() => import("./pages/dashboard/mechanic/settings/BusinessProfile"));
+const ServiceOfferings = lazy(
+  () => import("./pages/dashboard/mechanic/services/ServiceOfferings"),
+);
+const MechanicAnalytics = lazy(
+  () => import("./pages/dashboard/mechanic/Analytics"),
+);
+const CreateServiceOffering = lazy(
+  () => import("./pages/dashboard/mechanic/services/CreateServiceOffering"),
+);
+const MechanicSettings = lazy(
+  () => import("./pages/dashboard/mechanic/settings/Settings"),
+);
 
 // Dealer Dashboard
 const DealerProfile = lazy(() => import("./pages/marketplace/DealerProfile"));
-const DealerDashboardLayout = lazy(() => import("./pages/dashboard/dealer/Layout"));
-const DealerDashboard = lazy(() => import("./pages/dashboard/dealer/Dashboard"));
-const ListingsAdmin = lazy(() => import("./pages/dashboard/dealer/inventory/Listings"));
-const CreateListingAdmin = lazy(() => import("./pages/dashboard/dealer/inventory/CreateListing"));
-const EditListingAdmin = lazy(() => import("./pages/dashboard/dealer/inventory/EditListing"));
-const OrderListAdmin = lazy(() => import("./pages/dashboard/dealer/orders/OrderList"));
-const AnalyticsDashboard = lazy(() => import("./pages/dashboard/dealer/analytics/AnalyticsOverview"));
-const DealershipSettings = lazy(() => import("./pages/dashboard/dealer/settings/Settings"));
+const DealerDashboardLayout = lazy(
+  () => import("./pages/dashboard/dealer/Layout"),
+);
+const DealerDashboard = lazy(
+  () => import("./pages/dashboard/dealer/Dashboard"),
+);
+const ListingsAdmin = lazy(
+  () => import("./pages/dashboard/dealer/inventory/Listings"),
+);
+const CreateListingAdmin = lazy(
+  () => import("./pages/dashboard/dealer/inventory/CreateListing"),
+);
+const EditListingAdmin = lazy(
+  () => import("./pages/dashboard/dealer/inventory/EditListing"),
+);
+const OrderListAdmin = lazy(
+  () => import("./pages/dashboard/dealer/orders/OrderList"),
+);
+const AnalyticsDashboard = lazy(
+  () => import("./pages/dashboard/dealer/analytics/AnalyticsOverview"),
+);
+const DealershipSettings = lazy(
+  () => import("./pages/dashboard/dealer/settings/Settings"),
+);
 const MyBoosts = lazy(() => import("./pages/dashboard/dealer/boost/MyBoosts"));
-const VerifyInspectionPage = lazy(() => import("./pages/dashboard/dealer/VerifyInspectionPage"));
+const VerifyInspectionPage = lazy(
+  () => import("./pages/dashboard/dealer/VerifyInspectionPage"),
+);
 
 // Wallet
 const WalletLayout = lazy(() => import("./pages/marketplace/wallet/Layout"));
-const WalletHomePage = lazy(() => import("./pages/marketplace/wallet/Dashboard"));
-const WalletDepositPage = lazy(() => import("./pages/marketplace/wallet/Deposit"));
-const WalletTransactionsPage = lazy(() => import("./pages/marketplace/wallet/Transactions"));
-const WalletWithdrawalPage = lazy(() => import("./pages/marketplace/wallet/Withdraw"));
-
+const WalletHomePage = lazy(
+  () => import("./pages/marketplace/wallet/Dashboard"),
+);
+const WalletDepositPage = lazy(
+  () => import("./pages/marketplace/wallet/Deposit"),
+);
+const WalletTransactionsPage = lazy(
+  () => import("./pages/marketplace/wallet/Transactions"),
+);
+const WalletWithdrawalPage = lazy(
+  () => import("./pages/marketplace/wallet/Withdraw"),
+);
 
 function App() {
   const toast = useToast();
@@ -94,10 +170,12 @@ function App() {
   const [isAuthenticated, setAuthState] = useState(false);
   const [otherContext, setOtherContext] = useState({});
   const commaInt = (n) => {
-    try { return Number(n || 0).toLocaleString(); } catch { return '0'; }
+    try {
+      return Number(n || 0).toLocaleString();
+    } catch {
+      return "0";
+    }
   };
-
-
 
   // Use the centralized API client instead of creating a new one
   const axiosClient = apiClient;
@@ -108,31 +186,36 @@ function App() {
     if (token) {
       // Set Bearer token for the new format
       axiosClient.defaults.headers.Authorization = `Bearer ${token}`;
-      console.log('🔐 Token synced with axios client:', `Bearer ${token.substring(0, 20)}...`);
+      console.log(
+        "🔐 Token synced with axios client:",
+        `Bearer ${token.substring(0, 20)}...`,
+      );
     } else {
       delete axiosClient.defaults.headers.Authorization;
-      console.log('🔐 No token found, removed Authorization header');
+      console.log("🔐 No token found, removed Authorization header");
     }
   }, [authUser]);
 
   const notify = ({ title, body, color = "green", duration = 2500 }) =>
     toast({ title, description: body, colorScheme: color, duration });
 
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     window.notify = notify;
   }
 
   const redirect = (url, timeout) => {
-    timeout ? setTimeout(() => (window.location.href = url), timeout) : (window.location.href = url);
+    timeout
+      ? setTimeout(() => (window.location.href = url), timeout)
+      : (window.location.href = url);
   };
 
   const onAuthenticated = (data) => {
     try {
-      console.log('🔐 App.jsx onAuthenticated called with:', data);
+      console.log("🔐 App.jsx onAuthenticated called with:", data);
 
       // Handle missing authentication data gracefully
-      if (!data || typeof data !== 'object') {
-        console.error('❌ Invalid authentication data provided');
+      if (!data || typeof data !== "object") {
+        console.error("❌ Invalid authentication data provided");
         return;
       }
 
@@ -140,24 +223,25 @@ function App() {
       let userData = data.user || data;
 
       // Handle missing or invalid user data gracefully
-      if (!userData || typeof userData !== 'object') {
-        console.error('❌ No valid user data found in authentication response');
+      if (!userData || typeof userData !== "object") {
+        console.error("❌ No valid user data found in authentication response");
         return;
       }
 
       // Provide sensible defaults for missing user data fields
       const safeUserData = {
         id: userData.id || null,
-        email: userData.email || '',
-        first_name: userData.first_name || '',
-        last_name: userData.last_name || '',
-        user_type: userData.user_type || 'customer',
-        phone_number: userData.phone_number || '',
-        business_name: userData.business_name || '',
+        email: userData.email || "",
+        first_name: userData.first_name || "",
+        last_name: userData.last_name || "",
+        user_type: userData.user_type || "customer",
+        phone_number: userData.phone_number || "",
+        business_name: userData.business_name || "",
         email_verified: userData.email_verified || false,
         is_verified: userData.is_verified || false,
-        business_profile_completed: userData.business_profile_completed || false,
-        ...userData // Preserve any additional fields
+        business_profile_completed:
+          userData.business_profile_completed || false,
+        ...userData, // Preserve any additional fields
       };
 
       // Enhance user data with business_profile_completed field if not present
@@ -172,7 +256,7 @@ function App() {
 
       try {
         if (data.token) {
-          if (typeof data.token === 'string') {
+          if (typeof data.token === "string") {
             // Token is a string directly (old format)
             accessToken = data.token;
           } else if (data.token.access) {
@@ -195,12 +279,12 @@ function App() {
 
         if (accessToken) {
           TokenManager.setTokens(accessToken, refreshToken);
-          console.log('🔐 Tokens stored via TokenManager');
+          console.log("🔐 Tokens stored via TokenManager");
         } else {
-          console.warn('⚠️ No access token found in authentication data');
+          console.warn("⚠️ No access token found in authentication data");
         }
       } catch (tokenError) {
-        console.error('❌ Error processing authentication tokens:', tokenError);
+        console.error("❌ Error processing authentication tokens:", tokenError);
       }
 
       // Set the enhanced user data
@@ -209,18 +293,24 @@ function App() {
       setAuthUser({
         ...data,
         ...enhancedUserData, // Spread user properties at top level
-        user: enhancedUserData // Also keep nested for consistency
+        user: enhancedUserData, // Also keep nested for consistency
       });
       setAuthState(true);
 
-      console.log('✅ Authentication completed with graceful handling:', {
+      console.log("✅ Authentication completed with graceful handling:", {
         userId: enhancedUserData.id,
         userType: enhancedUserData.user_type,
-        emailVerified: enhancedUserData.email_verified || enhancedUserData.is_verified,
-        hasRequiredFields: !!(enhancedUserData.email && enhancedUserData.user_type)
+        emailVerified:
+          enhancedUserData.email_verified || enhancedUserData.is_verified,
+        hasRequiredFields: !!(
+          enhancedUserData.email && enhancedUserData.user_type
+        ),
       });
     } catch (error) {
-      console.error('❌ Error in onAuthenticated with graceful handling:', error);
+      console.error(
+        "❌ Error in onAuthenticated with graceful handling:",
+        error,
+      );
     }
   };
 
@@ -231,7 +321,7 @@ function App() {
     // Use TokenManager to clear tokens properly
     TokenManager.clearTokens();
 
-    window.location.href = '/login';
+    window.location.href = "/login";
   };
 
   const getAuthUser = () => {
@@ -251,27 +341,28 @@ function App() {
             userData = JSON.parse(newUserData);
 
             // Validate user data structure
-            if (userData && typeof userData === 'object') {
+            if (userData && typeof userData === "object") {
               // Provide sensible defaults for missing user data fields
               userData = {
                 id: userData.id || null,
-                email: userData.email || '',
-                first_name: userData.first_name || '',
-                last_name: userData.last_name || '',
-                user_type: userData.user_type || 'customer',
-                phone_number: userData.phone_number || '',
-                business_name: userData.business_name || '',
+                email: userData.email || "",
+                first_name: userData.first_name || "",
+                last_name: userData.last_name || "",
+                user_type: userData.user_type || "customer",
+                phone_number: userData.phone_number || "",
+                business_name: userData.business_name || "",
                 email_verified: userData.email_verified || false,
                 is_verified: userData.is_verified || false,
-                business_profile_completed: userData.business_profile_completed || false,
-                ...userData // Preserve any additional fields
+                business_profile_completed:
+                  userData.business_profile_completed || false,
+                ...userData, // Preserve any additional fields
               };
             } else {
-              console.warn('⚠️ Invalid user data format in veyu_user_data');
+              console.warn("⚠️ Invalid user data format in veyu_user_data");
               userData = null;
             }
           } catch (e) {
-            console.error('❌ Error parsing veyu_user_data:', e);
+            console.error("❌ Error parsing veyu_user_data:", e);
             userData = null;
           }
         }
@@ -284,24 +375,25 @@ function App() {
             // If we don't have userData from new format, extract from old format
             if (!userData && fullAuthData) {
               const extractedUser = fullAuthData.user || fullAuthData;
-              if (extractedUser && typeof extractedUser === 'object') {
+              if (extractedUser && typeof extractedUser === "object") {
                 userData = {
                   id: extractedUser.id || null,
-                  email: extractedUser.email || '',
-                  first_name: extractedUser.first_name || '',
-                  last_name: extractedUser.last_name || '',
-                  user_type: extractedUser.user_type || 'customer',
-                  phone_number: extractedUser.phone_number || '',
-                  business_name: extractedUser.business_name || '',
+                  email: extractedUser.email || "",
+                  first_name: extractedUser.first_name || "",
+                  last_name: extractedUser.last_name || "",
+                  user_type: extractedUser.user_type || "customer",
+                  phone_number: extractedUser.phone_number || "",
+                  business_name: extractedUser.business_name || "",
                   email_verified: extractedUser.email_verified || false,
                   is_verified: extractedUser.is_verified || false,
-                  business_profile_completed: extractedUser.business_profile_completed || false,
-                  ...extractedUser // Preserve any additional fields
+                  business_profile_completed:
+                    extractedUser.business_profile_completed || false,
+                  ...extractedUser, // Preserve any additional fields
                 };
               }
             }
           } catch (e) {
-            console.error('❌ Error parsing veyu-auth-user:', e);
+            console.error("❌ Error parsing veyu-auth-user:", e);
             fullAuthData = null;
           }
         }
@@ -311,7 +403,10 @@ function App() {
           const enhancedUserData = enhanceUserWithCompletionStatus(userData);
 
           // Update localStorage with enhanced data
-          localStorage.setItem("veyu_user_data", JSON.stringify(enhancedUserData));
+          localStorage.setItem(
+            "veyu_user_data",
+            JSON.stringify(enhancedUserData),
+          );
 
           // Prepare full auth data structure
           let authData;
@@ -319,30 +414,35 @@ function App() {
             authData = {
               ...fullAuthData,
               ...enhancedUserData, // Spread user properties at top level for routing compatibility
-              user: enhancedUserData
+              user: enhancedUserData,
             };
           } else {
             authData = enhancedUserData;
           }
 
-          console.log('🔐 Restored user session with graceful handling:', {
+          console.log("🔐 Restored user session with graceful handling:", {
             userId: enhancedUserData.id,
             userType: enhancedUserData.user_type,
-            emailVerified: enhancedUserData.email_verified || enhancedUserData.is_verified,
-            hasRequiredFields: !!(enhancedUserData.email && enhancedUserData.user_type)
+            emailVerified:
+              enhancedUserData.email_verified || enhancedUserData.is_verified,
+            hasRequiredFields: !!(
+              enhancedUserData.email && enhancedUserData.user_type
+            ),
           });
 
           setAuthUser(authData);
           setAuthState(true);
         } else {
-          console.log('🔐 Token exists but no valid user data found, clearing tokens');
+          console.log(
+            "🔐 Token exists but no valid user data found, clearing tokens",
+          );
           TokenManager.clearTokens();
         }
       } else {
-        console.log('🔐 No valid token found');
+        console.log("🔐 No valid token found");
       }
     } catch (error) {
-      console.error('❌ Error in getAuthUser with graceful handling:', error);
+      console.error("❌ Error in getAuthUser with graceful handling:", error);
       // Clear potentially corrupted data
       TokenManager.clearTokens();
     }
@@ -385,9 +485,18 @@ function App() {
     <ChakraProvider theme={VeyuTheme}>
       <ErrorBoundary>
         <GlobalStore.Provider value={context}>
-          <LoadScript googleMapsApiKey="AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0" libraries={['places', 'maps']}>
-            <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <Suspense fallback={<LoadingSpinner fullscreen message="Veyu is Loading..." />}>
+          <LoadScript
+            googleMapsApiKey="AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0"
+            libraries={["places", "maps"]}
+          >
+            <Router
+              future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+            >
+              <Suspense
+                fallback={
+                  <LoadingSpinner fullscreen message="Veyu is Loading..." />
+                }
+              >
                 <Routes>
                   {authUser ? (
                     <Fragment>
@@ -395,96 +504,258 @@ function App() {
                       {authUser.user_type === "dealer" ? (
                         <>
                           <Route element={<DealerDashboardLayout />}>
-                            <Route path="/dashboard" element={<DealerDashboard />} />
-                            <Route path="/orders" element={<OrderListAdmin />} />
+                            <Route
+                              path="/dashboard"
+                              element={<DealerDashboard />}
+                            />
+                            <Route
+                              path="/orders"
+                              element={<OrderListAdmin />}
+                            />
                             <Route path="/inventory" element={<Outlet />}>
-                              <Route path="edit/:listingId" element={<EditListingAdmin />} />
-                              <Route path="add" element={<CreateListingAdmin />} />
+                              <Route
+                                path="edit/:listingId"
+                                element={<EditListingAdmin />}
+                              />
+                              <Route
+                                path="add"
+                                element={<CreateListingAdmin />}
+                              />
                               <Route path="boost" element={<MyBoosts />} />
                               <Route path="" element={<ListingsAdmin />} />
                             </Route>
-                            <Route path="/analytics" element={<AnalyticsDashboard />} />
-                            <Route path="/verify-inspection" element={<VerifyInspectionPage />} />
-                            <Route path="/settings" element={<DealershipSettings />} />
-                            <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route
+                              path="/analytics"
+                              element={<AnalyticsDashboard />}
+                            />
+                            <Route
+                              path="/verify-inspection"
+                              element={<VerifyInspectionPage />}
+                            />
+                            <Route
+                              path="/settings"
+                              element={<DealershipSettings />}
+                            />
+                            <Route
+                              path="/notifications"
+                              element={<NotificationsPage />}
+                            />
                             <Route path="/support" element={<TicketList />} />
-                            <Route path="/support/create" element={<CreateTicket />} />
-                            <Route path="/support/tickets/:id" element={<TicketDetail />} />
-                            <Route path="/*" element={<Navigate to="/dashboard" />} />
+                            <Route
+                              path="/support/create"
+                              element={<CreateTicket />}
+                            />
+                            <Route
+                              path="/support/tickets/:id"
+                              element={<TicketDetail />}
+                            />
+                            <Route
+                              path="/*"
+                              element={<Navigate to="/dashboard" />}
+                            />
                           </Route>
                           {/* Marketplace routes for dealers */}
                           <Route element={<Layout />}>
                             <Route path="/buy" element={<BuyListing />} />
-                            <Route path="/buy/:listingId" element={<BuyDetail />} />
+                            <Route
+                              path="/buy/:listingId"
+                              element={<BuyDetail />}
+                            />
                             <Route path="/rent" element={<RentListing />} />
-                            <Route path="/rent/:listingId" element={<RentDetail />} />
+                            <Route
+                              path="/rent/:listingId"
+                              element={<RentDetail />}
+                            />
                             <Route path="/cart" element={<CartPage />} />
-                            <Route path="/checkout/pay" element={<CheckoutPage />} />
-                            <Route path="/checkout/docs" element={<DocumentSigningPage />} />
-                            <Route path="/checkout/inspection" element={<CheckoutWithInspection />} />
-                            <Route path="/inspections/:inspectionId" element={<InspectionDetailPage />} />
-                            <Route path="/inspections/slip/:slipReference" element={<InspectionSlipPage />} />
+                            <Route
+                              path="/checkout/pay"
+                              element={<CheckoutPage />}
+                            />
+                            <Route
+                              path="/checkout/docs"
+                              element={<DocumentSigningPage />}
+                            />
+                            <Route
+                              path="/checkout/inspection"
+                              element={<CheckoutWithInspection />}
+                            />
+                            <Route
+                              path="/inspections/:inspectionId"
+                              element={<InspectionDetailPage />}
+                            />
+                            <Route
+                              path="/inspections/slip/:slipReference"
+                              element={<InspectionSlipPage />}
+                            />
                           </Route>
                         </>
                       ) : authUser.user_type === "mechanic" ? (
                         /* Mechanic Dashboard */
                         <>
                           <Route element={<MechanicDashboardLayout />}>
-                            <Route path="/dashboard" element={<MechanicDashboard />} />
-                            <Route path="/bookings" element={<BookingsAdmin />} />
-                            <Route path="/analytics" element={<MechanicAnalytics />} />
+                            <Route
+                              path="/dashboard"
+                              element={<MechanicDashboard />}
+                            />
+                            <Route
+                              path="/bookings"
+                              element={<BookingsAdmin />}
+                            />
+                            <Route
+                              path="/analytics"
+                              element={<MechanicAnalytics />}
+                            />
                             <Route path="/services" element={<Outlet />}>
-                              <Route path="edit/:serviceId" element={<ServiceOfferings />} />
-                              <Route path="add" element={<CreateServiceOffering />} />
+                              <Route
+                                path="edit/:serviceId"
+                                element={<ServiceOfferings />}
+                              />
+                              <Route
+                                path="add"
+                                element={<CreateServiceOffering />}
+                              />
                               <Route path="" element={<ServiceOfferings />} />
                             </Route>
-                            <Route path="/settings" element={<MechanicBusinessProfile />} />
-                            <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route
+                              path="/settings"
+                              element={<MechanicSettings />}
+                            />
+                            <Route
+                              path="/notifications"
+                              element={<NotificationsPage />}
+                            />
                             <Route path="/support" element={<TicketList />} />
-                            <Route path="/support/create" element={<CreateTicket />} />
-                            <Route path="/support/tickets/:id" element={<TicketDetail />} />
-                            <Route path="/*" element={<Navigate to="/dashboard" />} />
+                            <Route
+                              path="/support/create"
+                              element={<CreateTicket />}
+                            />
+                            <Route
+                              path="/support/tickets/:id"
+                              element={<TicketDetail />}
+                            />
+                            <Route
+                              path="/*"
+                              element={<Navigate to="/dashboard" />}
+                            />
                           </Route>
                           {/* Marketplace routes for mechanics */}
                           <Route element={<Layout />}>
                             <Route path="/buy" element={<BuyListing />} />
-                            <Route path="/buy/:listingId" element={<BuyDetail />} />
+                            <Route
+                              path="/buy/:listingId"
+                              element={<BuyDetail />}
+                            />
                             <Route path="/rent" element={<RentListing />} />
-                            <Route path="/rent/:listingId" element={<RentDetail />} />
+                            <Route
+                              path="/rent/:listingId"
+                              element={<RentDetail />}
+                            />
                             <Route path="/cart" element={<CartPage />} />
-                            <Route path="/checkout/pay" element={<CheckoutPage />} />
-                            <Route path="/checkout/docs" element={<DocumentSigningPage />} />
-                            <Route path="/checkout/inspection" element={<CheckoutWithInspection />} />
-                            <Route path="/inspections/:inspectionId" element={<InspectionDetailPage />} />
-                            <Route path="/inspections/slip/:slipReference" element={<InspectionSlipPage />} />
+                            <Route
+                              path="/checkout/pay"
+                              element={<CheckoutPage />}
+                            />
+                            <Route
+                              path="/checkout/docs"
+                              element={<DocumentSigningPage />}
+                            />
+                            <Route
+                              path="/checkout/inspection"
+                              element={<CheckoutWithInspection />}
+                            />
+                            <Route
+                              path="/inspections/:inspectionId"
+                              element={<InspectionDetailPage />}
+                            />
+                            <Route
+                              path="/inspections/slip/:slipReference"
+                              element={<InspectionSlipPage />}
+                            />
                           </Route>
                         </>
                       ) : (
                         /* General Marketplace */
                         <Route element={<Layout />}>
                           <Route path="/rent" element={<RentListing />} />
-                          <Route path="/rent/:listingId" element={<RentDetail />} />
+                          <Route
+                            path="/rent/:listingId"
+                            element={<RentDetail />}
+                          />
                           <Route path="/buy" element={<BuyListing />} />
-                          <Route path="/buy/:listingId" element={<BuyDetail />} />
-                          <Route path="/mechanics" element={<MechanicListPage />} />
-                          <Route path="/mechanics/book/:mechId" element={<ConfirmMechanicBookingPage />} />
-                          <Route path="/mechanics/:mechId" element={<MechanicDetailPage />} />
-                          <Route path="/dealership/:dealerId" element={<DealerProfile />} />
+                          <Route
+                            path="/buy/:listingId"
+                            element={<BuyDetail />}
+                          />
+                          <Route
+                            path="/mechanics"
+                            element={<MechanicListPage />}
+                          />
+                          <Route
+                            path="/mechanics/book/:mechId"
+                            element={<ConfirmMechanicBookingPage />}
+                          />
+                          <Route
+                            path="/mechanics/:mechId"
+                            element={<MechanicDetailPage />}
+                          />
+                          <Route
+                            path="/dealership/:dealerId"
+                            element={<DealerProfile />}
+                          />
                           <Route path="/cart" element={<CartPage />} />
-                          <Route path="/checkout/pay" element={<CheckoutPage />} />
-                          <Route path="/checkout/docs" element={<DocumentSigningPage />} />
-                          <Route path="/checkout/inspection" element={<CheckoutWithInspection />} />
-                          <Route path="/inspection/slip" element={<InspectionSlipPage />} />
-                          <Route path="/inspection/form" element={<InspectionFormPage />} />
-                          <Route path="/inspection/document" element={<DocumentPreviewPage />} />
-                          <Route path="/inspections/:inspectionId" element={<InspectionDetailPage />} />
-                          <Route path="/inspections/slip/:slipReference" element={<InspectionSlipPage />} />
-                          <Route path="/search/cars" element={<CarSearchPage />} />
-                          <Route path="/search/mechanics" element={<MechanicSearchPage />} />
-                          <Route path="/notifications" element={<NotificationsPage />} />
+                          <Route
+                            path="/checkout/pay"
+                            element={<CheckoutPage />}
+                          />
+                          <Route
+                            path="/checkout/docs"
+                            element={<DocumentSigningPage />}
+                          />
+                          <Route
+                            path="/checkout/inspection"
+                            element={<CheckoutWithInspection />}
+                          />
+                          <Route
+                            path="/inspection/slip"
+                            element={<InspectionSlipPage />}
+                          />
+                          <Route
+                            path="/inspection/form"
+                            element={<InspectionFormPage />}
+                          />
+                          <Route
+                            path="/inspection/document"
+                            element={<DocumentPreviewPage />}
+                          />
+                          <Route
+                            path="/inspections/:inspectionId"
+                            element={<InspectionDetailPage />}
+                          />
+                          <Route
+                            path="/inspections/slip/:slipReference"
+                            element={<InspectionSlipPage />}
+                          />
+                          <Route
+                            path="/search/cars"
+                            element={<CarSearchPage />}
+                          />
+                          <Route
+                            path="/search/mechanics"
+                            element={<MechanicSearchPage />}
+                          />
+                          <Route
+                            path="/notifications"
+                            element={<NotificationsPage />}
+                          />
                           <Route path="/support" element={<TicketList />} />
-                          <Route path="/support/create" element={<CreateTicket />} />
-                          <Route path="/support/tickets/:id" element={<TicketDetail />} />
+                          <Route
+                            path="/support/create"
+                            element={<CreateTicket />}
+                          />
+                          <Route
+                            path="/support/tickets/:id"
+                            element={<TicketDetail />}
+                          />
                           <Route path="/home" element={<HomePage />} />
                           <Route path="/*" element={<Navigate to="/home" />} />
                         </Route>
@@ -508,9 +779,18 @@ function App() {
                       >
                         <Route path="/wallet" element={<WalletLayout />}>
                           <Route path="home" element={<WalletHomePage />} />
-                          <Route path="transactions" element={<WalletTransactionsPage />} />
-                          <Route path="deposit" element={<WalletDepositPage />} />
-                          <Route path="withdraw" element={<WalletWithdrawalPage />} />
+                          <Route
+                            path="transactions"
+                            element={<WalletTransactionsPage />}
+                          />
+                          <Route
+                            path="deposit"
+                            element={<WalletDepositPage />}
+                          />
+                          <Route
+                            path="withdraw"
+                            element={<WalletWithdrawalPage />}
+                          />
                           <Route path="" element={<Navigate to="home" />} />
                         </Route>
 
@@ -526,13 +806,28 @@ function App() {
                       <Route path="/services" element={<ServicesPage />} />
                       <Route path="/contact" element={<ContactPage />} />
                       <Route path="/profile" element={<PublicProfilePage />} />
-                      <Route path="/support" element={<Navigate to="/login" />} />
+                      <Route
+                        path="/support"
+                        element={<Navigate to="/login" />}
+                      />
                       <Route path="/login" element={<LoginView />} />
                       <Route path="/signup" element={<SignupView />} />
-                      <Route path="/signup/business" element={<BusinessSignupView />} />
-                      <Route path="/business-profile" element={<BusinessProfileSetup />} />
-                      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-                      <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+                      <Route
+                        path="/signup/business"
+                        element={<BusinessSignupView />}
+                      />
+                      <Route
+                        path="/business-profile"
+                        element={<BusinessProfileSetup />}
+                      />
+                      <Route
+                        path="/privacy-policy"
+                        element={<PrivacyPolicyPage />}
+                      />
+                      <Route
+                        path="/terms-of-service"
+                        element={<TermsOfServicePage />}
+                      />
                       <Route path="/*" element={<LandingPage />} />
                     </Route>
                   )}

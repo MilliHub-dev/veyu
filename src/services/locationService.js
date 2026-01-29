@@ -1,10 +1,40 @@
 import { apiClient, handleApiResponse, handleApiError } from './api';
 
 /**
+ * Round coordinate to 6 decimal places (fits within API's 10 digit limit)
+ * e.g., -122.123456 = 10 characters
+ */
+const roundCoord = (val) => {
+  if (val === null || val === undefined) return null;
+  return Math.round(parseFloat(val) * 1000000) / 1000000;
+};
+
+/**
  * Location Service
  * Handles all location-related API calls
  */
 class LocationService {
+  /**
+   * Get all locations for the current dealer
+   * @returns {Promise<Array>} Array of location objects
+   */
+  async getLocations() {
+    try {
+      const response = await apiClient.get('/accounts/locations/');
+      console.log("get locations response:", response.status);
+      console.log("get locations response data:", response.data);
+      const data = handleApiResponse(response);
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.results)) return data.results;
+      console.warn('Unexpected locations response shape:', data);
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch locations:', error);
+      // Return empty array instead of throwing - dealer might not have locations yet
+      return [];
+    }
+  }
+
   /**
    * Create a new location
    * @param {Object} locationData - Location data
@@ -20,23 +50,33 @@ class LocationService {
    */
   async createLocation(locationData) {
     try {
-      
-      const response = await apiClient.post('/locations/', {
+      const response = await apiClient.post('/accounts/locations/', {
         country: locationData.country,
         state: locationData.state,
         city: locationData.city,
         address: locationData.address || locationData.street_address || locationData.formatted_address,
         zip_code: locationData.zip_code || '',
-        lat: locationData.lat,
-        lng: locationData.lng,
+        lat: roundCoord(locationData.lat),
+        lng: roundCoord(locationData.lng),
         google_place_id: locationData.google_place_id || locationData.place_id || ''
       });
 
+      console.log("location creation response:", response.status);
+      console.log("location creation response data:", response);
+
+
       const data = handleApiResponse(response);
+      console.log('✅ Created location:', data);
       return data;
     } catch (error) {
       console.error('❌ Failed to create location:', error);
-      handleApiError(error);
+      // Extract error message without throwing to prevent page crash
+      const message = error.response?.data?.message
+        || error.response?.data?.detail
+        || error.response?.data?.error
+        || error.message
+        || 'Failed to create location';
+      throw new Error(message);
     }
   }
 
@@ -47,14 +87,17 @@ class LocationService {
    */
   async getLocation(locationId) {
     try {
-      
-      const response = await apiClient.get(`/locations/${locationId}/`);
+      const response = await apiClient.get(`/accounts/locations/${locationId}/`);
       const data = handleApiResponse(response);
-      
       return data;
     } catch (error) {
       console.error('❌ Failed to fetch location:', error);
-      handleApiError(error);
+      const message = error.response?.data?.message
+        || error.response?.data?.detail
+        || error.response?.data?.error
+        || error.message
+        || 'Failed to fetch location';
+      throw new Error(message);
     }
   }
 
@@ -67,15 +110,15 @@ class LocationService {
   async updateLocation(locationId, locationData) {
     try {
       console.log('📍 Updating location:', locationId, locationData);
-      
-      const response = await apiClient.put(`/locations/${locationId}/`, {
+
+      const response = await apiClient.put(`/accounts/locations/${locationId}/`, {
         country: locationData.country,
         state: locationData.state,
         city: locationData.city,
         address: locationData.address || locationData.street_address || locationData.formatted_address,
         zip_code: locationData.zip_code || '',
-        lat: locationData.lat,
-        lng: locationData.lng,
+        lat: roundCoord(locationData.lat),
+        lng: roundCoord(locationData.lng),
         google_place_id: locationData.google_place_id || locationData.place_id || ''
       });
 
@@ -84,7 +127,12 @@ class LocationService {
       return data;
     } catch (error) {
       console.error('❌ Failed to update location:', error);
-      handleApiError(error);
+      const message = error.response?.data?.message
+        || error.response?.data?.detail
+        || error.response?.data?.error
+        || error.message
+        || 'Failed to update location';
+      throw new Error(message);
     }
   }
 
@@ -95,13 +143,16 @@ class LocationService {
    */
   async deleteLocation(locationId) {
     try {
-      
-      await apiClient.delete(`/locations/${locationId}/`);
-      
+      await apiClient.delete(`/accounts/locations/${locationId}/`);
       return true;
     } catch (error) {
       console.error('❌ Failed to delete location:', error);
-      handleApiError(error);
+      const message = error.response?.data?.message
+        || error.response?.data?.detail
+        || error.response?.data?.error
+        || error.message
+        || 'Failed to delete location';
+      throw new Error(message);
     }
   }
 
