@@ -1,4 +1,4 @@
-import { 
+import {
   Box, Button, Checkbox, FormControl, FormLabel,
   Input, Stack, Switch, Textarea, VStack, Heading,
   Image, Tabs, TabList, TabPanels, Tab, TabPanel,
@@ -6,10 +6,11 @@ import {
 } from "@chakra-ui/react";
 import { useState, useEffect, useContext } from "react";
 import { FaUpload } from "react-icons/fa";
-import {Outlet} from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import BusinessProfile from './BusinessProfile';
-import {objectifyJSON} from '../../../../utils';
-import {GlobalStore} from '../../../../App';
+import LocationSettings from './LocationSettings';
+import { objectifyJSON } from '../../../../utils';
+import { GlobalStore } from '../../../../App';
 
 
 const DealershipSettings = () => {
@@ -35,6 +36,7 @@ const DealershipSettings = () => {
       <Tabs variant="enclosed">
         <TabList>
           <Tab fontWeight="600">Profile</Tab>
+          <Tab fontWeight="600">Location</Tab>
           <Tab fontWeight="600">Team</Tab>
           <Tab fontWeight="600">Notifications</Tab>
           <Tab fontWeight="600">Integrations</Tab>
@@ -44,6 +46,10 @@ const DealershipSettings = () => {
         <TabPanels>
           <TabPanel>
             <BusinessProfile />
+          </TabPanel>
+
+          <TabPanel>
+            <LocationSettings />
           </TabPanel>
 
           <TabPanel>

@@ -27,5 +27,5 @@ yarn-error.log*
 .kiro
 .idea
 .vscode
-/dist
 /docs
+/dist
