@@ -20,19 +20,9 @@ export default defineConfig({
 		// Optimize chunk splitting
 		rollupOptions: {
 			output: {
-				manualChunks(id) {
-					// Split vendor chunks for better caching
-					if (id.includes('node_modules')) {
-						if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-							return 'vendor-react';
-						}
-						if (id.includes('@chakra-ui') || id.includes('@emotion') || id.includes('framer-motion')) {
-							return 'vendor-chakra';
-						}
-						if (id.includes('firebase')) {
-							return 'vendor-firebase';
-						}
-					}
+				manualChunks: {
+					vendor: ['react', 'react-dom', 'react-router-dom'],
+					ui: ['@chakra-ui/react', '@emotion/react', '@emotion/styled', 'framer-motion'],
 				},
 			},
 		},
@@ -47,6 +37,6 @@ export default defineConfig({
 	},
 	// Optimize dependency pre-bundling
 	optimizeDeps: {
-		include: ['react', 'react-dom', 'react-router-dom', '@chakra-ui/react'],
+		include: ['react', 'react-dom', 'react-router-dom', '@chakra-ui/react', 'framer-motion'],
 	},
 });

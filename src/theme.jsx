@@ -2,8 +2,8 @@ import {extendTheme} from '@chakra-ui/react'
 
 const VeyuTheme = extendTheme({
   fonts: {
-    heading: `'Argent CF', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif`,
-    body: `'Argent CF', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif`,
+    heading: `'Satoshi', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif`,
+    body: `'Satoshi', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif`,
   },
   colors: {
     'primary': '#F4A950',
@@ -40,7 +40,7 @@ const VeyuTheme = extendTheme({
     global: {
       body: {
         color: "black",
-        fontFamily: `'Argent CF', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif`,
+        fontFamily: `'Satoshi', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif`,
       },
     },
   },
