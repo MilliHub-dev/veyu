@@ -855,8 +855,7 @@ function App() {
                   </Routes>
                 </Suspense>
               </Router>
-            </GoogleMapsProvider>
-          </Suspense>
+          </LoadScript>
         </GlobalStore.Provider>
       </ErrorBoundary>
     </ChakraProvider>
