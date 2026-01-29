@@ -113,8 +113,8 @@ const MechanicAnalytics = lazy(
 const CreateServiceOffering = lazy(
   () => import("./pages/dashboard/mechanic/services/CreateServiceOffering"),
 );
-const MechanicBusinessProfile = lazy(
-  () => import("./pages/dashboard/mechanic/settings/BusinessProfile"),
+const MechanicSettings = lazy(
+  () => import("./pages/dashboard/mechanic/settings/Settings"),
 );
 
 // Dealer Dashboard
@@ -618,7 +618,7 @@ function App() {
                             </Route>
                             <Route
                               path="/settings"
-                              element={<MechanicBusinessProfile />}
+                              element={<MechanicSettings />}
                             />
                             <Route
                               path="/notifications"
