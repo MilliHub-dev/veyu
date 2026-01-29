@@ -2,11 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="/assets/images/app_icon.jpg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#161b21" />
+
+    <!-- Preconnect to critical third-party origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://maps.googleapis.com" />
+    <link rel="preconnect" href="https://dev.veyu.cc" />
+    <link rel="dns-prefetch" href="https://embed.tawk.to" />
+
+    <!-- Preload critical fonts -->
+    <link rel="preload" href="/assets/fonts/ArgentCF-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/assets/fonts/ArgentCF-Medium.ttf" as="font" type="font/ttf" crossorigin />
+
+    <link rel="icon" href="/assets/images/app_icon.jpg" />
     <meta
-      name="Veyu - Africa's Largest Vehicle Marketplace"
+      name="description"
       content="All‑in‑one vehicle marketplace software designed to streamline vehicle transactions and services."
     />
     <link rel="canonical" href="https://www.veyu.cc/" />
@@ -43,23 +55,88 @@
     <link rel="apple-touch-icon" href="/assets/images/app_icon.jpg" />
     <link rel="manifest" href="/manifest.json" />
     <title> Veyu | Africa's Largest Vehicle Marketplace </title>
+
+    <!-- Critical CSS for instant preloader -->
+    <style>
+      #preloader {
+        position: fixed;
+        inset: 0;
+        background: #161b21;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.3s ease-out;
+      }
+      #preloader.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #preloader-logo {
+        width: 80px;
+        height: 80px;
+        border-radius: 16px;
+        margin-bottom: 24px;
+        animation: pulse-logo 1.5s ease-in-out infinite;
+      }
+      #preloader-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(244, 169, 80, 0.2);
+        border-top-color: #F4A950;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes pulse-logo {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+      }
+    </style>
   </head>
   <body>
+    <!-- Instant preloader - shows before any JS loads -->
+    <div id="preloader">
+      <img id="preloader-logo" src="/assets/images/app_icon.jpg" alt="Veyu" />
+      <div id="preloader-spinner"></div>
+    </div>
+
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+
     <script src="/src/index.jsx" type="module"></script>
-    <!--Start of Tawk.to Script--> 
-    <script type="text/javascript"> 
-    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date(); 
-    (function(){ 
-    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0]; 
-    s1.async=true; 
-    s1.src='https://embed.tawk.to/696f9d611090e9198185fe9e/1jfdvthdt'; 
-    s1.charset='UTF-8'; 
-    s1.setAttribute('crossorigin','*'); 
-    s0.parentNode.insertBefore(s1,s0); 
-    })(); 
-    </script> 
+
+    <!-- Preloader hide script - runs after React mounts -->
+    <script>
+      window.hidePreloader = function() {
+        var preloader = document.getElementById('preloader');
+        if (preloader) {
+          preloader.classList.add('fade-out');
+          setTimeout(function() { preloader.remove(); }, 300);
+        }
+      };
+    </script>
+
+    <!--Start of Tawk.to Script - Deferred loading -->
+    <script type="text/javascript">
+    // Delay Tawk.to load until after page is interactive
+    if (typeof window !== 'undefined') {
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          var Tawk_API = Tawk_API || {};
+          var s1 = document.createElement("script");
+          s1.async = true;
+          s1.src = 'https://embed.tawk.to/696f9d611090e9198185fe9e/1jfdvthdt';
+          s1.charset = 'UTF-8';
+          s1.setAttribute('crossorigin', '*');
+          document.body.appendChild(s1);
+        }, 3000); // Load after 3 seconds
+      });
+    }
+    </script>
     <!--End of Tawk.to Script-->
   </body>
 </html>

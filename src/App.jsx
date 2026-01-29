@@ -21,10 +21,26 @@ import ErrorBoundary from "./components/error";
 import { LoadingSpinner } from "./components/loaders";
 import BusinessProfileGuard from "./components/BusinessProfileGuard";
 import VeyuTheme from "./theme.jsx";
+
 import { APIProvider } from "@vis.gl/react-google-maps";
 import { Autocomplete, LoadScript } from "@react-google-maps/api";
 import { enhanceUserWithCompletionStatus } from "./utils/profileCompletionUtils";
 import { GlobalStore } from "./contexts/GlobalStore";
+
+// Lazy load Google Maps components - only load when needed
+const GoogleMapsProvider = lazy(() =>
+  import("@react-google-maps/api").then(mod => ({
+    default: ({ children }) => (
+      <mod.LoadScript
+        googleMapsApiKey="AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0"
+        libraries={['places', 'maps']}
+        loadingElement={<>{children}</>}
+      >
+        {children}
+      </mod.LoadScript>
+    )
+  }))
+);
 
 // Lazy-loaded pages (split chunks)
 const Layout = lazy(() => import("./pages/Layout"));
@@ -448,15 +464,20 @@ function App() {
     }
   };
 
-  const init = () => {
+  const init = useCallback(() => {
     setLoading(true);
     getAuthUser();
     setLoading(false);
-  };
+  }, []);
 
+  // Hide preloader and initialize app
   useEffect(() => {
     init();
-  }, []);
+    // Hide the HTML preloader after React mounts
+    if (typeof window !== 'undefined' && window.hidePreloader) {
+      window.hidePreloader();
+    }
+  }, [init]);
 
   const context = {
     notify,
@@ -831,10 +852,11 @@ function App() {
                       <Route path="/*" element={<LandingPage />} />
                     </Route>
                   )}
-                </Routes>
-              </Suspense>
-            </Router>
-          </LoadScript>
+                  </Routes>
+                </Suspense>
+              </Router>
+            </GoogleMapsProvider>
+          </Suspense>
         </GlobalStore.Provider>
       </ErrorBoundary>
     </ChakraProvider>

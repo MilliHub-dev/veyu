@@ -1,4 +1,4 @@
-import React, {Fragment} from "react";
+import React, { Fragment, memo } from "react";
 import {
   Box,
   Skeleton,
@@ -17,28 +17,23 @@ import {
   Badge,
   Button,
   Wrap,
-  WrapItem, 
+  WrapItem,
   Text,
   Center,
-  Spinner, 
+  Spinner,
 } from "@chakra-ui/react";
 import { css, keyframes } from "@emotion/react";
 
-
-const pulse = keyframes`
-  0% { transform: scale(1); background-color: #2e5cb8; }
-
-  33% { transform: scale(1.1); background-color: #ffd700; }
-  
-  66% { transform: scale(1.2); background-color: limegreen; }
-  
-  100% { transform: scale(1); background-color: #2e5cb8; }
+// CSS-based spinner animation for better performance
+const spinKeyframes = keyframes`
+  to { transform: rotate(360deg); }
 `;
 
+// Memoized LoadingSpinner for performance
+export const LoadingSpinner = memo(({ message = "", fullscreen = false, size = "lg" }) => {
+  const sizeMap = { sm: "24px", md: "32px", lg: "40px", xl: "48px" };
+  const spinnerSize = sizeMap[size] || "40px";
 
-
-
-export const LoadingSpinner = ({message = "", fullscreen = false, size="lg"}) => {
   return (
     <VStack
       spacing={4}
@@ -46,23 +41,22 @@ export const LoadingSpinner = ({message = "", fullscreen = false, size="lg"}) =>
       align="center"
       w="100%"
       h={fullscreen ? "100vh" : "100%"}
-      bg={fullscreen ? "dark.900" : "transparent"}
+      bg={fullscreen ? "#161b21" : "transparent"}
     >
-      <Spinner
-        thickness="4px"
-        speed="0.65s"
-        emptyColor="black"
-        color="primary"
-        size={size}
+      <Box
+        w={spinnerSize}
+        h={spinnerSize}
+        border="3px solid"
+        borderColor="rgba(244, 169, 80, 0.2)"
+        borderTopColor="#F4A950"
+        borderRadius="50%"
+        css={css`animation: ${spinKeyframes} 0.65s linear infinite;`}
       />
-      {/*{message && (
-        <Text color="dark.100" fontSize="md" fontWeight="medium">
-          {message}
-        </Text>
-      )}*/}
     </VStack>
   );
-};
+});
+
+LoadingSpinner.displayName = "LoadingSpinner";
 
 
 
