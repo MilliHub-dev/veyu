@@ -49,6 +49,7 @@ export default function AddListing() {
     listing_type: 'sale',
     vehicle_category: 'car', // car, bike, boat, aircraft
     features: [],
+    video: null,
   });
   const [form, setForm] = useState(null);
   const steps = ["Enter details", "Upload Images", "Review", "Publish"]
@@ -56,12 +57,13 @@ export default function AddListing() {
   const formRef = useRef();
   window.formRef = formRef;
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (currentStep < 3) {
       try {
         switch (currentStep) {
           case 1: {
-            return handleImageUpload()
+            await handleImageUpload();
+            return handleVideoUpload();
           }
           case 2: {
             return handlePublish()
@@ -111,7 +113,43 @@ export default function AddListing() {
     const res = await axios.post('/admin/dealership/listings/create/', payload);
 
     if (res.status === 200) {
-      setCurrentStep(currentStep + 1)
+      // Images uploaded, proceed to next step (handled by video upload or manually if no video)
+      // But we are calling handleVideoUpload right after, so we don't increment step here if video upload follows
+      // Actually, handleContinue calls them sequentially. 
+      // We should let handleVideoUpload increment the step, or increment if no video.
+    }
+  }
+
+  async function handleVideoUpload() {
+    if (!formData.video) {
+      setCurrentStep(currentStep + 1);
+      return;
+    }
+
+    try {
+      const payload = new FormData();
+      payload.append('action', 'upload-video');
+      payload.append('video', formData.video);
+
+      const res = await axios.post(`/admin/dealership/listings/${formData.uuid}/`, payload);
+
+      if (res.status === 200) {
+        toast({
+          title: "Video uploaded successfully",
+          status: "success",
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('Video upload failed:', error);
+      toast({
+        title: "Video upload failed",
+        description: "Your listing was created but the video could not be uploaded.",
+        status: "warning",
+        duration: 5000,
+      });
+    } finally {
+      setCurrentStep(currentStep + 1);
     }
   }
 
@@ -486,6 +524,64 @@ export default function AddListing() {
                       }}
                       data={formData?.images}
                     />
+
+                    {/* Video Uploader Section */}
+                    <Box w="full" p={6} border="1px dashed" borderColor="gray.300" borderRadius="xl" bg="gray.50">
+                      <VStack spacing={3}>
+                        <Heading size="sm" color="gray.700">Upload Vehicle Video (Optional)</Heading>
+                        <Text fontSize="sm" color="gray.500">Add a video tour of the vehicle. Max size 50MB.</Text>
+                        
+                        {formData.video ? (
+                          <HStack p={3} bg="white" borderRadius="md" shadow="sm" w="full" justify="space-between">
+                             <HStack>
+                               <Box p={2} bg="blue.100" borderRadius="full">
+                                 <PlayCircle size={20} color="var(--chakra-colors-blue-500)" /> 
+                               </Box>
+                               <Text fontSize="sm" noOfLines={1}>{formData.video.name}</Text>
+                             </HStack>
+                             <IconButton 
+                               icon={<DeleteIcon />} 
+                               size="sm" 
+                               colorScheme="red" 
+                               variant="ghost" 
+                               onClick={() => setFormData({...formData, video: null})}
+                             />
+                          </HStack>
+                        ) : (
+                          <Button
+                            as="label"
+                            htmlFor="video-upload"
+                            cursor="pointer"
+                            leftIcon={<Upload size={18} />}
+                            colorScheme="blue"
+                            variant="outline"
+                          >
+                            Select Video
+                            <Input
+                              id="video-upload"
+                              type="file"
+                              accept="video/*"
+                              hidden
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  if (file.size > 50 * 1024 * 1024) {
+                                    toast({
+                                      title: "File too large",
+                                      description: "Video must be under 50MB",
+                                      status: "error"
+                                    });
+                                    return;
+                                  }
+                                  setFormData({ ...formData, video: file });
+                                }
+                              }}
+                            />
+                          </Button>
+                        )}
+                      </VStack>
+                    </Box>
+
                     <Button disabled={formData?.images?.length > 0 ? false : true} colorScheme="blue" size="lg" w="full" onClick={handleContinue}>
                       Continue
                     </Button>

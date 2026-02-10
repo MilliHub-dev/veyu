@@ -243,6 +243,7 @@ export const BuyDetail = ({ }) => {
                   if (!img) return { url: '' };
                   return { url: img.url || img.file || img.image || img.src || '' };
               }).filter(img => img.url),
+            video: extractField(['video', 'video_url', 'media_video', 'listing_video']),
             mileage: extractField(['mileage', 'odometer', 'miles', 'kilometers', 'km']),
             transmission: extractField(['transmission', 'transmission_type', 'gearbox']),
             fuel_system: extractField(['fuel_system', 'fuel_type', 'fuel', 'fuel_kind']),
@@ -643,6 +644,7 @@ export const BuyDetail = ({ }) => {
               w={'100%'}
               height={{ base: '300px', md: '400px', lg: '450px' }}
               images={listing?.vehicle?.images}
+              video={listing?.vehicle?.video}
             />
           </Box>
 

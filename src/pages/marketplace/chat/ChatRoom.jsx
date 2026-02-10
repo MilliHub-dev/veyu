@@ -20,6 +20,7 @@ import {objectifyJSON} from '../../../utils';
 import {useParams, Link} from 'react-router-dom';
 import {ChevronLeftIcon, CloseIcon} from '@chakra-ui/icons';
 import { TokenManager } from '../../../services/api';
+import ListingCard from './ListingCard';
 
 
 function ChatRoom() {
@@ -36,17 +37,41 @@ function ChatRoom() {
 
   async function getData(){
     try{
-      const res = await axios.get(`/chat/chats/${room}/`);
+      let res;
+      try {
+        res = await axios.get(`/chat/chats/${room}/`);
+      } catch (e) {
+        if (e.response?.status === 404) {
+           console.log('Trying fallback endpoint /chats/:room/');
+           res = await axios.get(`/chats/${room}/`);
+        } else {
+           throw e;
+        }
+      }
+      
       const data = objectifyJSON(res.data);
 
-      console.log('Chat room data:', data?.data);
-      console.log('Participants:', data?.data?.participants || data?.data?.members);
+      console.log('Chat room data full:', data);
       
-      setChatRoom(data?.data || {});
-      setMessages(Array.isArray(data?.data?.messages) ? data?.data?.messages : []);
+      const roomData = data?.data || {};
+      setChatRoom(roomData);
+
+      // Handle various response structures for messages
+      let msgs = [];
+      if (Array.isArray(roomData?.messages)) {
+        msgs = roomData.messages;
+      } else if (Array.isArray(roomData?.results)) { // Handle DRF pagination
+        msgs = roomData.results;
+      } else if (Array.isArray(data?.messages)) { // Fallback to root
+        msgs = data.messages;
+      }
+      
+      console.log('Parsed messages:', msgs.length);
+      setMessages(msgs);
+
       // API might return 'participants' or 'members'
-      setMembers(Array.isArray(data?.data?.participants) ? data?.data?.participants : 
-                 Array.isArray(data?.data?.members) ? data?.data?.members : []);
+      setMembers(Array.isArray(roomData?.participants) ? roomData?.participants : 
+                 Array.isArray(roomData?.members) ? roomData?.members : []);
     }catch(err){
       console.error('Failed to load chat room:', err);
       setChatRoom({});
@@ -141,6 +166,12 @@ function ChatRoom() {
     
     return parts.map((part, index) => {
       if (part.match(urlPattern)) {
+        // Check if it's a listing URL (contains /buy/UUID or /rent/UUID)
+        // We match stricter pattern to avoid false positives, but keeping it flexible enough
+        if (part.match(/(?:buy|rent)\/([a-zA-Z0-9-]+)/)) {
+           return <ListingCard key={index} url={part} />;
+        }
+
         return (
           <Text
             key={index}

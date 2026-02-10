@@ -710,6 +710,32 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
   return (
     <Box>
       <form onSubmit={handleSubmit} method="post" name="sign-up-form">
+        {/* Toggle between Personal and Business Account at the top */}
+        <Button
+          as={RLink}
+          to={`/signup/?type=${type !== 'business' ? 'business' : 'customer'}`}
+          size="lg"
+          w="full"
+          variant="solid"
+          colorScheme="orange"
+          rightIcon={<ArrowRight size={20} />}
+          border="2px solid"
+          borderColor="primary"
+          mb={8}
+          _hover={{
+            bg: 'orange.600',
+            transform: 'translateY(-2px)',
+            shadow: 'lg'
+          }}
+          transition="all 0.2s"
+          py={7}
+          fontSize="md"
+          fontWeight="bold"
+          boxShadow="md"
+        >
+          Create {type === 'business' ? 'Personal' : 'Business'} Account
+        </Button>
+
         {type === 'business' && (
           <Box mb={6}>
             <FormLabel color="gray.700" fontWeight="semibold" textAlign="center">
@@ -897,27 +923,6 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
           </Button>
 
           <Divider />
-
-          <Button
-            as={RLink}
-            to={`/signup/?type=${type !== 'business' ? 'business' : 'customer'}`}
-            size="lg"
-            w="full"
-            variant="outline"
-            colorScheme="orange"
-            rightIcon={<ArrowRight size={20} />}
-            border="2px solid"
-            borderColor="primary"
-            _hover={{
-              bg: 'orange.50',
-              transform: 'translateY(-2px)',
-              shadow: 'md'
-            }}
-            transition="all 0.2s"
-            py={6}
-          >
-            Create {type === 'business' ? 'Personal' : 'Business'} Account
-          </Button>
 
           <HStack justify="center">
             <Text color="gray.600">

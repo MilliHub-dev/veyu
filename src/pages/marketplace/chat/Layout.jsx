@@ -33,9 +33,10 @@ function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
   const hoverBg = useColorModeValue('gray.50', 'gray.700');
   const activeBg = useColorModeValue('blue.50', 'blue.900');
 
-  const filteredConversations = conversations.filter(conv =>
-    conv?.recipient?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredConversations = conversations.filter(conv => {
+    const name = conv?.recipient?.name || conv?.participant?.name || '';
+    return name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const formatTime = (dateString) => {
     if (!dateString) return '';
@@ -164,12 +165,12 @@ function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
                     <Box position="relative" flexShrink={0}>
                       <Avatar
                         size="md"
-                        name={conversation?.recipient?.name || 'User'}
-                        src={conversation?.recipient?.image}
+                        name={conversation?.recipient?.name || conversation?.participant?.name || 'User'}
+                        src={conversation?.recipient?.image || conversation?.participant?.image || conversation?.participant?.avatar}
                         border="2px"
                         borderColor={hasUnread ? 'blue.500' : 'transparent'}
                       />
-                      {conversation?.recipient?.online && (
+                      {(conversation?.recipient?.online || conversation?.participant?.online) && (
                         <Box
                           position="absolute"
                           bottom={0}
@@ -191,7 +192,7 @@ function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
                           noOfLines={1}
                           color={hasUnread ? 'gray.900' : 'gray.700'}
                         >
-                          {conversation?.recipient?.name || 'Unknown User'}
+                          {conversation?.recipient?.name || conversation?.participant?.name || 'Unknown User'}
                         </Text>
                         <Text
                           fontSize="xs"
@@ -252,9 +253,41 @@ function ChatLayout() {
 
   async function getData() {
     try {
-      const res = await axios.get(`/chat/chats/`);
+      // Try the documented endpoint first: /chat/chats/
+      let res;
+      try {
+        res = await axios.get(`/chat/chats/`);
+      } catch (e) {
+        if (e.response?.status === 404) {
+          // If 404, try fallback endpoint: /chats/
+          console.log('Trying fallback endpoint /chats/');
+          res = await axios.get(`/chats/`);
+        } else {
+          throw e;
+        }
+      }
+
       const data = objectifyJSON(res.data);
-      setConversations(Array.isArray(data?.data) ? data?.data : []);
+      console.log('Chat List Response:', data);
+
+      // Handle various response structures
+      let chats = [];
+      if (Array.isArray(data)) {
+        chats = data;
+      } else if (Array.isArray(data?.data)) {
+        chats = data.data;
+      } else if (Array.isArray(data?.results)) {
+        chats = data.results;
+      } else if (Array.isArray(data?.data?.results)) {
+        chats = data.data.results;
+      } else if (Array.isArray(data?.chats)) {
+        chats = data.chats;
+      } else if (Array.isArray(data?.data?.chats)) {
+        chats = data.data.chats;
+      }
+
+      console.log('Parsed chats:', chats.length);
+      setConversations(chats);
     } catch (err) {
       console.error('Failed to load conversations:', err);
       console.error('Error details:', {
@@ -315,8 +348,8 @@ function ChatLayout() {
   }
 
   return (
-    <Box w="100%" bg={bgColor} minH="70vh">
-      <Flex h={{ base: '80vh', md: '75vh' }} maxH="900px">
+    <Box w="100%" bg={bgColor} h="calc(100vh - 80px)">
+      <Flex h="100%">
         {/* Sidebar - Hide on mobile when room is selected */}
         {room && isMobile ? null : (
           <ChatSidebar

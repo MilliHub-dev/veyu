@@ -55,7 +55,7 @@ import { formatCurrency } from '../utils';
 import { BusinessLogo } from './BusinessLogo';
 import {Fragment, useContext, useEffect, useState, useRef} from 'react';
 import { RiGasStationLine, RiHeart2Fill, RiHeart2Line, RiSearch2Line } from 'react-icons/ri'
-import { FaCaretLeft, FaCaretRight } from 'react-icons/fa6'
+import { FaCaretLeft, FaCaretRight, FaPlay } from 'react-icons/fa6'
 import { HiMiniReceiptPercent } from 'react-icons/hi2'
 import { LuMapPin } from 'react-icons/lu'
 import { RxCaretLeft, RxCaretRight, RxTimer } from 'react-icons/rx';
@@ -2160,17 +2160,28 @@ export const DNDUploadField = ({ accept, multiple=true, onUpload, ...props}) => 
 
 
 
-export function ImageCarousel({ images, ...props }) {
+export function ImageCarousel({ images, video, ...props }) {
   const [currentImage, setCurrentImage] = useState(0)
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const normalizedImages = (Array.isArray(images) ? images : []).map(img => {
-      if (typeof img === 'string') return { url: img };
-      if (!img) return { url: '' };
-      return { url: img.url || img.file || img.image || img.src || '' };
+      if (typeof img === 'string') return { url: img, type: 'image' };
+      if (!img) return { url: '', type: 'image' };
+      return { url: img.url || img.file || img.image || img.src || '', type: 'image' };
   }).filter(img => img.url);
 
-  if (!normalizedImages || normalizedImages.length === 0){
+  // Add video to the beginning if it exists
+  const mediaItems = [];
+  if (video) {
+      const videoUrl = typeof video === 'string' ? video : (video.url || video.file || video.src);
+      if (videoUrl) {
+          mediaItems.push({ url: videoUrl, type: 'video' });
+      }
+  }
+  
+  mediaItems.push(...normalizedImages);
+
+  if (!mediaItems || mediaItems.length === 0){
     return (
         <Box 
             w={'100%'} 
@@ -2192,33 +2203,55 @@ export function ImageCarousel({ images, ...props }) {
 
   const nextImage = (e) => {
     e?.stopPropagation();
-    setCurrentImage((prev) => (prev + 1) % normalizedImages?.length)
+    setCurrentImage((prev) => (prev + 1) % mediaItems.length)
   }
 
   const previousImage = (e) => {
     e?.stopPropagation();
-    setCurrentImage((prev) => (prev - 1 + normalizedImages?.length) % normalizedImages?.length)
+    setCurrentImage((prev) => (prev - 1 + mediaItems.length) % mediaItems.length)
   }
+
+  const currentItem = mediaItems[currentImage];
 
   return (
     <Box w="100%" overflow="hidden">
         <Box position="relative" mb={4} borderRadius="10px" overflow="hidden">
-            <Box
-                sx={{
-                    backgroundImage: `url(${normalizedImages[currentImage]?.url})`,
-                    borderRadius: '10px',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                }}
-                w={'100%'}
-                h={'400px'}
-                cursor="zoom-in"
-                onClick={onOpen}
-                transition="transform 0.3s ease"
-                _hover={{ transform: 'scale(1.02)' }}
-                {...props}
-            />
+            {currentItem.type === 'video' ? (
+                 <Box
+                    w={'100%'}
+                    h={'400px'}
+                    borderRadius="10px"
+                    bg="black"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    {...props}
+                >
+                    <video 
+                        src={currentItem.url} 
+                        controls 
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </Box>
+            ) : (
+                <Box
+                    sx={{
+                        backgroundImage: `url(${currentItem.url})`,
+                        borderRadius: '10px',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                    }}
+                    w={'100%'}
+                    h={'400px'}
+                    cursor="zoom-in"
+                    onClick={onOpen}
+                    transition="transform 0.3s ease"
+                    _hover={{ transform: 'scale(1.02)' }}
+                    {...props}
+                />
+            )}
 
             <IconButton
                 fontSize={"35px"}
@@ -2272,7 +2305,7 @@ export function ImageCarousel({ images, ...props }) {
                 },
             }}
         >
-            {normalizedImages?.map((img, index) => (
+            {mediaItems.map((item, index) => (
                 <AspectRatio
                     key={index}
                     ratio={4/3}
@@ -2285,11 +2318,28 @@ export function ImageCarousel({ images, ...props }) {
                     borderWidth={2}
                     borderColor={currentImage === index ? 'blue.500' : 'transparent'}
                 >
-                    <Image
-                        src={img?.url}
-                        alt={`Thumbnail ${index + 1}`}
-                        objectFit="cover"
-                    />
+                    <Box w="100%" h="100%">
+                        {item.type === 'video' ? (
+                             <Box 
+                                w="100%" 
+                                h="100%" 
+                                bg="black" 
+                                display="flex" 
+                                alignItems="center" 
+                                justifyContent="center"
+                            >
+                                <Icon as={FaPlay} color="white" boxSize={6} />
+                            </Box>
+                        ) : (
+                            <Image
+                                src={item.url}
+                                alt={`Thumbnail ${index + 1}`}
+                                objectFit="cover"
+                                w="100%" 
+                                h="100%"
+                            />
+                        )}
+                    </Box>
                 </AspectRatio>
             ))}
         </HStack>
@@ -2300,13 +2350,31 @@ export function ImageCarousel({ images, ...props }) {
             <ModalBody p={0}>
             <AspectRatio ratio={4/3}>
                 <Box position="relative">
-                <Image
-                    src={normalizedImages[currentImage]?.url}
-                    alt={`Car image ${currentImage + 1}`}
-                    objectFit="contain"
-                    w="100%"
-                    h="100%"
-                />
+                {currentItem.type === 'video' ? (
+                     <Box
+                        w={'100%'}
+                        h={'100%'}
+                        bg="black" 
+                        display="flex" 
+                        alignItems="center" 
+                        justifyContent="center"
+                    >
+                        <video 
+                            src={currentItem.url} 
+                            controls 
+                            autoPlay
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                    </Box>
+                ) : (
+                    <Image
+                        src={currentItem.url}
+                        alt={`Car image ${currentImage + 1}`}
+                        objectFit="contain"
+                        w="100%"
+                        h="100%"
+                    />
+                )}
                 <IconButton
                     aria-label="Previous image"
                     icon={<ChevronLeftIcon />}

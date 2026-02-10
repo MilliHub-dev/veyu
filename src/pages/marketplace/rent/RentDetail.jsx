@@ -1,13 +1,13 @@
 import { Fragment, useContext, useEffect, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { GlobalStore } from "../../../App";
-import { LocationBreadcrumb, DatePicker, ReviewCard, RatingCard, ListingItemCard } from "../../../components";
+import { LocationBreadcrumb, DatePicker, ReviewCard, RatingCard, ListingItemCard, ImageCarousel } from "../../../components";
 import { ListingDetailSkeleton } from "../../../components/loaders";
 import { BusinessLogo } from "../../../components/BusinessLogo";
 import { 
   ChevronLeft, ChevronRight, Star, Users, MapPin, Calendar,
   DoorOpen, Zap, Gauge, Key, Camera, Music, Phone, Heart, Share2,
-  Smartphone, Sun, BatteryCharging, Shield, Clock, CheckCircle, MessageCircle, Edit
+  Smartphone, Sun, BatteryCharging, Shield, Clock, CheckCircle, MessageCircle, Edit, Play
 } from 'lucide-react'
 import { objectifyJSON, formatCurrency } from "../../../utils";
 import {
@@ -54,138 +54,7 @@ function FeatureCard({ feature }) {
   );
 }
 
-// Enhanced Image Carousel Component
-function ImageCarousel({ images, ...props }) {
-  const [currentImage, setCurrentImage] = useState(0);
-  const [imageList, setImageList] = useState([])
-  const [loading, setLoadingState] = useState(true);
 
-  useEffect(() => {
-    setTimeout(() => setLoadingState(false), 500);
-    if (images){
-      const normalized = (Array.isArray(images) ? images : []).map(img => {
-           if (typeof img === 'string') return { url: img };
-           if (!img) return { url: '' };
-           return { url: img.url || img.file || img.image || img.src || '' };
-      }).filter(img => img.url);
-      setImageList(normalized)
-    }
-  }, [images])
-
-  if(loading){
-    return (
-      <Box w="full" h="500px" bg="gray.100" borderRadius="2xl" display="flex" alignItems="center" justifyContent="center">
-        <VStack spacing={3} color="gray.400">
-          <Box fontSize="4xl">🚗</Box>
-          <Text>Loading images...</Text>
-        </VStack>
-      </Box>
-    )
-  }
-
-  if (!imageList || imageList.length === 0) {
-    return (
-      <Box w="full" h="500px" bg="gray.100" borderRadius="2xl" display="flex" alignItems="center" justifyContent="center">
-        <VStack spacing={3} color="gray.400">
-          <Box fontSize="4xl">🚗</Box>
-          <Text>No images available</Text>
-        </VStack>
-      </Box>
-    )
-  }
-
-  return (
-    <Box position="relative" borderRadius="2xl" overflow="hidden" boxShadow="2xl">
-      <Image
-        src={imageList[currentImage]?.url}
-        alt="Vehicle"
-        w="full"
-        h={{ base: "300px", md: "500px" }}
-        objectFit="cover"
-      />
-      
-      {/* Image Counter */}
-      <Badge
-        position="absolute"
-        top={4}
-        right={4}
-        bg="blackAlpha.800"
-        color="white"
-        px={4}
-        py={2}
-        borderRadius="full"
-        fontSize="sm"
-        fontWeight="bold"
-      >
-        {currentImage + 1} / {imageList?.length}
-      </Badge>
-
-      {/* Navigation Arrows */}
-      {imageList?.length > 1 && (
-        <>
-          <IconButton
-            icon={<ChevronLeft size="24px" />}
-            position="absolute"
-            left={4}
-            top="50%"
-            transform="translateY(-50%)"
-            onClick={() => setCurrentImage((prev) => (prev > 0 ? prev - 1 : imageList?.length - 1))}
-            bg="whiteAlpha.900"
-            color="gray.800"
-            borderRadius="full"
-            size="lg"
-            _hover={{ bg: "white", transform: "translateY(-50%) scale(1.1)" }}
-            boxShadow="lg"
-            aria-label="Previous image"
-          />
-          <IconButton
-            icon={<ChevronRight size="24px" />}
-            position="absolute"
-            right={4}
-            top="50%"
-            transform="translateY(-50%)"
-            onClick={() => setCurrentImage((prev) => (prev < imageList?.length - 1 ? prev + 1 : 0))}
-            bg="whiteAlpha.900"
-            color="gray.800"
-            borderRadius="full"
-            size="lg"
-            _hover={{ bg: "white", transform: "translateY(-50%) scale(1.1)" }}
-            boxShadow="lg"
-            aria-label="Next image"
-          />
-        </>
-      )}
-
-      {/* Thumbnail Navigation */}
-      {imageList?.length > 1 && (
-        <HStack
-          position="absolute"
-          bottom={4}
-          left="50%"
-          transform="translateX(-50%)"
-          spacing={2}
-          bg="blackAlpha.600"
-          p={3}
-          borderRadius="full"
-        >
-          {imageList?.map((_, index) => (
-            <Box
-              key={index}
-              w={index === currentImage ? 8 : 3}
-              h={3}
-              borderRadius="full"
-              bg={index === currentImage ? "#F4A950" : "whiteAlpha.600"}
-              cursor="pointer"
-              onClick={() => setCurrentImage(index)}
-              transition="all 0.2s"
-              _hover={{ bg: index === currentImage ? "#E09940" : "whiteAlpha.800" }}
-            />
-          ))}
-        </HStack>
-      )}
-    </Box>
-  )
-}
 
 export default function RentalDetails() {
     const [selectedDate, setSelectedDate] = useState('')
@@ -214,6 +83,21 @@ export default function RentalDetails() {
                   typeof img === 'string' ? { url: img } : img
               );
           }
+          
+          // Helper to extract video from various possible fields
+          const extractField = (keys) => {
+            for (const key of keys) {
+                if (listingData.vehicle?.[key]) return listingData.vehicle[key];
+                if (listingData?.[key]) return listingData[key];
+            }
+            return null;
+          };
+          
+          // Extract video and add to listing data
+          if (listingData && listingData.vehicle) {
+             listingData.vehicle.video = extractField(['video', 'video_url', 'media_video', 'listing_video']);
+          }
+
           setListing(listingData);
           setRecommended(data.data.recommended);
           let rats = [], _reviews = data.data.listing.vehicle.dealer.reviews;
@@ -353,7 +237,7 @@ export default function RentalDetails() {
               {/* Left Column */}
               <Box>
                 {/* Image Carousel */}
-                <ImageCarousel images={listing?.vehicle?.images} />
+                <ImageCarousel images={listing?.vehicle?.images} video={listing?.vehicle?.video} />
 
                 {/* Vehicle Stats Cards */}
                 <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} my={8}>
