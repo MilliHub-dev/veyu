@@ -61,6 +61,9 @@ export const carBrands = {
   "DFSK": ["Glory 580", "Glory 500"],
   "Mahindra": ["XUV500", "Scorpio", "Thar", "Bolero"],
   "Tata": ["Nexon", "Harrier", "Safari", "Punch"],
+"Landwind": ["X7", "X8", "X9"],
+  "Haima": ["S5", "S7", "M3", "M6"],
+  "Zotye": ["T600", "T700", "Z300", "E200"],
   "Other": ["Other"]
 };
 
