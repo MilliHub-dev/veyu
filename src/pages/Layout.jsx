@@ -7,6 +7,7 @@ import {
 } from "../components/nav";
 import { Box, Stack } from "@chakra-ui/react";
 import { Outlet, useLocation } from "react-router-dom";
+import InstallPrompt from "../components/InstallPrompt";
 
 
 
@@ -44,6 +45,7 @@ export const Layout = ({ children, hideFooter, ...props }) => {
                 !isAuthenticated ? (<UnauthenticatedNavbar />):(<CustomerNavbar />)
             }
             <Box minH={'50vh'}><Outlet /></Box>
+            <InstallPrompt />
             {!shouldHideFooter && <Footer />}
         </Stack>
     )
