@@ -120,21 +120,24 @@
       };
     </script>
 
-    <!--Start of Tawk.to Script - Deferred loading -->
+    <!--Start of Tawk.to Script - load only in production -->
     <script type="text/javascript">
-    // Delay Tawk.to load until after page is interactive
     if (typeof window !== 'undefined') {
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          var Tawk_API = Tawk_API || {};
-          var s1 = document.createElement("script");
-          s1.async = true;
-          s1.src = 'https://embed.tawk.to/696f9d611090e9198185fe9e/1jfdvthdt';
-          s1.charset = 'UTF-8';
-          s1.setAttribute('crossorigin', '*');
-          document.body.appendChild(s1);
-        }, 3000); // Load after 3 seconds
-      });
+      var host = window.location.hostname;
+      var isProdHost = host === 'veyu.cc' || host === 'www.veyu.cc';
+      if (isProdHost) {
+        window.addEventListener('load', function() {
+          setTimeout(function() {
+            var Tawk_API = window.Tawk_API || {};
+            var s1 = document.createElement("script");
+            s1.async = true;
+            s1.src = 'https://embed.tawk.to/696f9d611090e9198185fe9e/1jfdvthdt';
+            s1.charset = 'UTF-8';
+            s1.setAttribute('crossorigin', '*');
+            document.body.appendChild(s1);
+          }, 3000);
+        });
+      }
     }
     </script>
     <!--End of Tawk.to Script-->
