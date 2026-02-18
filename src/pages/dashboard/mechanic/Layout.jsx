@@ -1,4 +1,4 @@
-import {useState, useEffect, useContext, createContext, Fragment, useCallback} from 'react';
+import {useState, useEffect, useContext, createContext, Fragment} from 'react';
 import {Link, Routes, Route, Outlet, useLocation} from 'react-router-dom';
 import {GlobalStore} from '../../../App';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
@@ -144,40 +144,9 @@ function MechanicDashboardLayout({children, hideSidebar, ...props}) {
     }
   }
 
-  // Load Google Maps script
-  const loadGoogleMaps = useCallback(() => {
-    if (window.google && window.google.maps) {
-      return Promise.resolve();
-    }
-
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY'}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      
-      script.onload = () => {
-        if (window.google && window.google.maps) {
-          console.log('Google Maps API loaded successfully');
-          resolve();
-        } else {
-          reject(new Error('Google Maps API failed to load'));
-        }
-      };
-      
-      script.onerror = (error) => {
-        console.error('Error loading Google Maps API:', error);
-        reject(new Error('Error loading Google Maps API'));
-      };
-      
-      document.head.appendChild(script);
-    });
-  }, []);
-
   useEffect(() => {
     const initialize = async () => {
       try {
-        await loadGoogleMaps();
         await init();
       } catch (error) {
         console.error('Initialization error:', error);
