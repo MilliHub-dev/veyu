@@ -18,7 +18,6 @@ import { objectifyJSON, formatCurrency } from "../../../utils"
 import { ListingSkeleton } from "../../../components/loaders"
 import { CustomPlacesAutocomplete } from "../../../components/maps"
 import { MapPin, Calendar as CalendarIcon, Search as SearchIcon, Filter, SlidersHorizontal, Car, Clock, Users, Zap, Plane, Ship, Bike, Radio } from "lucide-react";
-import {Autocomplete} from "@react-google-maps/api";
 import {
     CarBrandFilter,
     PriceFilter,

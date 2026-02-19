@@ -36,7 +36,6 @@ import {
   GridItem
 } from '@chakra-ui/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Autocomplete } from '@react-google-maps/api';
 import {
   Globe,
   Shield,

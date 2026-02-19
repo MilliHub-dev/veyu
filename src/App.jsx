@@ -24,24 +24,8 @@ import BusinessProfileGuard from "./components/BusinessProfileGuard";
 import VeyuTheme from "./theme.jsx";
 
 import { APIProvider } from "@vis.gl/react-google-maps";
-import { Autocomplete, LoadScript } from "@react-google-maps/api";
 import { enhanceUserWithCompletionStatus } from "./utils/profileCompletionUtils";
 import { GlobalStore } from "./contexts/GlobalStore";
-
-// Lazy load Google Maps components - only load when needed
-const GoogleMapsProvider = lazy(() =>
-  import("@react-google-maps/api").then(mod => ({
-    default: ({ children }) => (
-      <mod.LoadScript
-        googleMapsApiKey="AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0"
-        libraries={['places', 'maps']}
-        loadingElement={<>{children}</>}
-      >
-        {children}
-      </mod.LoadScript>
-    )
-  }))
-);
 
 // Lazy-loaded pages (split chunks)
 const Layout = lazy(() => import("./pages/Layout"));
@@ -507,19 +491,15 @@ function App() {
     <ChakraProvider theme={VeyuTheme}>
       <ErrorBoundary>
         <GlobalStore.Provider value={context}>
-          <LoadScript
-            googleMapsApiKey="AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0"
-            libraries={["places", "maps"]}
+          <Router
+            future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
           >
-            <Router
-              future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+            <Suspense
+              fallback={
+                <LoadingSpinner fullscreen message="Veyu is Loading..." />
+              }
             >
-              <Suspense
-                fallback={
-                  <LoadingSpinner fullscreen message="Veyu is Loading..." />
-                }
-              >
-                <Routes>
+              <Routes>
                   {authUser ? (
                     <Fragment>
                       {/* Dealer Dashboard */}
@@ -853,13 +833,12 @@ function App() {
                       <Route path="/*" element={<LandingPage />} />
                     </Route>
                   )}
-                  </Routes>
-                </Suspense>
-              </Router>
-          </LoadScript>
-        </GlobalStore.Provider>
-      </ErrorBoundary>
-    </ChakraProvider>
+                </Routes>
+              </Suspense>
+            </Router>
+          </GlobalStore.Provider>
+        </ErrorBoundary>
+      </ChakraProvider>
   );
 }
 
