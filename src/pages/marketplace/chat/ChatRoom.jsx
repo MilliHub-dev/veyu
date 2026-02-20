@@ -14,7 +14,7 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import { Search, Phone, Send, Smile, Mic, MoreVertical, Check, PlayCircle } from 'lucide-react';
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import {GlobalStore} from '../../../App';
 import {objectifyJSON} from '../../../utils';
 import {useParams, Link} from 'react-router-dom';
@@ -34,6 +34,7 @@ function ChatRoom() {
   const [socket, setSocket] = useState(null);
   const {room} = useParams();
   const socketUrl = DEBUG ? 'ws://localhost:8000' : 'wss://server.motaa.net'
+  const messagesEndRef = useRef(null);
 
   async function getData(){
     try{
@@ -104,20 +105,45 @@ function ChatRoom() {
       chatSocket.close();
     };
   }, [room]);
+  
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [messages]);
 
-  function sendMessage() {
+  async function sendMessage() {
     if (!message.trim()) return;
-    if (!socket) return;
 
-    socket.send(
-      JSON.stringify({
-        message_type: 'text', // text | image | document
+    const payload = {
+      message_type: 'text',
+      message,
+      attachments
+    };
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(payload));
+      setMessage('');
+      setAttachments([]);
+      return;
+    }
+
+    try {
+      const res = await axios.post(`/chat/message/`, {
         message,
-        attachments
-      })
-    );
-    setMessage('');
-    setAttachments([])
+        room_id: room,
+        chat_id: room
+      });
+
+      const data = objectifyJSON(res.data);
+      const newMessage = data?.data || data?.message || data;
+
+      setMessages((prev) => [...prev, newMessage]);
+      setMessage('');
+      setAttachments([]);
+    } catch (error) {
+      console.error('Failed to send message via HTTP:', error);
+    }
   }
 
   const currentUserEmail = authUser?.email || '';
@@ -191,10 +217,22 @@ function ChatRoom() {
     });
   };
 
+  const messagesBg = useColorModeValue('gray.50', 'gray.900');
+
   return (
     <VStack h="100%" bg="white" spacing={0} w="100%">
       {/* Chat Header */}
-      <HStack w="full" px={5} py={3} borderBottomWidth={1} justify="space-between" bg="white" position="sticky" top={0} zIndex={2}>
+      <HStack
+        w="full"
+        px={5}
+        py={3}
+        borderBottomWidth={1}
+        justify="space-between"
+        bg="white"
+        position="sticky"
+        top={0}
+        zIndex={2}
+      >
         <HStack spacing={3}>
           <Button as={Link} to="/chat/" variant="ghost" size="sm">
             <CloseIcon />
@@ -221,7 +259,13 @@ function ChatRoom() {
       </HStack>
 
       {/* Messages */}
-      <VStack flex={1} spacing={3} align="stretch" p={4} w="100%" overflowY="auto">
+      <Box flex={1} w="100%" overflowY="auto" px={4} py={4} bg={messagesBg}>
+        <VStack
+          spacing={3}
+          align="stretch"
+          justify="flex-end"
+          minH="100%"
+        >
         {messages?.map((msg, index) => {
           // Handle different message formats
           // msg.sender could be an email string OR an object with {id, name, email, user_type, business_name, business_logo}
@@ -290,10 +334,21 @@ function ChatRoom() {
             </HStack>
           );
         })}
-      </VStack>
+        <Box ref={messagesEndRef} />
+        </VStack>
+      </Box>
 
       {/* Message Input */}
-      <HStack as={Flex} w="full" p={3} borderTopWidth={1} spacing={3} bg="white" position="sticky" bottom="0">
+      <HStack
+        as={Flex}
+        w="full"
+        p={3}
+        borderTopWidth={1}
+        spacing={3}
+        bg="white"
+        position="sticky"
+        bottom="0"
+      >
         <IconButton icon={<Smile size={18} />} variant="ghost" aria-label="Add emoji" />
         <Input onInput={(e) => setMessage(e.target.value)} value={message} placeholder="Type a message" borderRadius="full" />
         <Button colorScheme="blue" bg="primary" rightIcon={<Send size={16} />} onClick={sendMessage} borderRadius="full" px={6}>
