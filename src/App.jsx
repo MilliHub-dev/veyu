@@ -830,6 +830,19 @@ function App() {
                         path="/terms-of-service"
                         element={<TermsOfServicePage />}
                       />
+
+                      {/* Public marketplace access so guests can view listings */}
+                      <Route path="/rent" element={<RentListing />} />
+                      <Route
+                        path="/rent/:listingId"
+                        element={<RentDetail />}
+                      />
+                      <Route path="/buy" element={<BuyListing />} />
+                      <Route
+                        path="/buy/:listingId"
+                        element={<BuyDetail />}
+                      />
+
                       <Route path="/*" element={<LandingPage />} />
                     </Route>
                   )}
