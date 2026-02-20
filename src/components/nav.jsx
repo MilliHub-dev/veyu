@@ -517,6 +517,10 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, dealership, ...prop
     setSidebarState(true)
   }
 
+  function goToChat() {
+    navigate('/chat');
+  }
+
   return (
     <Box
       position={'sticky'}
@@ -588,7 +592,7 @@ export const DealerNavbar = ({ sidebarOpen, setSidebarState, dealership, ...prop
             </HStack>
           )} */}
 
-          <IconButton as={RLink} to={'/chat'} aria-label="Chat" variant="ghost" icon={<MessageCircleIcon size={18} />} />
+          <IconButton onClick={goToChat} aria-label="Chat" variant="ghost" icon={<MessageCircleIcon size={18} />} />
           <IconButton as={RLink} to={'/notifications'} aria-label="Notifications" variant="ghost" icon={<BellIcon size={18} />} />
 
           <Menu zIndex={2} display="block">
