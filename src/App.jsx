@@ -795,11 +795,11 @@ function App() {
                           />
                           <Route path="" element={<Navigate to="home" />} />
                         </Route>
-
-                        <Route path="/chat" element={<ChatLayout />}>
-                          <Route path="/chat/:room" element={<ChatRoom />} />
-                        </Route>
                       </Route>
+
+                      {/* Chat Routes */}
+                      <Route path="/chat" element={<ChatLayout />} />
+                      <Route path="/chat/:room" element={<ChatRoom />} />
                     </Fragment>
                   ) : (
                     /* Public Routes */
