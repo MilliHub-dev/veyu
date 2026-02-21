@@ -386,25 +386,33 @@ function FeaturedDeals() {
   async function getListings() {
     try {
       setLoading(true);
-      
-      const response = await axios.get('/listings/', {
+
+      const response = await axios.get("/listings/", {
         params: {
           limit: 8,
           is_active: true,
-          ordering: '-created_at'
-        }
+          ordering: "-created_at",
+        },
       });
 
-      if (response.data && Array.isArray(response.data.results)) {
-        setListings(response.data.results);
-      } else if (response.data && Array.isArray(response.data)) {
-        setListings(response.data.slice(0, 8));
+      const raw = objectifyJSON(response.data);
+      let items = [];
+
+      if (Array.isArray(raw?.data?.results)) {
+        items = raw.data.results;
+      } else if (Array.isArray(raw?.results)) {
+        items = raw.results;
+      } else if (Array.isArray(raw)) {
+        items = raw;
+      }
+
+      if (items.length > 0) {
+        setListings(items.slice(0, 8));
       } else {
-        console.warn('Unexpected API response format:', response.data);
         setListings([]);
       }
     } catch (error) {
-      console.error('Error fetching listings:', error);
+      console.error("Error fetching listings:", error);
       setListings([]);
     } finally {
       setLoading(false);
