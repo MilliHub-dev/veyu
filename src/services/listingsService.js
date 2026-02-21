@@ -46,8 +46,27 @@ class ListingsService {
   async getBuyListings(params = {}) {
     try {
       const response = await apiClient.get('/listings/buy/', { params });
-      return handleApiResponse(response);
+      const payload = response?.data;
+
+      const pagination = payload?.data?.pagination ?? payload?.pagination ?? null;
+
+      const results =
+        payload?.data?.results ??
+        payload?.results ??
+        (Array.isArray(payload) ? payload : []);
+
+      return {
+        results: Array.isArray(results) ? results : [],
+        pagination,
+      };
     } catch (error) {
+      if (error?.response?.status === 401) {
+        console.warn('getBuyListings 401: Returning empty list.');
+        return {
+          results: [],
+          pagination: null,
+        };
+      }
       handleApiError(error);
     }
   }
@@ -59,8 +78,27 @@ class ListingsService {
   async getRentalListings(params = {}) {
     try {
       const response = await apiClient.get('/listings/rentals/', { params });
-      return handleApiResponse(response);
+      const payload = response?.data;
+
+      const pagination = payload?.data?.pagination ?? payload?.pagination ?? null;
+
+      const results =
+        payload?.data?.results ??
+        payload?.results ??
+        (Array.isArray(payload) ? payload : []);
+
+      return {
+        results: Array.isArray(results) ? results : [],
+        pagination,
+      };
     } catch (error) {
+      if (error?.response?.status === 401) {
+        console.warn('getRentalListings 401: Returning empty list.');
+        return {
+          results: [],
+          pagination: null,
+        };
+      }
       handleApiError(error);
     }
   }
