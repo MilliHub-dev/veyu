@@ -124,7 +124,13 @@ apiClient.interceptors.request.use(
       '/accounts/verify-email-unauthenticated/',
       '/token/',
       '/token/refresh/',
-      '/token/verify/'
+      '/token/verify/',
+      // Public marketplace listing endpoints
+      '/listings/',
+      '/listings/buy/',
+      '/listings/rentals/',
+      '/listings/featured/',
+      '/listings/find/'
     ];
 
     // Check if this is a public endpoint
