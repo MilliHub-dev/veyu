@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 // Base API configuration
-const API_BASE_URL = 'https://dev.veyu.cc/api/v1';
+// Use relative path to leverage Vite proxy in development
+// In production (built app), this should be the full URL
+const API_BASE_URL = import.meta.env.DEV ? '/api' : 'https://dev.veyu.cc/api/v1';
 
 // Create axios instance with proper configuration
 // withCredentials is explicitly set to false to prevent CORS issues
@@ -11,7 +13,7 @@ const API_BASE_URL = 'https://dev.veyu.cc/api/v1';
 // - JSON needs 'application/json' (set in request interceptor)
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 60000,
   withCredentials: false,
   headers: {
     'Accept': 'application/json',
@@ -124,13 +126,13 @@ apiClient.interceptors.request.use(
       '/accounts/verify-email-unauthenticated/',
       '/token/',
       '/token/refresh/',
-      '/token/verify/',
-      // Public marketplace listing endpoints
-      '/listings/',
-      '/listings/buy/',
-      '/listings/rentals/',
-      '/listings/featured/',
-      '/listings/find/'
+      '/token/verify/'
+      // Public marketplace listing endpoints removed to allow optional auth
+      // '/listings/',
+      // '/listings/buy/',
+      // '/listings/rentals/',
+      // '/listings/featured/',
+      // '/listings/find/'
     ];
 
     // Check if this is a public endpoint
@@ -205,6 +207,24 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Handle network errors or timeouts (where response is undefined)
+    if (!error.response) {
+      // Check if logging should be skipped
+      if (!error.config?.skipErrorLogging) {
+        const errorMessage = error.message || 'Network Error';
+        console.error(`❌ Network/Timeout Error: ${errorMessage}`, {
+          url: error.config?.url,
+          baseURL: error.config?.baseURL,
+          timeout: error.config?.timeout
+        });
+        
+        if (errorMessage.includes('timeout')) {
+          // Retry logic could go here if implemented
+          console.warn('⚠️ Request timed out. The server might be slow or unreachable.');
+        }
+      }
+    }
+    
     // Handle 401 Unauthorized - Token expired or invalid
     // CRITICAL: Only attempt refresh once per request to prevent infinite loops
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -446,14 +466,20 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Log error details for debugging
-    console.error('❌ API Error:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-    });
+    // Log error details for debugging (unless suppressed)
+    // Check both error.config and error.response.config just to be safe
+    const shouldSkipLogging = error.config?.skipErrorLogging || 
+                             (error.response && error.response.config && error.response.config.skipErrorLogging);
+
+    if (!shouldSkipLogging) {
+      console.error('❌ API Error:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+    }
 
     return Promise.reject(error);
   }
@@ -485,6 +511,20 @@ class ApiError extends Error {
 
 // Enhanced API error handler with detailed logging and user-friendly messages
 const handleApiError = (error) => {
+  // Check if error logging should be skipped
+  const shouldSkipLogging = error.config?.skipErrorLogging || 
+                           (error.response && error.response.config && error.response.config.skipErrorLogging);
+
+  if (shouldSkipLogging) {
+    // If it's an instance of ApiError, we still need to throw it, but we skip logging
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    // For other errors, we rethrow them so the caller can handle them (e.g., return null)
+    // or if the caller ignores them, that's fine.
+    throw error;
+  }
+
   // Log detailed error information for debugging
   console.error('🚨 API Error Details:', {
     error: error,

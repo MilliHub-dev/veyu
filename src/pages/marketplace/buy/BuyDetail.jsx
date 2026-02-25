@@ -129,44 +129,45 @@ export const BuyDetail = ({ }) => {
         }
       }
 
-      // Try to fetch listing - try multiple possible endpoints
+      // Try to fetch listing - try multiple possible endpoints in parallel
       console.log('🔍 Fetching listing with ID:', listingId);
       
       let res;
       let endpointUsed = '';
       
-      // Try different possible endpoints
+      // Try different possible endpoints simultaneously
       const endpoints = [
-        `/listings/${listingId}/`,           // Generic listing endpoint
-        `/listings/buy/${listingId}/`,       // Buy-specific endpoint
-        `/listings/detail/${listingId}/`,    // Detail endpoint
-        `/marketplace/listings/${listingId}/` // Marketplace endpoint
+        `/listings/buy/${listingId}/`,
+        `/listings/${listingId}/`,
+        `/listings/detail/${listingId}/`
       ];
       
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`🔍 Trying endpoint: ${endpoint}`);
-          res = await apiClient.get(endpoint);
-          if (res.status === 200) {
-            endpointUsed = endpoint;
-            console.log(`✅ Success with endpoint: ${endpoint}`);
-            break;
-          }
-        } catch (err) {
-          console.log(`❌ Failed with endpoint: ${endpoint}`, err.response?.status);
-          // Continue to next endpoint
-          if (endpoint === endpoints[endpoints.length - 1]) {
-            // Last endpoint failed, throw the error
-            throw err;
-          }
+      try {
+        // Create promises for each endpoint request
+        // We wrap each promise to include the endpoint info on success
+        const promises = endpoints.map(endpoint => 
+          apiClient.get(endpoint, { skipErrorLogging: true })
+            .then(response => ({ endpoint, response }))
+        );
+        
+        // Wait for the first successful response
+        const result = await Promise.any(promises);
+        
+        if (result.response.status === 200) {
+          res = result.response;
+          endpointUsed = result.endpoint;
+          console.log(`✅ Success with endpoint: ${result.endpoint}`);
         }
+      } catch (err) {
+        // All endpoints failed (AggregateError)
+        // console.log('❌ All direct endpoints failed');
       }
       
       // If all direct endpoints failed, try fetching from the list
       if (!res || res.status !== 200) {
         console.log('🔍 All direct endpoints failed, trying to fetch from list...');
         try {
-          const listRes = await apiClient.get(`/listings/buy/`);
+          const listRes = await apiClient.get(`/listings/buy/`, { skipErrorLogging: true });
           if (listRes.status === 200) {
             const listData = objectifyJSON(listRes.data);
             const listings = listData?.data?.results || listData?.results || [];
@@ -174,9 +175,9 @@ export const BuyDetail = ({ }) => {
             
             // Find the specific listing by ID
             const foundListing = listings.find(l => 
-              l.uuid === listingId || 
-              l.id === listingId || 
-              l.listing_id === listingId
+              String(l.uuid) === String(listingId) || 
+              String(l.id) === String(listingId) || 
+              String(l.listing_id) === String(listingId)
             );
             
             if (foundListing) {
@@ -184,13 +185,18 @@ export const BuyDetail = ({ }) => {
               res = { status: 200, data: { data: { listing: foundListing } } };
               endpointUsed = '/listings/buy/ (from list)';
             } else {
-              throw new Error(`Listing ${listingId} not found in list`);
+              console.warn(`⚠️ Listing ${listingId} not found in the first page of listings`);
+              // Don't throw immediately, let it fall through to show 404
             }
           }
         } catch (listErr) {
           console.error('❌ Failed to fetch from list:', listErr);
-          throw new Error('Could not fetch listing from any endpoint');
+          // Don't throw, let it fall through
         }
+      }
+
+      if (!res || res.status !== 200) {
+        throw { response: { status: 404 } };
       }
       
       console.log(`✅ Using endpoint: ${endpointUsed}`);
@@ -366,6 +372,8 @@ export const BuyDetail = ({ }) => {
           duration: 3000
         });
       }
+    } finally {
+      setLoadingState(false);
     }
   }
 
@@ -546,7 +554,6 @@ export const BuyDetail = ({ }) => {
   function init() {
     setLoadingState(true);
     getData();
-    setTimeout(() => setLoadingState(false), 2500);
   }
 
   useEffect(() => {

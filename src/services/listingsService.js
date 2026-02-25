@@ -126,6 +126,20 @@ class ListingsService {
     }
   }
 
+  /**
+   * Get vehicle type counts
+   */
+  async getVehicleCounts() {
+    try {
+      const response = await apiClient.get('/listings/counts/', { skipErrorLogging: true });
+      return handleApiResponse(response);
+    } catch (error) {
+      // Endpoint might not exist yet, return null to fallback to client-side counting
+      console.warn('Vehicle counts endpoint unavailable');
+      return null;
+    }
+  }
+
   // ==================== 2.2 Listing Details ====================
 
   /**

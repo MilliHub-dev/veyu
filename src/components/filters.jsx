@@ -127,7 +127,7 @@ export const CarBrandFilter = ({ onChange, onClose, category = "car" }) => {
     onClose();
     onChange({
       filter: "brands",
-      value: "".concat(value),
+      value: value.join(","), // Join with comma for API
     });
   }
 
@@ -183,6 +183,19 @@ export const CarBrandFilter = ({ onChange, onClose, category = "car" }) => {
 
 export const LocationFilter = ({ onChange, onClose }) => {
   const [isOpen, setOpenState] = useState(false);
+  const [selectedLocations, setSelectedLocations] = useState([]);
+
+  function addOrRemoveLocation(e) {
+    const loc = e.target.value;
+    let _value = [...selectedLocations];
+
+    if (_value.includes(loc)) {
+      _value = _value.filter(v => v !== loc);
+    } else {
+      _value.push(loc);
+    }
+    setSelectedLocations(_value);
+  }
 
   function onClose() {
     setOpenState(false);
@@ -193,7 +206,10 @@ export const LocationFilter = ({ onChange, onClose }) => {
 
   function applyFilter() {
     onClose();
-    onChange({});
+    onChange({
+      filter: "location",
+      value: selectedLocations.join(",").toLowerCase(),
+    });
   }
 
   return (
@@ -218,8 +234,14 @@ export const LocationFilter = ({ onChange, onClose }) => {
             Select Location{" "}
           </Text>
 
-          {["Abuja", "Kaduna"].map((location) => (
-            <MenuItem key={location} value={location} as={Checkbox}>
+          {["Abuja", "Kaduna", "Lagos", "Kano", "Port Harcourt"].map((location) => (
+            <MenuItem 
+              key={location} 
+              value={location} 
+              as={Checkbox}
+              selected={selectedLocations.includes(location)}
+              onInput={addOrRemoveLocation}
+            >
               {" "}
               {location}{" "}
             </MenuItem>
@@ -347,7 +369,7 @@ export const TransmissionFilter = ({ onChange, onClose }) => {
     onClose();
     onChange({
       filter: "transmission",
-      value: "".concat(value),
+      value: value.join(",").toLowerCase(), // Join with comma and lowercase for API
     });
   }
 
@@ -430,7 +452,7 @@ export const FuelSystemFilter = ({ onChange, onClose }) => {
     onClose();
     onChange({
       filter: "fuel_system",
-      value: "".concat(value),
+      value: value.join(",").toLowerCase(), // Join with comma and lowercase for API
     });
   }
 

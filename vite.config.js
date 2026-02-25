@@ -8,7 +8,7 @@ export default defineConfig({
 			'/api': {
 				target: 'https://dev.veyu.cc',
 				changeOrigin: true,
-				secure: true,
+				secure: false, // Don't verify SSL certificates
 				rewrite: (path) => path.replace(/^\/api/, '/api/v1'),
 			},
 		},

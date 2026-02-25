@@ -110,6 +110,8 @@ export default function RentalDetails() {
         }
       }catch(error){
         console.log("Error getting ratings", error)
+      }finally{
+        setLoadingState(false)
       }
     }
 

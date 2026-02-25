@@ -47,6 +47,7 @@ import {
 } from "../../../components/filters"
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom';
+import listingsService from '../../../services/listingsService';
 
 const MotionBox = motion(Box);
 const MotionCard = motion(Card);
@@ -57,6 +58,7 @@ const BuyListing = ({ }) => {
     const [data, setData] = useState(null);
     const [carType, setCarType] = useState('all'); // Changed default to 'all'
     const [vehicleCategory, setVehicleCategory] = useState('all'); // New vehicle category filter
+    const [categoryCounts, setCategoryCounts] = useState({}); // Store vehicle counts from API
     const [sort, setSort] = useState('relevance');
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState('grid'); // grid or list
@@ -124,9 +126,25 @@ const BuyListing = ({ }) => {
         try {
             const res = await axios.get(url,);
             let _data = objectifyJSON(res.data);
+            console.log('BuyListing raw response:', res.data);
+            console.log('BuyListing parsed data:', _data);
 
-            setData(_data.data);
-            setListings(_data?.data?.results || []);
+            if (_data?.data?.results) {
+                console.log('Setting listings from data.data.results:', _data.data.results);
+                setData(_data.data);
+                setListings(_data.data.results);
+            } else if (_data?.results) {
+                 console.log('Setting listings from data.results:', _data.results);
+                 setData(_data);
+                 setListings(_data.results);
+            } else if (Array.isArray(_data)) {
+                 console.log('Setting listings from array:', _data);
+                 setData({ results: _data });
+                 setListings(_data);
+            } else {
+                 console.warn('Unexpected data shape:', _data);
+                 setListings([]);
+            }
 
             if (res.status !== 200) {
                 notify({
@@ -136,9 +154,15 @@ const BuyListing = ({ }) => {
             }
         } catch (error) {
             console.error("Error fetching buy listings:", error);
-            setListings([]);
-            // Optional: Handle specific errors like 401 if needed, 
-            // but usually buy listings should be public.
+            // Don't wipe listings on error, just log it
+            // setListings([]); 
+            
+            // Only notify if it's not a timeout/cancellation to avoid spamming
+            if (error.code !== 'ECONNABORTED' && !axios.isCancel(error)) {
+                // Optional: silent fail or user notification
+            }
+        } finally {
+            setLoadingState(false);
         }
     }
 
@@ -226,10 +250,31 @@ const BuyListing = ({ }) => {
         }
     }
 
+    async function fetchCounts() {
+        try {
+            const res = await listingsService.getVehicleCounts();
+            if (res) {
+                const counts = objectifyJSON(res);
+                const rawCounts = counts.data || counts;
+                
+                // Normalize keys to lowercase to ensure matching with apiValue
+                const normalizedCounts = {};
+                if (rawCounts && typeof rawCounts === 'object') {
+                    Object.keys(rawCounts).forEach(key => {
+                        normalizedCounts[key.toLowerCase()] = rawCounts[key];
+                    });
+                }
+                
+                setCategoryCounts(normalizedCounts);
+            }
+        } catch (err) {
+            console.error("Failed to fetch vehicle counts", err);
+        }
+    }
 
     function init() {
         getData();
-        setTimeout(() => setLoadingState(false), 2500);
+        fetchCounts();
     }
 
     useEffect(() => {
@@ -289,17 +334,61 @@ const BuyListing = ({ }) => {
 
     const filteredListings = getFilteredListings();
 
-    // Get count for each vehicle category from current listings
+    // Get count for each vehicle category
     const getCategoryCount = (categoryId) => {
-        if (categoryId === 'all') return listings?.length || 0;
-        
         const category = vehicleCategories.find(c => c.id === categoryId);
-        if (!category?.apiValue) return 0;
         
-        return listings?.filter(l => {
-            const vehicleKind = l?.vehicle?.kind?.toLowerCase() || '';
-            return vehicleKind === category.apiValue;
-        }).length || 0;
+        // Priority 1: Use API-provided counts if available
+        if (category?.apiValue && categoryCounts && categoryCounts[category.apiValue] !== undefined) {
+            return categoryCounts[category.apiValue];
+        }
+        
+        // Special handling for "All Vehicles"
+        if (categoryId === 'all') {
+             // If we have total_count from the main listings API response, use it
+             if (data?.total_count !== undefined) return data.total_count;
+             
+             // Fallback: sum up the category counts if available
+             if (categoryCounts && Object.keys(categoryCounts).length > 0) {
+                 return Object.values(categoryCounts).reduce((sum, count) => sum + count, 0);
+             }
+             
+             // Fallback: use current listings length
+             return listings?.length || 0;
+        }
+
+        // Priority 2: Fallback to client-side counting (only accurate if showing "All Vehicles" and paginated/filtered)
+        if (vehicleCategory === 'all') {
+            if (!category?.apiValue) return 0;
+            
+            // Debug matching for first listing if counts are 0
+            if (listings?.length > 0 && listings[0]?.vehicle) {
+                // Only log once to avoid spam
+                // console.log('Debug Vehicle Type Matching:', {
+                //    kind: listings[0].vehicle.kind,
+                //    type: listings[0].vehicle.vehicle_type,
+                //    target: category.apiValue
+                // });
+            }
+            
+            return listings?.filter(l => {
+                // Check multiple possible fields for vehicle type
+                const vehicle = l?.vehicle || {};
+                const kind = (vehicle.kind || vehicle.vehicle_type || vehicle.type || l.vehicle_type || '').toLowerCase();
+                const target = category.apiValue.toLowerCase();
+                
+                // Flexible matching (e.g. 'cars' matches 'car')
+                return kind === target || kind.includes(target) || target.includes(kind);
+            }).length || 0;
+        }
+
+        // If a specific category is selected and we don't have API counts, 
+        // we can only show the count for the selected category
+        if (categoryId === vehicleCategory) {
+            return listings?.length || 0;
+        }
+
+        return 0;
     };
 
     if (loading) {
