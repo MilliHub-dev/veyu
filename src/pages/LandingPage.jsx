@@ -71,6 +71,7 @@ import { DashboardSearchBar, ListingItemCard } from '../components';
 import { MdHeight } from 'react-icons/md';
 import { GlobalStore } from '../App';
 import { objectifyJSON } from '../utils';
+import listingsService from '../services/listingsService';
 
 const MotionBox = motion(Box);
 const MotionFlex = motion(Flex);
@@ -379,7 +380,6 @@ function StatsSection() {
 }
 
 function FeaturedDeals() {
-  const { axios } = useContext(GlobalStore);
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -387,23 +387,40 @@ function FeaturedDeals() {
     try {
       setLoading(true);
 
-      const response = await axios.get("/listings/", {
-        params: {
+      // Try fetching all listings first
+      // If /listings/ endpoint fails or returns empty, we might try a fallback
+      // but let's assume listingsService handles it.
+      let items = [];
+      
+      try {
+        const response = await listingsService.getAllListings({
           limit: 8,
           is_active: true,
           ordering: "-created_at",
-        },
-      });
+        });
 
-      const raw = objectifyJSON(response.data);
-      let items = [];
-
-      if (Array.isArray(raw?.data?.results)) {
-        items = raw.data.results;
-      } else if (Array.isArray(raw?.results)) {
-        items = raw.results;
-      } else if (Array.isArray(raw)) {
-        items = raw;
+        const raw = objectifyJSON(response);
+        
+        if (Array.isArray(raw?.data?.results)) {
+          items = raw.data.results;
+        } else if (Array.isArray(raw?.results)) {
+          items = raw.results;
+        } else if (Array.isArray(raw?.data)) {
+          items = raw.data;
+        } else if (Array.isArray(raw)) {
+          items = raw;
+        }
+      } catch (err) {
+        console.warn('Failed to fetch from main listings endpoint, trying fallback...', err);
+        // Fallback to buy listings if main endpoint fails
+        const buyRes = await listingsService.getBuyListings({
+          limit: 8,
+          ordering: "-created_at"
+        });
+        
+        if (buyRes && buyRes.results) {
+          items = buyRes.results;
+        }
       }
 
       if (items.length > 0) {
@@ -454,7 +471,7 @@ function FeaturedDeals() {
         ) : listings.length > 0 ? (
           <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
             {listings.map((listing) => (
-              <ListingItemCard key={listing.uuid} listing={listing} />
+              <ListingItemCard key={listing.uuid} listing={listing} requireAuth={true} />
             ))}
           </SimpleGrid>
         ) : (

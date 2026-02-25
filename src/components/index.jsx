@@ -1397,10 +1397,21 @@ export const ListingItemCard = ({ listing, ...props }) => {
     setIsFavorited(!isFavorited);
   };
 
+  const handleCardClick = (e) => {
+    // Check if authentication is required for this card
+    // Check both authUser existence and valid ID to handle initialized-but-empty states
+    if (props.requireAuth && (!authUser || !authUser.id)) {
+      e.preventDefault();
+      e.stopPropagation();
+      navigate('/login');
+    }
+  };
+
   return (
     <NavLink
       to={`/${type}/${listing?.uuid || listing?.id || listing?.listing_id}`}
       style={{ textDecoration: "none" }}
+      onClick={handleCardClick}
     >
       <Box
         position="relative"
