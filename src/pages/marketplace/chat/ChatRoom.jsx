@@ -234,8 +234,8 @@ function ChatRoom() {
         zIndex={2}
       >
         <HStack spacing={3}>
-          <Button as={Link} to="/chat/" variant="ghost" size="sm">
-            <CloseIcon />
+          <Button as={Link} to="/chat/" variant="ghost" size="sm" p={0}>
+            <ChevronLeftIcon w={8} h={8} />
           </Button>
           {otherPersonInfo.isDealer && otherPersonInfo.avatar ? (
             <Image 

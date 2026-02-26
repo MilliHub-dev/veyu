@@ -23,11 +23,13 @@ import { Search, MessageCircle, MoreVertical, CheckCheck, Clock } from 'lucide-r
 import { useState, useEffect, useContext } from 'react';
 import { GlobalStore } from '../../../App';
 import { objectifyJSON } from '../../../utils';
-import { useParams, Outlet, Link } from 'react-router-dom';
+import { useParams, Outlet, Link, useNavigate } from 'react-router-dom';
 import { FaInbox } from 'react-icons/fa';
+import { ChevronLeftIcon } from '@chakra-ui/icons';
 
 function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const hoverBg = useColorModeValue('gray.50', 'gray.700');
@@ -80,9 +82,18 @@ function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
         zIndex={10}
       >
         <HStack justify="space-between" align="center">
-          <Heading size="lg" color="gray.800">
-            Messages
-          </Heading>
+          <HStack spacing={2}>
+            <IconButton
+              icon={<ChevronLeftIcon w={6} h={6} />}
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              aria-label="Back"
+              size="sm"
+            />
+            <Heading size="lg" color="gray.800">
+              Messages
+            </Heading>
+          </HStack>
           <HStack spacing={2}>
             <Badge
               colorScheme="blue"
