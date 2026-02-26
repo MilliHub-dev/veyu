@@ -994,6 +994,18 @@ export function CreateRentalForm({ formData, setFormData, vehicleCategory = 'car
                 {...fieldProps}
               />
             </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Saddle Height (inches)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 32.5"
+                value={formData.saddle_height}
+                onChange={(e) => setFormData({ ...formData, saddle_height: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
           </>
         )}
 
@@ -1068,6 +1080,52 @@ export function CreateRentalForm({ formData, setFormData, vehicleCategory = 'car
                 {...fieldProps}
               />
             </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Engine Count</FormLabel>
+              <Input
+                type="number"
+                min={1}
+                placeholder="eg 2"
+                value={formData.engine_count}
+                onChange={(e) => setFormData({ ...formData, engine_count: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Propeller Type</FormLabel>
+              <Input
+                placeholder="eg Outboard"
+                value={formData.propeller_type}
+                onChange={(e) => setFormData({ ...formData, propeller_type: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Beam Width (feet)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 10.0"
+                value={formData.beam_width}
+                onChange={(e) => setFormData({ ...formData, beam_width: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Draft (feet)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 3.2"
+                value={formData.draft}
+                onChange={(e) => setFormData({ ...formData, draft: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
           </>
         )}
 
@@ -1137,6 +1195,252 @@ export function CreateRentalForm({ formData, setFormData, vehicleCategory = 'car
                 onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
                 {...fieldProps}
               />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Wing Span (feet)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 117.0"
+                value={formData.wing_span}
+                onChange={(e) => setFormData({ ...formData, wing_span: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Range (miles)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 3000"
+                value={formData.range}
+                onChange={(e) => setFormData({ ...formData, range: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+          </>
+        )}
+
+        {/* UAV-specific fields */}
+        {vehicleCategory === 'uav' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>UAV Type</FormLabel>
+              <Select
+                placeholder="Select UAV type"
+                value={formData.uav_type}
+                onChange={(e) => setFormData({ ...formData, uav_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="quadcopter">Quadcopter</option>
+                <option value="fixed-wing">Fixed Wing</option>
+                <option value="hexacopter">Hexacopter</option>
+                <option value="octocopter">Octocopter</option>
+                <option value="vtol">VTOL</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Purpose</FormLabel>
+              <Select
+                placeholder="Select purpose"
+                value={formData.purpose}
+                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                {...selectProps}
+              >
+                <option value="photography">Photography</option>
+                <option value="surveillance">Surveillance</option>
+                <option value="mapping">Mapping</option>
+                <option value="agriculture">Agriculture</option>
+                <option value="inspection">Inspection</option>
+                <option value="racing">Racing</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Max Flight Time (minutes)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 30"
+                value={formData.max_flight_time}
+                onChange={(e) => setFormData({ ...formData, max_flight_time: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Max Range (meters)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 5000"
+                value={formData.max_range}
+                onChange={(e) => setFormData({ ...formData, max_range: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Camera Resolution</FormLabel>
+              <Input
+                placeholder="eg 4K"
+                value={formData.camera_resolution}
+                onChange={(e) => setFormData({ ...formData, camera_resolution: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Obstacle Avoidance</FormLabel>
+              <Select
+                placeholder="Select option"
+                value={formData.has_obstacle_avoidance}
+                onChange={(e) => setFormData({ ...formData, has_obstacle_avoidance: e.target.value === 'true' })}
+                {...selectProps}
+              >
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>GPS</FormLabel>
+              <Select
+                placeholder="Select option"
+                value={formData.has_gps}
+                onChange={(e) => setFormData({ ...formData, has_gps: e.target.value === 'true' })}
+                {...selectProps}
+              >
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Return to Home</FormLabel>
+              <Select
+                placeholder="Select option"
+                value={formData.has_return_to_home}
+                onChange={(e) => setFormData({ ...formData, has_return_to_home: e.target.value === 'true' })}
+                {...selectProps}
+              >
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </Select>
+            </FormControl>
+          </>
+        )}
+
+        {/* UAV-specific fields */}
+        {vehicleCategory === 'uav' && (
+          <>
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>UAV Type</FormLabel>
+              <Select
+                placeholder="Select UAV type"
+                value={formData.uav_type}
+                onChange={(e) => setFormData({ ...formData, uav_type: e.target.value })}
+                {...selectProps}
+              >
+                <option value="quadcopter">Quadcopter</option>
+                <option value="fixed-wing">Fixed Wing</option>
+                <option value="hexacopter">Hexacopter</option>
+                <option value="octocopter">Octocopter</option>
+                <option value="vtol">VTOL</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Purpose</FormLabel>
+              <Select
+                placeholder="Select purpose"
+                value={formData.purpose}
+                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                {...selectProps}
+              >
+                <option value="photography">Photography</option>
+                <option value="surveillance">Surveillance</option>
+                <option value="mapping">Mapping</option>
+                <option value="agriculture">Agriculture</option>
+                <option value="inspection">Inspection</option>
+                <option value="racing">Racing</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Max Flight Time (minutes)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 30"
+                value={formData.max_flight_time}
+                onChange={(e) => setFormData({ ...formData, max_flight_time: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Max Range (meters)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 5000"
+                value={formData.max_range}
+                onChange={(e) => setFormData({ ...formData, max_range: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Camera Resolution</FormLabel>
+              <Input
+                placeholder="eg 4K"
+                value={formData.camera_resolution}
+                onChange={(e) => setFormData({ ...formData, camera_resolution: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Obstacle Avoidance</FormLabel>
+              <Select
+                placeholder="Select option"
+                value={formData.has_obstacle_avoidance}
+                onChange={(e) => setFormData({ ...formData, has_obstacle_avoidance: e.target.value === 'true' })}
+                {...selectProps}
+              >
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>GPS</FormLabel>
+              <Select
+                placeholder="Select option"
+                value={formData.has_gps}
+                onChange={(e) => setFormData({ ...formData, has_gps: e.target.value === 'true' })}
+                {...selectProps}
+              >
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </Select>
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Return to Home</FormLabel>
+              <Select
+                placeholder="Select option"
+                value={formData.has_return_to_home}
+                onChange={(e) => setFormData({ ...formData, has_return_to_home: e.target.value === 'true' })}
+                {...selectProps}
+              >
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </Select>
             </FormControl>
           </>
         )}
@@ -1893,6 +2197,18 @@ export function CreateSaleForm({ formData, setFormData, vehicleCategory = 'car' 
                 {...fieldProps}
               />
             </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Saddle Height (inches)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 32.5"
+                value={formData.saddle_height}
+                onChange={(e) => setFormData({ ...formData, saddle_height: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
           </>
         )}
 
@@ -1967,6 +2283,52 @@ export function CreateSaleForm({ formData, setFormData, vehicleCategory = 'car' 
                 {...fieldProps}
               />
             </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Engine Count</FormLabel>
+              <Input
+                type="number"
+                min={1}
+                placeholder="eg 2"
+                value={formData.engine_count}
+                onChange={(e) => setFormData({ ...formData, engine_count: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Propeller Type</FormLabel>
+              <Input
+                placeholder="eg Outboard"
+                value={formData.propeller_type}
+                onChange={(e) => setFormData({ ...formData, propeller_type: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Beam Width (feet)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 10.0"
+                value={formData.beam_width}
+                onChange={(e) => setFormData({ ...formData, beam_width: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Draft (feet)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 3.2"
+                value={formData.draft}
+                onChange={(e) => setFormData({ ...formData, draft: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
           </>
         )}
 
@@ -2034,6 +2396,30 @@ export function CreateSaleForm({ formData, setFormData, vehicleCategory = 'car' 
                 placeholder="eg N12345"
                 value={formData.registration}
                 onChange={(e) => setFormData({ ...formData, registration: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Wing Span (feet)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 117.0"
+                value={formData.wing_span}
+                onChange={(e) => setFormData({ ...formData, wing_span: e.target.value })}
+                {...fieldProps}
+              />
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel {...labelProps}>Range (miles)</FormLabel>
+              <Input
+                type="number"
+                min={0}
+                placeholder="eg 3000"
+                value={formData.range}
+                onChange={(e) => setFormData({ ...formData, range: e.target.value })}
                 {...fieldProps}
               />
             </FormControl>

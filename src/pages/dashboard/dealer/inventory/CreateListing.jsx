@@ -244,6 +244,10 @@ export default function AddListing() {
         form.append('engine_type', formData?.engine_type || 'piston');
         form.append('total_hours', formData?.total_hours || '0');
         form.append('passenger_capacity', formData?.passenger_capacity || '4');
+        form.append('registration', formData?.registration || 'N/A');
+        form.append('registration_number', formData?.registration || 'N/A'); // Alias for registration
+        form.append('wing_span', formData?.wing_span || '0');
+        form.append('range', formData?.range || '0');
         
         // Backend expects these fields for all vehicles - provide aircraft-appropriate defaults
         form.append('transmission', 'N/A');
@@ -251,20 +255,25 @@ export default function AddListing() {
         form.append('seats', formData?.passenger_capacity || '4');
         form.append('doors', '2');
       } else if (category === 'bike') {
-        // Bike-specific fields
-        form.append('engine_capacity', formData?.engine_capacity || '150');
-        form.append('bike_type', formData?.bike_type || 'sport');
-        form.append('fuel_system', formData?.fuel || 'petrol');
-        form.append('transmission', formData?.transmission || 'manual');
-        form.append('mileage', formData?.mileage || '0');
-        
-        // Backend expects these fields - provide bike-appropriate defaults
-        form.append('seats', '2');
-        form.append('doors', '0');
-      } else if (category === 'boat') {
+      // Bike-specific fields
+      form.append('engine_capacity', formData?.engine_capacity || '150');
+      form.append('bike_type', formData?.bike_type || 'sport');
+      form.append('fuel_system', formData?.fuel || 'petrol');
+      form.append('transmission', formData?.transmission || 'manual');
+      form.append('mileage', formData?.mileage || '0');
+      form.append('saddle_height', formData?.saddle_height || '0');
+      
+      // Backend expects these fields - provide bike-appropriate defaults
+      form.append('seats', '2');
+      form.append('doors', '0');
+    } else if (category === 'boat') {
         // Boat-specific fields
         form.append('boat_type', formData?.boat_type || 'motorboat');
         form.append('length', formData?.length || '20');
+        form.append('beam_width', formData?.beam_width || '0');
+        form.append('draft', formData?.draft || '0');
+        form.append('engine_count', formData?.engine_count || '1');
+        form.append('propeller_type', formData?.propeller_type || 'outboard');
         form.append('engine_type', formData?.engine_type || 'outboard');
         form.append('hull_material', formData?.hull_material || 'fiberglass');
         form.append('capacity', formData?.capacity || '6');
@@ -277,6 +286,13 @@ export default function AddListing() {
       } else if (category === 'uav') {
         // UAV-specific fields
         form.append('uav_type', formData?.uav_type || 'quadcopter');
+        form.append('purpose', formData?.purpose || 'photography');
+        form.append('max_flight_time', formData?.max_flight_time || '0');
+        form.append('max_range', formData?.max_range || '0');
+        form.append('camera_resolution', formData?.camera_resolution || 'N/A');
+        form.append('has_obstacle_avoidance', formData?.has_obstacle_avoidance ? 'true' : 'false');
+        form.append('has_gps', formData?.has_gps ? 'true' : 'false');
+        form.append('has_return_to_home', formData?.has_return_to_home ? 'true' : 'false');
         
         // Backend expects these fields - provide UAV-appropriate defaults
         form.append('transmission', 'N/A');
