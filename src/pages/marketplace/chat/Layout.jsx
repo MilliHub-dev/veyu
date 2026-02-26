@@ -348,7 +348,7 @@ function ChatLayout() {
   }
 
   return (
-    <Box w="100%" bg={bgColor} h="calc(100vh - 80px)">
+    <Box w="100%" bg={bgColor} h="100vh">
       <Flex h="100%">
         {/* Sidebar - Hide on mobile when room is selected */}
         {room && isMobile ? null : (

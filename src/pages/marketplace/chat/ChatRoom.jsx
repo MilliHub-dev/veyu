@@ -220,7 +220,7 @@ function ChatRoom() {
   const messagesBg = useColorModeValue('gray.50', 'gray.900');
 
   return (
-    <VStack h="100%" bg="white" spacing={0} w="100%">
+    <VStack h="100vh" bg="white" spacing={0} w="100%" overflow="hidden">
       {/* Chat Header */}
       <HStack
         w="full"
