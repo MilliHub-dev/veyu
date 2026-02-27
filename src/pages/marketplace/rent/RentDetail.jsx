@@ -518,7 +518,7 @@ const BookingForm = ({ listing, ...props }) => {
 
   const totalDays = calculateDays();
   const basePrice = listing?.price || 0;
-  const driverFee = needsDriver ? 2000 : 0;
+  const driverFee = needsDriver ? (15000 * totalDays) : 0;
   const serviceFee = Math.round(basePrice * 0.05);
   const totalPrice = (basePrice * totalDays) + driverFee + serviceFee;
 
@@ -605,7 +605,7 @@ const BookingForm = ({ listing, ...props }) => {
                 <Flex justify="space-between" align="center">
                   <VStack align="start" spacing={1}>
                     <Text fontWeight="medium">Need a driver?</Text>
-                    <Text fontSize="sm" color="gray.600">+{formatCurrency(2000, listing?.currency)} per day</Text>
+                    <Text fontSize="sm" color="gray.600">+{formatCurrency(15000, listing?.currency)} per day</Text>
                   </VStack>
                   <Switch 
                     colorScheme="orange" 
