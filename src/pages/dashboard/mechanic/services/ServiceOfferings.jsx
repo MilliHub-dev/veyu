@@ -79,7 +79,7 @@ export const ServiceOfferings = () => {
       setLoading(true);
       setError(null);
       
-      const data = await mechanicService.getServiceOfferings();
+      const data = await mechanicService.getServices();
       console.log("Service Offerings:", data);
       
       setServiceOfferings(data.data || data || []);
