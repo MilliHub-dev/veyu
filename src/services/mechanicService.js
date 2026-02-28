@@ -50,10 +50,11 @@ class MechanicService {
 
   /**
    * Get mechanic dashboard (authenticated)
+   * @param {Object} config - Axios config options
    */
-  async getMechanicDashboard() {
+  async getMechanicDashboard(config = {}) {
     try {
-      const response = await apiClient.get('/admin/mechanics/dashboard/');
+      const response = await apiClient.get('/admin/mechanics/dashboard/', config);
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);

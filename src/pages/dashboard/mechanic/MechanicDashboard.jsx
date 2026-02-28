@@ -45,6 +45,7 @@ import {
 } from 'react-icons/fa6'
 import {useState, useEffect, useContext, Fragment} from 'react';
 import {GlobalStore} from '../../../App';
+import {MechanicContext} from './Layout';
 import { Link } from 'react-router-dom';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import {MapPin, Search, MoreVertical, TrendingUp, Users, Calendar, DollarSign, Clock, CheckCircle, Share2} from 'lucide-react';
@@ -138,6 +139,7 @@ const StatusColor = {
 
 export const MechanicOverview = () => {
   const {authUser, naturalDate, naturalTime} = useContext(GlobalStore);
+  const {mechanic} = useContext(MechanicContext);
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -153,15 +155,53 @@ export const MechanicOverview = () => {
   } = useDashboardError('mechanic dashboard');
 
   async function getData(){
+    // If mechanic is new or profile is not fully set up, skip API call and use empty state
+    // This prevents 404 errors in the console
+    if (mechanic?.isNew || mechanic?.status === 'pending_verification') {
+      console.log("New mechanic detected, skipping dashboard data fetch");
+      const emptyData = {
+        total_revenue: 0,
+        total_hires: 0,
+        total_bookings: 0,
+        pending_requests: [],
+        booking_history: []
+      };
+      setDashboardData(emptyData);
+      setPendingRequests([]);
+      setBookingHistory([]);
+      return { data: emptyData };
+    }
+
     return executeWithErrorHandling(
       async () => {
-        const data = await mechanicService.getDashboardData();
-        
-        console.log("Dashboard Data:", data);
-        setDashboardData(data.data || data);
-        setPendingRequests(data.data?.pending_requests || data.pending_requests || []);
-        setBookingHistory(data.data?.booking_history || data.booking_history || []);
-        return data;
+        try {
+          // Pass skipErrorLogging: true to prevent API service from logging 404s for this endpoint
+          const data = await mechanicService.getMechanicDashboard({ skipErrorLogging: true });
+          
+          console.log("Dashboard Data:", data);
+          setDashboardData(data.data || data);
+          setPendingRequests(data.data?.pending_requests || data.pending_requests || []);
+          setBookingHistory(data.data?.booking_history || data.booking_history || []);
+          return data;
+        } catch (err) {
+          // Handle 404 (Profile not found) gracefully
+          // Check both standard Axios error structure and custom ApiError structure
+          if ((err.response && err.response.status === 404) || err.status === 404) {
+            console.log("Mechanic dashboard not found (404), using empty state");
+            const emptyData = {
+              total_revenue: 0,
+              total_hires: 0,
+              total_bookings: 0,
+              pending_requests: [],
+              booking_history: []
+            };
+            setDashboardData(emptyData);
+            setPendingRequests([]);
+            setBookingHistory([]);
+            return { data: emptyData };
+          }
+          throw err; // Re-throw other errors
+        }
       },
       { 
         customContext: 'loading mechanic dashboard data'
