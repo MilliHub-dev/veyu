@@ -15,13 +15,14 @@ class AuthService {
     try {
       const response = await apiClient.post('/accounts/login/', {
         email: (email || '').trim(),
-        password: (password || '').trim(),
-        provider: 'veyu',
-        action: 'login',
-        device: {
-          app: 'web',
-          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
-        }
+        password: (password || '').trim()
+        // Removed extra fields to match newdoc.md strictly and prevent 500 errors
+        // provider: 'veyu',
+        // action: 'login',
+        // device: {
+        //   app: 'web',
+        //   user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+        // }
       });
 
       const result = handleApiResponse(response);

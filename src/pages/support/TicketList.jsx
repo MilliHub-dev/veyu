@@ -7,7 +7,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { GlobalStore } from '../../App';
 import supportService from '../../services/supportService';
-import { MdAdd, MdSearch, MdFilterList } from 'react-icons/md';
+import { MdAdd, MdSearch, MdFilterList, MdPhone, MdEmail } from 'react-icons/md';
 
 const TicketList = () => {
   const { authUser } = useContext(GlobalStore);
@@ -69,19 +69,55 @@ const TicketList = () => {
     ticket.subject.toLowerCase().includes(filters.search.toLowerCase())
   );
 
+  const isBusinessUser = authUser?.user_type === 'mechanic' || authUser?.user_type === 'dealer';
+
   return (
     <Container maxW="7xl" py={8}>
       <VStack spacing={6} align="stretch">
         <Flex justify="space-between" align="center" flexWrap="wrap" gap={4}>
           <Heading size="lg">Support Tickets</Heading>
-          <Button
-            leftIcon={<MdAdd />}
-            colorScheme="blue"
-            onClick={() => navigate('/support/create')}
-          >
-            Create Ticket
-          </Button>
+          {!isBusinessUser && (
+            <Button
+              leftIcon={<MdAdd />}
+              colorScheme="blue"
+              onClick={() => navigate('/support/create')}
+            >
+              Create Ticket
+            </Button>
+          )}
         </Flex>
+
+        {isBusinessUser && (
+          <Card variant="outline" borderColor="blue.200" bg="blue.50">
+            <CardBody>
+              <VStack align="start" spacing={3}>
+                <Heading size="md" color="blue.700">Contact Support</Heading>
+                <Stack direction={{ base: 'column', md: 'row' }} spacing={8}>
+                  <HStack 
+                    as="a" 
+                    href="https://wa.me/2349035735555" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    cursor="pointer"
+                    _hover={{ opacity: 0.8 }}
+                  >
+                    <Icon as={MdPhone} color="green.500" boxSize={5} />
+                    <Text fontWeight="medium">WhatsApp: +234 903 573 5555</Text>
+                  </HStack>
+                  <HStack 
+                    as="a" 
+                    href="mailto:veyultd@gmail.com,info.veyu@gmail.com"
+                    cursor="pointer"
+                    _hover={{ opacity: 0.8 }}
+                  >
+                    <Icon as={MdEmail} color="blue.500" boxSize={5} />
+                    <Text fontWeight="medium">Email: veyultd@gmail.com, info.veyu@gmail.com</Text>
+                  </HStack>
+                </Stack>
+              </VStack>
+            </CardBody>
+          </Card>
+        )}
 
         {/* Filters */}
         <Card>
@@ -135,13 +171,15 @@ const TicketList = () => {
               <VStack py={12} spacing={4}>
                 <Icon as={MdFilterList} boxSize={16} color="gray.300" />
                 <Text color="gray.500">No tickets found</Text>
-                <Button
-                  colorScheme="blue"
-                  variant="outline"
-                  onClick={() => navigate('/support/create')}
-                >
-                  Create Your First Ticket
-                </Button>
+                {!isBusinessUser && (
+                  <Button
+                    colorScheme="blue"
+                    variant="outline"
+                    onClick={() => navigate('/support/create')}
+                  >
+                    Create Your First Ticket
+                  </Button>
+                )}
               </VStack>
             </CardBody>
           </Card>

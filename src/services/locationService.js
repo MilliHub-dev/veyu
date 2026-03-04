@@ -20,7 +20,7 @@ class LocationService {
    */
   async getLocations() {
     try {
-      const response = await apiClient.get('/accounts/locations/');
+      const response = await apiClient.get('/locations/');
       console.log("get locations response:", response.status);
       console.log("get locations response data:", response.data);
       const data = handleApiResponse(response);
@@ -50,7 +50,7 @@ class LocationService {
    */
   async createLocation(locationData) {
     try {
-      const response = await apiClient.post('/accounts/locations/', {
+      const response = await apiClient.post('/locations/', {
         country: locationData.country,
         state: locationData.state,
         city: locationData.city,
@@ -87,7 +87,7 @@ class LocationService {
    */
   async getLocation(locationId) {
     try {
-      const response = await apiClient.get(`/accounts/locations/${locationId}/`);
+      const response = await apiClient.get(`/locations/${locationId}/`);
       const data = handleApiResponse(response);
       return data;
     } catch (error) {
@@ -111,7 +111,7 @@ class LocationService {
     try {
       console.log('📍 Updating location:', locationId, locationData);
 
-      const response = await apiClient.put(`/accounts/locations/${locationId}/`, {
+      const response = await apiClient.put(`/locations/${locationId}/`, {
         country: locationData.country,
         state: locationData.state,
         city: locationData.city,
@@ -143,7 +143,7 @@ class LocationService {
    */
   async deleteLocation(locationId) {
     try {
-      await apiClient.delete(`/accounts/locations/${locationId}/`);
+      await apiClient.delete(`/locations/${locationId}/`);
       return true;
     } catch (error) {
       console.error('❌ Failed to delete location:', error);

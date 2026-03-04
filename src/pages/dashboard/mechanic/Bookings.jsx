@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, Fragment } from "react"
 import {GlobalStore} from '../../../App';
+import {MechanicContext} from './Layout';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import {
   Box,
@@ -86,6 +87,7 @@ const Bookings = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const {naturalDate, naturalTime } = useContext(GlobalStore);
+  const {mechanic} = useContext(MechanicContext);
   const toast = useToast();
 
   const filters = [
@@ -101,7 +103,17 @@ const Bookings = () => {
       setLoading(true);
       setError(null);
       
-      const data = await mechanicService.getBookings();
+      // If mechanic is new or profile is not fully set up, skip API call
+      if (mechanic?.isNew || mechanic?.status === 'pending_verification') {
+        console.log("New mechanic detected, skipping bookings fetch");
+        setPendingRequests([]);
+        setBookingHistory([]);
+        setFilteredBookings([]);
+        return;
+      }
+
+      // Pass skipErrorLogging to avoid console noise for 500/404 errors on new/incomplete profiles
+      const data = await mechanicService.getBookings({}, { skipErrorLogging: true });
       console.log("Bookings:", data);
       
       const requests = data.bookings?.requests || data.requests || [];
@@ -111,6 +123,16 @@ const Bookings = () => {
       setBookingHistory(history);
       setFilteredBookings(history);
     } catch (error) {
+      // Handle 404 (Not Found) and 500 (Server Error) as empty state
+      // This is common for new profiles or incomplete data
+      if (error.response?.status === 404 || error.response?.status === 500 || error.status === 404 || error.status === 500) {
+        console.log(`Bookings fetch skipped due to error (${error.response?.status || error.status}), using empty state`);
+        setPendingRequests([]);
+        setBookingHistory([]);
+        setFilteredBookings([]);
+        return;
+      }
+      
       console.error("Error fetching bookings:", error);
       setError(error.message);
       toast({

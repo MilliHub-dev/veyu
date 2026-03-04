@@ -4,12 +4,27 @@ class MechanicService {
   // ==================== 4.1 Mechanic Profile (Public) ====================
 
   /**
-   * Get mechanic overview (public listing)
+   * List all available mechanics (public)
    * @param {Object} params - Query parameters
    */
-  async getMechanicOverview(params = {}) {
+  async getMechanics(params = {}) {
     try {
-      const response = await apiClient.get('/admin/mechanics/', { params });
+      const response = await apiClient.get('/mechanics/', { params });
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  /**
+   * Search mechanics (public)
+   * @param {string} query - Search query (name or service)
+   */
+  async searchMechanics(query) {
+    try {
+      const response = await apiClient.get('/mechanics/find/', { 
+        params: { find: query } 
+      });
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
@@ -20,9 +35,9 @@ class MechanicService {
    * Get specific mechanic profile (public)
    * @param {string} mechId - Mechanic ID
    */
-  async getMechanicProfile(mechId) {
+  async getMechanicPublicProfile(mechId) {
     try {
-      const response = await apiClient.get(`/admin/mechanics/${mechId}/`);
+      const response = await apiClient.get(`/mechanics/${mechId}/`);
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
@@ -30,26 +45,34 @@ class MechanicService {
   }
 
   /**
-   * Search mechanics
-   * @param {Object} params - Search parameters
-   * @param {string} params.location - Location
-   * @param {string} params.service_type - Service type
-   * @param {number} params.rating_min - Minimum rating
-   * @param {boolean} params.available - Availability filter
+   * View mechanic's past jobs/reviews (public)
+   * @param {string} mechId - Mechanic ID
    */
-  async searchMechanics(params = {}) {
+  async getMechanicHistory(mechId) {
     try {
-      const response = await apiClient.get('/admin/mechanics/find/', { params });
+      const response = await apiClient.get(`/mechanics/${mechId}/history/`);
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
     }
   }
 
-  // ==================== 4.2 Dashboard ====================
+  // ==================== 4.2 Dashboard (Authenticated) ====================
 
   /**
-   * Get mechanic dashboard (authenticated)
+   * Get mechanic profile summary (Overview)
+   */
+  async getMechanicOverview() {
+    try {
+      const response = await apiClient.get('/admin/mechanics/');
+      return handleApiResponse(response);
+    } catch (error) {
+      handleApiError(error);
+    }
+  }
+
+  /**
+   * Get mechanic dashboard stats
    * @param {Object} config - Axios config options
    */
   async getMechanicDashboard(config = {}) {
@@ -67,10 +90,11 @@ class MechanicService {
    * @param {string} params.period - day|week|month|year
    * @param {string} params.start_date - Start date
    * @param {string} params.end_date - End date
+   * @param {Object} extraConfig - Additional Axios config
    */
-  async getAnalytics(params = {}) {
+  async getAnalytics(params = {}, extraConfig = {}) {
     try {
-      const response = await apiClient.get('/admin/mechanics/analytics/', { params });
+      const response = await apiClient.get('/admin/mechanics/analytics/', { params, ...extraConfig });
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
@@ -83,10 +107,11 @@ class MechanicService {
 
   /**
    * Get mechanic settings
+   * @param {Object} config - Axios config options
    */
-  async getSettings() {
+  async getSettings(config = {}) {
     try {
-      const response = await apiClient.get('/admin/mechanics/settings/');
+      const response = await apiClient.get('/admin/mechanics/settings/', config);
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
@@ -99,7 +124,7 @@ class MechanicService {
    */
   async updateSettings(settings) {
     try {
-      const response = await apiClient.put('/admin/mechanics/settings/', settings);
+      const response = await apiClient.post('/admin/mechanics/settings/', settings);
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
@@ -109,20 +134,26 @@ class MechanicService {
   // Legacy method for backward compatibility
   async updateProfile(profileData) {
     try {
-      const formData = new FormData();
+      let formData;
       
-      // Handle file uploads (logo)
-      Object.keys(profileData).forEach(key => {
-        if (key === 'logo' && profileData[key]?.file) {
-          formData.append('new-logo', profileData[key].file, profileData[key].file.name);
-        } else if (Array.isArray(profileData[key])) {
-          formData.append(key, JSON.stringify(profileData[key]));
-        } else {
-          formData.append(key, profileData[key]);
-        }
-      });
+      if (profileData instanceof FormData) {
+        formData = profileData;
+      } else {
+        formData = new FormData();
+        
+        // Handle file uploads (logo)
+        Object.keys(profileData).forEach(key => {
+          if (key === 'logo' && profileData[key]?.file) {
+            formData.append('new-logo', profileData[key].file, profileData[key].file.name);
+          } else if (Array.isArray(profileData[key])) {
+            formData.append(key, JSON.stringify(profileData[key]));
+          } else {
+            formData.append(key, profileData[key]);
+          }
+        });
+      }
 
-      const response = await apiClient.put('/admin/mechanics/settings/', formData, {
+      const response = await apiClient.put('/profile/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -139,10 +170,11 @@ class MechanicService {
 
   /**
    * Get services
+   * @param {Object} config - Axios config options
    */
-  async getServices() {
+  async getServices(config = {}) {
     try {
-      const response = await apiClient.get('/admin/mechanics/services/');
+      const response = await apiClient.get('/admin/mechanics/services/', config);
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);
@@ -221,10 +253,11 @@ class MechanicService {
    * @param {string} params.status - pending|confirmed|in_progress|completed|cancelled
    * @param {string} params.date_from - Start date
    * @param {string} params.date_to - End date
+   * @param {Object} extraConfig - Additional Axios config
    */
-  async getBookings(params = {}) {
+  async getBookings(params = {}, extraConfig = {}) {
     try {
-      const response = await apiClient.get('/admin/mechanics/bookings/', { params });
+      const response = await apiClient.get('/admin/mechanics/bookings/', { params, ...extraConfig });
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);

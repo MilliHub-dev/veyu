@@ -91,6 +91,28 @@ export const CreateServiceOffering = () => {
       return;
     }
 
+    if (serviceOffering.description && serviceOffering.description.length < 20) {
+      toast({
+        title: 'Validation Error',
+        description: 'Description must be at least 20 characters long.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    if (parseFloat(serviceOffering.charge) < 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Service charge cannot be negative.',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
     try {
       setSubmitting(true);
       

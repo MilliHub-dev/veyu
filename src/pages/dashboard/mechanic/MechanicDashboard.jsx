@@ -184,10 +184,10 @@ export const MechanicOverview = () => {
           setBookingHistory(data.data?.booking_history || data.booking_history || []);
           return data;
         } catch (err) {
-          // Handle 404 (Profile not found) gracefully
+          // Handle 404 (Profile not found) and 500 (Server Error - likely missing profile data) gracefully
           // Check both standard Axios error structure and custom ApiError structure
-          if ((err.response && err.response.status === 404) || err.status === 404) {
-            console.log("Mechanic dashboard not found (404), using empty state");
+          if ((err.response && (err.response.status === 404 || err.response.status === 500)) || err.status === 404 || err.status === 500) {
+            console.log(`Mechanic dashboard error (${err.response?.status || err.status}), using empty state`);
             const emptyData = {
               total_revenue: 0,
               total_hires: 0,
@@ -200,7 +200,9 @@ export const MechanicOverview = () => {
             setBookingHistory([]);
             return { data: emptyData };
           }
-          throw err; // Re-throw other errors
+          
+          // Re-throw other errors to be handled by the hook
+          throw err;
         }
       },
       { 

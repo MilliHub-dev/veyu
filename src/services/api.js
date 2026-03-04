@@ -393,23 +393,22 @@ apiClient.interceptors.response.use(
             console.error('🚨 CRITICAL: Refreshed token was rejected by backend!');
             console.error('🚨 This indicates the /token/refresh/ endpoint returned an invalid token');
 
-            // Only force re-login for auth endpoints
-            if (isAuthEndpoint(originalRequest.url)) {
-              TokenManager.clearTokens();
-              if (window.notify) {
-                window.notify({
-                  title: 'Authentication Error',
-                  body: 'There was a problem with your session. Please log in again.',
-                  color: 'red'
-                });
-              }
-              if (!window.location.pathname.includes('/login') &&
-                !window.location.pathname.includes('/signup') &&
-                !window.location.pathname.includes('/forgot-password')) {
-                setTimeout(() => {
-                  window.location.href = '/login?auth_error=true';
-                }, 1000);
-              }
+            // Force re-login for ALL endpoints if the fresh token is rejected
+            // This prevents infinite loops and "zombie" sessions
+            TokenManager.clearTokens();
+            if (window.notify) {
+              window.notify({
+                title: 'Authentication Error',
+                body: 'Your session has expired or is invalid. Please log in again.',
+                color: 'red'
+              });
+            }
+            if (!window.location.pathname.includes('/login') &&
+              !window.location.pathname.includes('/signup') &&
+              !window.location.pathname.includes('/forgot-password')) {
+              setTimeout(() => {
+                window.location.href = '/login?auth_error=true';
+              }, 1000);
             }
           }
 

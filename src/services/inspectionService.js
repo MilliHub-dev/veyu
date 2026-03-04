@@ -61,7 +61,7 @@ class InspectionService {
    */
   async updateInspection(inspectionId, inspectionData) {
     try {
-      const response = await apiClient.put(`/inspections/${inspectionId}/`, inspectionData);
+      const response = await apiClient.patch(`/inspections/${inspectionId}/`, inspectionData);
       return handleApiResponse(response);
     } catch (error) {
       handleApiError(error);

@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from "react"
 import {GlobalStore} from '../../../../App';
+import {MechanicContext} from '../Layout';
 import {objectifyJSON, jsonifyObject} from '../../../../utils';
 import {
   Box,
@@ -73,18 +74,37 @@ export const ServiceOfferings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const toast = useToast();
+  const { mechanic } = useContext(MechanicContext);
 
   async function init(){
     try {
       setLoading(true);
       setError(null);
       
-      const data = await mechanicService.getServices();
+      // Pass skipErrorLogging to handle 404s gracefully (e.g. new profiles)
+      const data = await mechanicService.getServices({ skipErrorLogging: true });
       console.log("Service Offerings:", data);
       
-      setServiceOfferings(data.data || data || []);
+      // Handle different response structures (array, {data: []}, {results: []})
+      let servicesList = [];
+      if (Array.isArray(data)) {
+        servicesList = data;
+      } else if (Array.isArray(data?.data)) {
+        servicesList = data.data;
+      } else if (Array.isArray(data?.results)) {
+        servicesList = data.results;
+      }
+      
+      setServiceOfferings(servicesList);
     } catch (error) {
       console.error("Error fetching service offerings:", error);
+      
+      // If 404, it just means no services/profile yet, which is fine to show empty state
+      if (error.response?.status === 404 || error.status === 404) {
+        setServiceOfferings([]);
+        return;
+      }
+
       setError(error.message);
       toast({
         title: 'Error',

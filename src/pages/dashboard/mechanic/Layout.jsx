@@ -77,9 +77,13 @@ function MechanicDashboardLayout({children, hideSidebar, ...props}) {
             // Use utility function to map API response to consistent structure
             const mappedData = mapBusinessProfileResponse(rawData);
             console.log("Mechanic data loaded:", mappedData);
+            
+            // Check if profile is actually complete enough to be considered "not new"
+            const isNew = !mappedData.id || mappedData.status === 'pending_verification' || !mappedData.business_name;
+            
             setMechanic({
               ...mappedData,
-              isNew: false
+              isNew: isNew
             });
             return;
           }

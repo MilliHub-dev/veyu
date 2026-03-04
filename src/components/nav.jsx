@@ -913,10 +913,13 @@ export const MechanicNavbar = ({ sidebarOpen, setSidebarState, ...props }) => {
   const navigate = useNavigate();
 
   window.onscroll = (ev) => {
-    if (window.scrollY > 1000) {
-      document.getElementById('navbar').classList.add('scrolled');
-    } else {
-      document.getElementById('navbar').classList.remove('scrolled');
+    const navbar = document.getElementById('navbar');
+    if (navbar) {
+      if (window.scrollY > 1000) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
     }
   }
 

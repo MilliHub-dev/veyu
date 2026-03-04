@@ -16,6 +16,7 @@ import {
   Legend,
 } from "chart.js";
 import {GlobalStore} from '../../../App';
+import {MechanicContext} from './Layout';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import { useState, useContext, useEffect, useRef} from 'react';
 import { TrendingUp, DollarSign, Users, Calendar, BarChart3 } from 'lucide-react';
@@ -129,8 +130,27 @@ export default function MechanicAnalytics() {
     }
   });
   const toast = useToast();
+  const { mechanic } = useContext(MechanicContext);
 
   async function getAnalyticsData(){
+    // If mechanic is new or profile is not fully set up, skip API call
+    if (mechanic?.isNew || mechanic?.status === 'pending_verification') {
+      console.log("New mechanic detected, skipping analytics fetch");
+      setChartsData({
+        revenue: { amount: 0, chart_data: null },
+        jobs: { hires: 0, pending: 0, canceled: 0 },
+        revenue_chart: {
+          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+          datasets: [{
+            label: "Revenue",
+            data: [0, 0, 0, 0, 0, 0],
+            backgroundColor: "#3182CE",
+          }],
+        }
+      });
+      return;
+    }
+
     try {
       setError(null);
       const params = { 
@@ -299,7 +319,21 @@ export default function MechanicAnalytics() {
         </CardHeader>
         <CardBody>
           <Box height="400px">
-            <Bar data={{...chartsData?.revenue?.chart_data}} options={chartOptions} />
+            {chartsData?.revenue?.chart_data ? (
+              <Bar data={chartsData.revenue.chart_data} options={chartOptions} />
+            ) : (
+              <Bar 
+                data={{
+                  labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+                  datasets: [{
+                    label: "Revenue",
+                    data: [0, 0, 0, 0, 0, 0],
+                    backgroundColor: "#3182CE",
+                  }],
+                }} 
+                options={chartOptions} 
+              />
+            )}
           </Box>
         </CardBody>
       </Card>

@@ -11,11 +11,10 @@ import { FaUpload } from "react-icons/fa";
 import {GlobalStore} from '../../../../App'
 import {objectifyJSON, jsonifyObject} from '../../../../utils'
 import { Search, Bell, CloudUpload, ChevronDown, ArrowRight, User, Building, Phone, Mail, FileText, MapPin } from "lucide-react";
-import authService from '../../../../services/authService';
 import { getBusinessDisplayName } from '../../../../utils/userDataUtils';
 import { CustomPlacesAutocomplete } from '../../../../components/maps';
-import locationService from '../../../../services/locationService';
-
+import { mechanicService, locationService, authService } from '../../../../services';
+import { useToast } from '@chakra-ui/react';
 
 let mechServices = [
   'Oil Change',
@@ -25,7 +24,7 @@ let mechServices = [
 ]
 
 export const BusinessProfile = ({  }) => {
-  const {axios, notify, authUser, commaInt} = useContext(GlobalStore);
+  const {notify, authUser, commaInt} = useContext(GlobalStore);
   const imageRef = useRef();
   const [mechanic, setMechanic] = useState({
     logo: "", // Placeholder for logo
@@ -105,61 +104,61 @@ export const BusinessProfile = ({  }) => {
   }
 
   async function getMechanicSettings() {
-    const res = await axios.get('/admin/mechanics/settings/');
-    const data = objectifyJSON(res.data);
+    try {
+      // Pass skipErrorLogging to avoid console noise for 404 errors on new profiles
+      const data = await mechanicService.getSettings({ skipErrorLogging: true });
 
-    if (res.status === 200){
-      // Fetch verification status to get CAC and TIN numbers
-      let verificationData = {};
-      try {
-        const verificationResponse = await axios.get('/accounts/verification-status/');
-        verificationData = objectifyJSON(verificationResponse.data);
-        console.log('Verification status data received:', verificationData);
-      } catch (verificationError) {
-        console.log('Could not fetch verification status:', verificationError);
-        // Continue without verification data if it fails
-      }
-
-      // Log the business name received from API for debugging
-      console.log('📥 Received mechanic data from GET /admin/mechanics/settings/ with business_name:', {
-        business_name: data.data.business_name,
-        has_business_name: !!data.data.business_name,
-        endpoint: '/admin/mechanics/settings/',
-        method: 'GET'
-      });
-
-      // Fetch location details if we only have an ID
-      let locationData = data.data.location;
-      if (typeof data.data.location === 'number') {
+      if (data) {
+        // Fetch verification status to get CAC and TIN numbers
+        let verificationData = {};
         try {
-          console.log('📍 Fetching location details for ID:', data.data.location);
-          const locationResponse = await axios.get(`/locations/${data.data.location}/`);
-          const locationResult = objectifyJSON(locationResponse.data);
-          locationData = locationResult.data || locationResult;
-          console.log('✅ Location details fetched:', locationData);
-        } catch (locationError) {
-          console.error('❌ Failed to fetch location details:', locationError);
-          // Keep the ID if fetch fails
-          locationData = { id: data.data.location };
+          verificationData = await authService.getVerificationStatus();
+          console.log('Verification status data received:', verificationData);
+        } catch (verificationError) {
+          console.log('Could not fetch verification status:', verificationError);
+          // Continue without verification data if it fails
         }
+
+        // Log the business name received from API for debugging
+        console.log('📥 Received mechanic data from mechanicService.getSettings() with business_name:', {
+          business_name: data.business_name,
+          has_business_name: !!data.business_name,
+        });
+
+        // Fetch location details if we only have an ID
+        let locationData = data.location;
+        if (typeof data.location === 'number') {
+          try {
+            console.log('📍 Fetching location details for ID:', data.location);
+            const locationResult = await locationService.getLocation(data.location);
+            locationData = locationResult;
+            console.log('✅ Location details fetched:', locationData);
+          } catch (locationError) {
+            console.error('❌ Failed to fetch location details:', locationError);
+            // Keep the ID if fetch fails
+            locationData = { id: data.location };
+          }
+        }
+
+        setMechanic({
+          ...data,
+          // Ensure business_name is properly set from API response
+          business_name: data.business_name || '',
+          // Add CAC and TIN from verification status
+          cac_number: verificationData.cac_number || data.cac_number || '',
+          tin_number: verificationData.tin_number || data.tin_number || '',
+          // Set location data properly
+          location: locationData,
+          location_id: locationData?.id || data.location
+        });
+
+        // Check for missing business name after data is loaded
+        setTimeout(() => {
+          checkAndPromptForBusinessName();
+        }, 500);
       }
-
-      setMechanic({
-        ...data.data,
-        // Ensure business_name is properly set from API response
-        business_name: data.data.business_name || '',
-        // Add CAC and TIN from verification status
-        cac_number: verificationData.cac_number || data.data.cac_number || '',
-        tin_number: verificationData.tin_number || data.data.tin_number || '',
-        // Set location data properly
-        location: locationData,
-        location_id: locationData?.id || data.data.location
-      });
-
-      // Check for missing business name after data is loaded
-      setTimeout(() => {
-        checkAndPromptForBusinessName();
-      }, 500);
+    } catch (error) {
+      console.error('Error fetching mechanic settings:', error);
     }
   }
 
@@ -243,7 +242,7 @@ export const BusinessProfile = ({  }) => {
     console.log('📤 Sending mechanic profile update with business_name:', {
       business_name: trimmedBusinessName,
       business_name_length: trimmedBusinessName.length,
-      endpoint: '/admin/mechanics/settings/',
+      endpoint: '/profile/',
       method: 'PUT'
     });
 
@@ -268,67 +267,60 @@ export const BusinessProfile = ({  }) => {
     }
 
     try {
-      const res = await axios.put('/admin/mechanics/settings/', payload, {
-        headers: {
-          // Don't set Content-Type - let browser set it with boundary
+      console.log('📤 Sending mechanic profile update via mechanicService.updateProfile');
+      const data = await mechanicService.updateProfile(payload);
+
+      if (data) {
+        console.log("My new settings:", data);
+        
+        // Log the business name received from API for debugging
+        console.log('📥 Received mechanic profile update response with business_name:', {
+          business_name: data.business_name,
+          has_business_name: !!data.business_name,
+        });
+
+        // Fetch location details if we only have an ID in the response
+        let locationData = data.location;
+        if (typeof data.location === 'number') {
+          try {
+            console.log('📍 Fetching location details for ID:', data.location);
+            const locationResult = await locationService.getLocation(data.location);
+            locationData = locationResult;
+            console.log('✅ Location details fetched:', locationData);
+          } catch (locationError) {
+            console.error('❌ Failed to fetch location details:', locationError);
+            // Keep the ID if fetch fails
+            locationData = { id: data.location };
+          }
         }
-      });
-      const data = objectifyJSON(res.data);
 
-      if (res.status === 200){
-      console.log("My new settings:", data.data)
-      
-      // Log the business name received from API for debugging
-      console.log('📥 Received mechanic profile update response with business_name:', {
-        business_name: data.data.business_name,
-        has_business_name: !!data.data.business_name,
-        endpoint: '/admin/mechanics/settings/',
-        method: 'PUT'
-      });
-
-      // Fetch location details if we only have an ID in the response
-      let locationData = data.data.location;
-      if (typeof data.data.location === 'number') {
-        try {
-          console.log('📍 Fetching location details for ID:', data.data.location);
-          const locationResponse = await axios.get(`/locations/${data.data.location}/`);
-          const locationResult = objectifyJSON(locationResponse.data);
-          locationData = locationResult.data || locationResult;
-          console.log('✅ Location details fetched:', locationData);
-        } catch (locationError) {
-          console.error('❌ Failed to fetch location details:', locationError);
-          // Keep the ID if fetch fails
-          locationData = { id: data.data.location };
+        setMechanic({
+          ...data,
+          // Preserve the local file preview if it exists
+          logo: mechanic.logo?.preview ? mechanic.logo : data.logo,
+          // Handle location data from response
+          location: locationData,
+          location_id: locationData?.id || data.location
+        })
+        
+        // Update business name in auth service storage for consistency
+        if (data.business_name) {
+          authService.updateBusinessName(data.business_name);
         }
+
+        notify({
+          title: 'Profile Updated Successfully',
+          description: 'Your mechanic profile has been saved and is now live.',
+          status: 'success',
+          duration: 4000,
+          isClosable: true
+        });
+        
+        // Re-fetch mechanic data to get the latest verification status
+        await getMechanicSettings();
+
+        return true;
       }
-
-      setMechanic({
-        ...data.data,
-        // Preserve the local file preview if it exists
-        logo: mechanic.logo?.preview ? mechanic.logo : data.data.logo,
-        // Handle location data from response
-        location: locationData,
-        location_id: locationData?.id || data.data.location
-      })
-      
-      // Update business name in auth service storage for consistency
-      if (data.data.business_name) {
-        authService.updateBusinessName(data.data.business_name);
-      }
-
-      notify({
-        title: 'Profile Updated Successfully',
-        description: 'Your mechanic profile has been saved and is now live.',
-        status: 'success',
-        duration: 4000,
-        isClosable: true
-      });
-      
-      // Re-fetch mechanic data to get the latest verification status
-      await getMechanicSettings();
-
-      return true;
-    }
     } catch (error) {
       console.error('Error saving mechanic settings:', error);
 
