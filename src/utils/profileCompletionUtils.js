@@ -219,7 +219,9 @@ export const enhanceUserWithCompletionStatus = (user) => {
     const hasBusinessName = user.business_name && user.business_name.trim() !== '';
     const hasContactInfo = (user.business_address && user.business_address.trim() !== '') ||
       (user.business_phone && user.business_phone.trim() !== '') ||
-      (user.business_email && user.business_email.trim() !== '');
+      (user.contact_phone && user.contact_phone.trim() !== '') ||
+      (user.business_email && user.business_email.trim() !== '') ||
+      (user.contact_email && user.contact_email.trim() !== '');
 
     const isComplete = hasBusinessName && hasContactInfo;
 
@@ -277,7 +279,9 @@ export const syncProfileCompletionStatus = (apiUserData) => {
         const hasBusinessName = true;
         const hasContactInfo = (enhancedApiData.business_address && enhancedApiData.business_address.trim() !== '') ||
           (enhancedApiData.business_phone && enhancedApiData.business_phone.trim() !== '') ||
-          (enhancedApiData.business_email && enhancedApiData.business_email.trim() !== '');
+          (enhancedApiData.contact_phone && enhancedApiData.contact_phone.trim() !== '') ||
+          (enhancedApiData.business_email && enhancedApiData.business_email.trim() !== '') ||
+          (enhancedApiData.contact_email && enhancedApiData.contact_email.trim() !== '');
         
         enhancedApiData.business_profile_completed = hasBusinessName && hasContactInfo;
     }

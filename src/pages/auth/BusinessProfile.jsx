@@ -51,6 +51,7 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 
 import authService from "../../services/authService";
 import dealershipService from "../../services/dealershipService";
+import mechanicService from "../../services/mechanicService";
 import { TokenManager } from "../../services/api";
 import { formatErrorForUser, createErrorNotification, handleValidationErrors, logError } from '../../utils/errorHandling';
 import { getUserDisplayName, getBusinessDisplayName, getUserEmail, getUserPhone } from "../../utils/userDataUtils";
@@ -161,7 +162,19 @@ function BusinessProfile({ onSubmit, ...props }) {
   const fetchBusinessProfileData = async () => {
     try {
       console.log('🔄 Fetching business profile data from API...');
-      const profileData = await dealershipService.getSettings();
+      
+      const user = authService.getCurrentUser();
+      let profileData = null;
+      
+      if (user?.user_type === 'mechanic') {
+        profileData = await mechanicService.getSettings();
+      } else if (user?.user_type === 'dealer') {
+        profileData = await dealershipService.getSettings();
+      } else {
+        // Fallback or skip for other user types
+        console.warn('⚠️ Unknown or unsupported user type for profile fetch:', user?.user_type);
+        return null;
+      }
       
       if (profileData) {
         console.log('✅ Business profile data fetched:', {
@@ -173,6 +186,19 @@ function BusinessProfile({ onSubmit, ...props }) {
         // Add debug log to verify business_name from API
         console.log('DEBUG: Business name from API:', profileData.business_name);
         
+        // Normalize services to ensure they are strings
+        let normalizedServices = [];
+        if (Array.isArray(profileData.services)) {
+          normalizedServices = profileData.services.map(s => {
+            if (typeof s === 'string') return s;
+            if (typeof s === 'object' && s !== null) {
+              // Try common name fields
+              return s.name || s.service_name || s.label || s.value || JSON.stringify(s);
+            }
+            return String(s);
+          });
+        }
+
         // Update the business profile state with fetched data
         setBusinessProfile(prev => ({
           ...prev,
@@ -181,7 +207,7 @@ function BusinessProfile({ onSubmit, ...props }) {
           about: profileData.about || prev.about,
           contact_phone: profileData.contact_phone || prev.contact_phone,
           contact_email: profileData.contact_email || prev.contact_email,
-          services: profileData.services || prev.services,
+          services: normalizedServices.length > 0 ? normalizedServices : prev.services,
           business_type: profileData.business_type || prev.business_type
         }));
         
@@ -658,6 +684,15 @@ function BusinessProfile({ onSubmit, ...props }) {
       ...prev,
       services: prev.services.filter(s => s !== service)
     }));
+  };
+
+  // Helper function to safely render service label
+  const renderServiceLabel = (service) => {
+    if (typeof service === 'string') return service;
+    if (typeof service === 'object' && service !== null) {
+      return service.name || service.label || service.service_name || JSON.stringify(service);
+    }
+    return String(service);
   };
 
   // Business profile setup function
@@ -1587,7 +1622,7 @@ function BusinessProfile({ onSubmit, ...props }) {
                                   px={4}
                                   py={2}
                                 >
-                                  {service}
+                                  {renderServiceLabel(service)}
                                   <IconButton
                                     size="xs"
                                     ml={2}
@@ -1736,7 +1771,7 @@ function BusinessProfile({ onSubmit, ...props }) {
                             {businessProfile.services.slice(0, 3).map((service, index) => (
                               <WrapItem key={index}>
                                 <Badge size="sm" colorScheme="orange">
-                                  {service}
+                                  {renderServiceLabel(service)}
                                 </Badge>
                               </WrapItem>
                             ))}

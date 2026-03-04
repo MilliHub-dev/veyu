@@ -24,7 +24,7 @@ let mechServices = [
 ]
 
 export const BusinessProfile = ({  }) => {
-  const {notify, authUser, commaInt} = useContext(GlobalStore);
+  const {notify, authUser, commaInt, onAuthenticated} = useContext(GlobalStore);
   const imageRef = useRef();
   const [mechanic, setMechanic] = useState({
     logo: "", // Placeholder for logo
@@ -248,10 +248,15 @@ export const BusinessProfile = ({  }) => {
 
     const payload = new FormData();
     const keys = Object.keys(mechanic);
+    
+    // Define keys to exclude from payload to prevent API errors
+    const excludedKeys = ['user', 'isNew', 'status', 'verified_business', 'id', 'created_at', 'updated_at', 'slug', 'rating', 'review_count', 'owner'];
 
     for (let key of keys){
-      if (key === 'logo' && typeof mechanic['logo'] !== 'string'){
-        const file = mechanic['logo'].file;
+      if (excludedKeys.includes(key)) continue;
+
+      if (key === 'logo' && mechanic.logo && typeof mechanic.logo !== 'string' && mechanic.logo.file){
+        const file = mechanic.logo.file;
         payload.append('new-logo', file, file.name)
       } else if (key === 'business_name') {
         // Ensure business_name is properly trimmed before sending
@@ -259,10 +264,16 @@ export const BusinessProfile = ({  }) => {
       } else if (key === 'location_id' && locationId) {
         // Add location ID if it exists
         payload.append('location', locationId)
-      } else if (key !== 'location' && key !== 'location_id') {
-        // Skip location object, only send location_id
-        console.log("New setting")
-        payload.append(key, mechanic[key])
+      } else if (key === 'services' && Array.isArray(mechanic.services)) {
+        // Stringify services array for API
+        payload.append(key, JSON.stringify(mechanic.services));
+      } else if (key !== 'location' && key !== 'location_id' && key !== 'logo') {
+        // Skip location object (already handled via location_id) and logo (handled above)
+        // Only append if value is not null/undefined
+        if (mechanic[key] !== null && mechanic[key] !== undefined) {
+          console.log(`Appending setting: ${key}`)
+          payload.append(key, mechanic[key])
+        }
       }
     }
 
@@ -306,6 +317,24 @@ export const BusinessProfile = ({  }) => {
         // Update business name in auth service storage for consistency
         if (data.business_name) {
           authService.updateBusinessName(data.business_name);
+        }
+
+        // Update global auth user state to reflect profile completion
+        if (onAuthenticated && authUser) {
+          console.log('🔄 Updating global auth user state with new profile data');
+          const updatedUser = { 
+            ...authUser,
+            // Merge new data into top level
+            ...data,
+            business_profile_completed: true,
+            // Also update nested user object if it exists
+            user: authUser.user ? {
+              ...authUser.user,
+              ...data,
+              business_profile_completed: true
+            } : undefined
+          };
+          onAuthenticated(updatedUser);
         }
 
         notify({

@@ -502,6 +502,35 @@ function App() {
               <Routes>
                   {authUser ? (
                     <Fragment>
+                      {/* Wallet Routes - Moved to top to avoid shadowing by catch-all routes */}
+                      <Route
+                        element={
+                          authUser.user_type === "dealer" ? (
+                            <DealerDashboardLayout hideSidebar hideFooter />
+                          ) : authUser.user_type === "mechanic" ? (
+                            <MechanicDashboardLayout hideSidebar hideFooter />
+                          ) : (
+                            <Layout hideFooter />
+                          )
+                        }
+                      >
+                        <Route path="/wallet" element={<WalletLayout />}>
+                          <Route path="home" element={<WalletHomePage />} />
+                          <Route
+                            path="transactions"
+                            element={<WalletTransactionsPage />}
+                          />
+                          <Route
+                            path="deposit"
+                            element={<WalletDepositPage />}
+                          />
+                          <Route
+                            path="withdraw"
+                            element={<WalletWithdrawalPage />}
+                          />
+                          <Route path="" element={<Navigate to="home" />} />
+                        </Route>
+                      </Route>
                       {/* Dealer Dashboard */}
                       {authUser.user_type === "dealer" ? (
                         <>
@@ -564,6 +593,11 @@ function App() {
                               element={<BuyDetail />}
                             />
                             <Route path="/rent" element={<RentListing />} />
+                            {/* Business Profile Setup - needed for redirects */}
+                            <Route
+                              path="/business-profile"
+                              element={<BusinessProfileSetup />}
+                            />
                             <Route
                               path="/rent/:listingId"
                               element={<RentDetail />}
@@ -640,14 +674,19 @@ function App() {
                               element={<Navigate to="/dashboard" />}
                             />
                           </Route>
-                          {/* Marketplace routes for mechanics */}
-                          <Route element={<Layout />}>
-                            <Route path="/buy" element={<BuyListing />} />
-                            <Route
-                              path="/buy/:listingId"
-                              element={<BuyDetail />}
-                            />
-                            <Route path="/rent" element={<RentListing />} />
+                        {/* Marketplace routes for mechanics */}
+                        <Route element={<Layout />}>
+                          <Route path="/buy" element={<BuyListing />} />
+                          <Route
+                            path="/buy/:listingId"
+                            element={<BuyDetail />}
+                          />
+                          <Route path="/rent" element={<RentListing />} />
+                          {/* Business Profile Setup - needed for redirects */}
+                          <Route
+                            path="/business-profile"
+                            element={<BusinessProfileSetup />}
+                          />
                             <Route
                               path="/rent/:listingId"
                               element={<RentDetail />}
@@ -763,39 +802,7 @@ function App() {
                         </Route>
                       )}
 
-                      {/* Wallet Routes */}
-                      <Route
-                        element={
-                          authUser.user_type === "dealer" ? (
-                            <BusinessProfileGuard>
-                              <DealerDashboardLayout hideSidebar hideFooter />
-                            </BusinessProfileGuard>
-                          ) : authUser.user_type === "mechanic" ? (
-                            <BusinessProfileGuard>
-                              <MechanicDashboardLayout hideSidebar hideFooter />
-                            </BusinessProfileGuard>
-                          ) : (
-                            <Layout hideFooter />
-                          )
-                        }
-                      >
-                        <Route path="/wallet" element={<WalletLayout />}>
-                          <Route path="home" element={<WalletHomePage />} />
-                          <Route
-                            path="transactions"
-                            element={<WalletTransactionsPage />}
-                          />
-                          <Route
-                            path="deposit"
-                            element={<WalletDepositPage />}
-                          />
-                          <Route
-                            path="withdraw"
-                            element={<WalletWithdrawalPage />}
-                          />
-                          <Route path="" element={<Navigate to="home" />} />
-                        </Route>
-                      </Route>
+
 
                       {/* Chat Routes */}
                       <Route path="/chat" element={<ChatLayout />} />
