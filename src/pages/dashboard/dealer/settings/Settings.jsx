@@ -20,6 +20,7 @@ const DealershipSettings = () => {
   const [notif, setNotif] = useState({
     product_updates: true,
     listing_activity: true,
+    new_messages: true,
     payouts: true,
     marketing: false,
   });
@@ -118,6 +119,10 @@ const DealershipSettings = () => {
                 <HStack justify="space-between">
                   <Text>Listing activity</Text>
                   <Switch isChecked={notif.listing_activity} onChange={(e) => setNotif({ ...notif, listing_activity: e.target.checked })} />
+                </HStack>
+                <HStack justify="space-between">
+                  <Text>New messages</Text>
+                  <Switch isChecked={notif.new_messages} onChange={(e) => setNotif({ ...notif, new_messages: e.target.checked })} />
                 </HStack>
                 <HStack justify="space-between">
                   <Text>Payouts</Text>

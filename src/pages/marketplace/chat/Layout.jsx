@@ -30,10 +30,21 @@ import { ChevronLeftIcon } from '@chakra-ui/icons';
 function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { authUser } = useContext(GlobalStore);
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const hoverBg = useColorModeValue('gray.50', 'gray.700');
   const activeBg = useColorModeValue('blue.50', 'blue.900');
+
+  const handleBack = () => {
+    if (authUser?.user_type === 'dealer') {
+      navigate('/dealer/dashboard');
+    } else if (authUser?.user_type === 'mechanic') {
+      navigate('/mechanic/dashboard');
+    } else {
+      navigate('/');
+    }
+  };
 
   const filteredConversations = conversations.filter(conv => {
     const name = conv?.recipient?.name || conv?.participant?.name || '';
@@ -86,7 +97,7 @@ function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
             <IconButton
               icon={<ChevronLeftIcon w={6} h={6} />}
               variant="ghost"
-              onClick={() => navigate(-1)}
+              onClick={handleBack}
               aria-label="Back"
               size="sm"
             />
@@ -261,6 +272,13 @@ function ChatLayout() {
   const [activeConversation, setActiveConversation] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [loading, setLoadingState] = useState(true);
+
+  // Pass authUser down to ChatSidebar if needed, but it uses context now
+  // However, we need to make sure GlobalStore context is available inside ChatSidebar
+  // ChatSidebar is defined in same file but outside ChatLayout component
+  // It uses useContext(GlobalStore) so it should work if it's rendered within GlobalStore.Provider
+  // App.jsx wraps everything in GlobalStore.Provider so it's fine.
+
 
   async function getData() {
     try {

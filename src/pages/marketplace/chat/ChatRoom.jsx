@@ -291,13 +291,25 @@ function ChatRoom() {
           const candidateEmail = msg?.sender?.email || msg?.from || (typeof msg?.sender === 'string' && msg?.sender.includes('@') ? msg?.sender : null);
           
           let sent = false;
-          if (authUser?.id && candidateId && String(candidateId) === String(authUser.id)) {
+          
+          // Check explicit flag from API if available
+          if (msg?.is_me === true || msg?.is_sender === true || msg?.mine === true) {
              sent = true;
-          } else if (authUser?.email && candidateEmail && candidateEmail === authUser.email) {
+          }
+          // Check Optimistic
+          else if (msg?.isOptimistic) {
              sent = true;
-          } else if (msg?.isOptimistic) {
+          }
+          // Check ID match
+          else if (authUser?.id && candidateId && String(candidateId) === String(authUser.id)) {
              sent = true;
-          } else if (msg?.sender === authUser?.email) { // Direct string match fallback
+          } 
+          // Check Email match (case insensitive)
+          else if (authUser?.email && candidateEmail && String(candidateEmail).toLowerCase() === String(authUser.email).toLowerCase()) {
+             sent = true;
+          }
+          // Direct string match fallback (case insensitive)
+          else if (typeof msg?.sender === 'string' && authUser?.email && String(msg.sender).toLowerCase() === String(authUser.email).toLowerCase()) { 
              sent = true;
           }
 
