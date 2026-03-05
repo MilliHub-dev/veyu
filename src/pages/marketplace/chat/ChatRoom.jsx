@@ -121,6 +121,16 @@ function ChatRoom() {
       attachments
     };
 
+    // Optimistic update - show message immediately
+    const optimisticMsg = {
+      text: message,
+      sender: authUser?.email,
+      timestamp: new Date().toISOString(),
+      isOptimistic: true
+    };
+    
+    setMessages((prev) => [...prev, optimisticMsg]);
+
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(payload));
       setMessage('');
@@ -138,7 +148,15 @@ function ChatRoom() {
       const data = objectifyJSON(res.data);
       const newMessage = data?.data || data?.message || data;
 
-      setMessages((prev) => [...prev, newMessage]);
+      // Only add if not already added (though HTTP fallback usually implies socket failed)
+      // If we used optimistic update, we might want to replace it or update status
+      // For now, we'll just ensure we don't duplicate if logic changes
+      // But since we returned early for socket, this block only runs if socket closed
+      // So we should add it here too if we didn't add optimistic msg (but we did above)
+      // Actually, if we add optimistic msg above, we don't need to add it here again
+      // unless we want to update it with server response (like ID)
+      
+      // Let's just clear input and attachments here since we added optimistic msg
       setMessage('');
       setAttachments([]);
     } catch (error) {
@@ -262,7 +280,7 @@ function ChatRoom() {
       <Box flex={1} w="100%" overflowY="auto" px={4} py={4} bg={messagesBg}>
         <VStack
           spacing={3}
-          align="stretch"
+          align="unset"
           justify="flex-end"
           minH="100%"
         >
@@ -271,7 +289,19 @@ function ChatRoom() {
           // msg.sender could be an email string OR an object with {id, name, email, user_type, business_name, business_logo}
           const senderEmail = typeof msg?.sender === 'string' ? msg?.sender : 
                              msg?.sender?.email || msg?.from;
-          const sent = senderEmail === currentUserEmail;
+          
+          // Improved check for current user
+          let sent = false;
+          if (authUser?.email && senderEmail === authUser.email) {
+            sent = true;
+          } else if (msg?.sender?.id && authUser?.id && String(msg.sender.id) === String(authUser.id)) {
+            sent = true;
+          } else if (msg?.user_id && authUser?.id && String(msg.user_id) === String(authUser.id)) {
+             sent = true;
+          } else if (msg?.isOptimistic) {
+             sent = true;
+          }
+
           const bubbleBg = sent ? 'primary' : 'gray.100';
           const bubbleColor = sent ? 'white' : 'gray.900';
           
