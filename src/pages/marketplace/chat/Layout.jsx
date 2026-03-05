@@ -53,18 +53,27 @@ function ChatSidebar({ conversations, activeId, onSelect, ...props }) {
 
   const formatTime = (dateString) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = (now - date) / (1000 * 60 * 60);
+    try {
+      const date = new Date(dateString);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return '';
+      }
+      
+      const now = new Date();
+      const diffInHours = (now - date) / (1000 * 60 * 60);
 
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    } else if (diffInHours < 48) {
-      return 'Yesterday';
-    } else if (diffInHours < 168) {
-      return date.toLocaleDateString('en-US', { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (diffInHours < 24) {
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      } else if (diffInHours < 48) {
+        return 'Yesterday';
+      } else if (diffInHours < 168) {
+        return date.toLocaleDateString('en-US', { weekday: 'short' });
+      } else {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+    } catch (e) {
+      return '';
     }
   };
 
