@@ -125,6 +125,7 @@ function ChatRoom() {
     const optimisticMsg = {
       text: message,
       sender: authUser?.email,
+      user_id: authUser?.id, // Add ID for robust check
       timestamp: new Date().toISOString(),
       isOptimistic: true
     };
@@ -285,20 +286,18 @@ function ChatRoom() {
           minH="100%"
         >
         {messages?.map((msg, index) => {
-          // Handle different message formats
-          // msg.sender could be an email string OR an object with {id, name, email, user_type, business_name, business_logo}
-          const senderEmail = typeof msg?.sender === 'string' ? msg?.sender : 
-                             msg?.sender?.email || msg?.from;
+          // Robust sender identification
+          const candidateId = msg?.user_id || msg?.sender?.id || (typeof msg?.sender === 'number' || (typeof msg?.sender === 'string' && !msg?.sender.includes('@')) ? msg?.sender : null);
+          const candidateEmail = msg?.sender?.email || msg?.from || (typeof msg?.sender === 'string' && msg?.sender.includes('@') ? msg?.sender : null);
           
-          // Improved check for current user
           let sent = false;
-          if (authUser?.email && senderEmail === authUser.email) {
-            sent = true;
-          } else if (msg?.sender?.id && authUser?.id && String(msg.sender.id) === String(authUser.id)) {
-            sent = true;
-          } else if (msg?.user_id && authUser?.id && String(msg.user_id) === String(authUser.id)) {
+          if (authUser?.id && candidateId && String(candidateId) === String(authUser.id)) {
+             sent = true;
+          } else if (authUser?.email && candidateEmail && candidateEmail === authUser.email) {
              sent = true;
           } else if (msg?.isOptimistic) {
+             sent = true;
+          } else if (msg?.sender === authUser?.email) { // Direct string match fallback
              sent = true;
           }
 
@@ -311,8 +310,12 @@ function ChatRoom() {
             // Sender is already an object with full info
             sender = msg.sender;
           } else {
-            // Sender is just an email, find in members
-            sender = members?.find(mem => mem?.email === senderEmail);
+            // Sender is just an email or ID, find in members
+            sender = members?.find(mem => 
+               (candidateEmail && mem?.email === candidateEmail) || 
+               (candidateId && String(mem?.id) === String(candidateId)) ||
+               (candidateId && String(mem?.user_id) === String(candidateId))
+            );
           }
           
           const senderInfo = getDisplayInfo(sender);
