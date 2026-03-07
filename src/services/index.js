@@ -6,6 +6,7 @@ export { default as mechanicService } from './mechanicService';
 export { default as inspectionService } from './inspectionService';
 export { default as bookingService } from './bookingService';
 export { default as chatService } from './chatService';
+export { default as reviewService } from './reviewService';
 export { default as walletService } from './walletService';
 export { default as feedbackService } from './feedbackService';
 export { default as boostService } from './boostService';

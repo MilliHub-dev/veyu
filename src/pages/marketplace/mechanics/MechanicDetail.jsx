@@ -13,11 +13,12 @@ import {
   ChevronDown, ChevronUp, MapPin, Star, Shield, MessageCircle, Phone, Calendar,
   Clock, Award, CheckCircle, Wrench, DollarSign, Users, Heart, Share2
 } from 'lucide-react'
-import { LocationBreadcrumb, ReviewCard, RatingCard } from '../../../components';
+import { LocationBreadcrumb, ReviewCard, RatingCard, CreateReviewModal } from '../../../components';
 import { ChatPopup } from "../../../components/chat";
 import { MapComponent, CustomPlacesAutocomplete } from "../../../components/maps";
 import { CashMoneyIcon, TopRatedBadgeIcon } from "../../../components/icons";
 import { ListingDetailSkeleton } from "../../../components/loaders";
+import { reviewService } from "../../../services";
 
 const ServiceAccordion = ({ service, currency, ...props }) => {
   const { isOpen, onToggle } = useDisclosure();
@@ -88,6 +89,7 @@ export const MechanicDetailPage = ({ }) => {
   const [address, setAddress] = useState("");
   const [isFavorited, setIsFavorited] = useState(false);
   const { axios, authUser, commaInt, notify } = useContext(GlobalStore);
+  const { isOpen: isReviewOpen, onOpen: onReviewOpen, onClose: onReviewClose } = useDisclosure();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const redirect = useNavigate();
@@ -120,7 +122,27 @@ export const MechanicDetailPage = ({ }) => {
     try {
       const res = await axios.get(`/mechanics/${mechId}`);
       const data = objectifyJSON(res.data);
-      setMechanic(data?.data);
+      let mechData = data?.data;
+
+      // Fetch reviews using reviewService
+      try {
+         const objectId = mechData?.uuid || mechData?.id;
+         if (objectId) {
+            const reviewsRes = await reviewService.getReviews({
+                object_type: 'mechanic',
+                related_object: objectId
+            });
+            if (reviewsRes.data && reviewsRes.data.results) {
+                mechData.reviews = reviewsRes.data.results;
+            } else if (Array.isArray(reviewsRes.data)) {
+                mechData.reviews = reviewsRes.data;
+            }
+         }
+      } catch (e) {
+         console.log('Failed to fetch reviews separately', e);
+      }
+
+      setMechanic(mechData);
     } catch (error) {
       console.error("Error fetching mechanic:", error);
       notify({
@@ -475,15 +497,22 @@ export const MechanicDetailPage = ({ }) => {
                     {/* Reviews Tab */}
                     <TabPanel>
                       <VStack align="stretch" spacing={6}>
+                        <Flex justify="space-between" align="center">
+                           <Heading size="md" color="#F4A950">Customer Reviews</Heading>
+                           <Button size="sm" colorScheme="orange" variant="outline" onClick={onReviewOpen}>
+                              Write a Review
+                           </Button>
+                        </Flex>
+
                         <RatingCard
-                          avg_rating={rating}
+                          avg_rating={mechanic?.avg_rating || 0}
                           ratings={mechanic?.ratings || []}
                         />
 
                         <VStack align="stretch" spacing={4}>
                           {mechanic?.reviews?.length > 0 ? (
                             mechanic.reviews.map((review, index) => (
-                              <ReviewCard key={index} review={review} />
+                              <ReviewCard key={review.id || index} review={review} />
                             ))
                           ) : (
                             <Card bg="gray.50" border="1px" borderColor={borderColor}>
@@ -662,6 +691,14 @@ export const MechanicDetailPage = ({ }) => {
         onClose={() => setPopupState(false)}
         recipient_type="mechanic" 
         recipient_id={mechanic?.uuid}
+      />
+
+      <CreateReviewModal 
+        isOpen={isReviewOpen} 
+        onClose={onReviewClose} 
+        objectType="mechanic" 
+        relatedObject={mechanic?.uuid || mechanic?.id} 
+        onSuccess={getData} 
       />
     </Box>
   );

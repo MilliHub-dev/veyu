@@ -50,8 +50,8 @@ import {
   AlertDescription,
 } from '@chakra-ui/react';
 import { BusinessLogo } from '../../components/BusinessLogo';
-import { ListingItemCard } from '../../components';
-import {useState, useEffect, useContext} from 'react';
+import { ListingItemCard, CreateReviewModal } from '../../components';
+import {useState, useEffect, useContext, useCallback} from 'react';
 import {useParams, useNavigate} from 'react-router-dom';
 import {GlobalStore} from '../../App';
 import {BackButton} from '../../components/nav';
@@ -66,6 +66,7 @@ import {
 import { motion } from 'framer-motion';
 import { apiClient } from '../../services/api';
 import ChatService from '../../services/chatService';
+import { reviewService } from '../../services';
 
 
 function Stats({ number, label }) {
@@ -376,140 +377,7 @@ function ReviewCard({ review, isHighlighted = false }) {
   );
 }
 
-// Write Review Modal Component
-function WriteReviewModal({ isOpen, onClose, dealer }) {
-  const [rating, setRating] = useState(0);
-  const [title, setTitle] = useState('');
-  const [comment, setComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const toast = useToast();
-
-  const handleSubmit = async () => {
-    if (rating === 0 || !comment.trim()) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please provide a rating and comment',
-        status: 'warning',
-        duration: 3000,
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: 'Review Submitted!',
-        description: 'Thank you for your feedback',
-        status: 'success',
-        duration: 3000,
-      });
-      setIsSubmitting(false);
-      onClose();
-      // Reset form
-      setRating(0);
-      setTitle('');
-      setComment('');
-    }, 2000);
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
-      <ModalOverlay />
-      <ModalContent borderRadius="xl">
-        <ModalHeader>
-          <VStack spacing={2} align="start">
-            <Text>Write a Review</Text>
-            <HStack spacing={2}>
-              <BusinessLogo 
-                logoUrl={dealer?.logo}
-                businessName={dealer?.business_name}
-                size="sm"
-                borderRadius="50%"
-              />
-              <Text fontSize="sm" color="gray.600">{dealer?.business_name}</Text>
-            </HStack>
-          </VStack>
-        </ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <VStack spacing={6} align="stretch">
-            {/* Rating */}
-            <FormControl>
-              <FormLabel>Overall Rating</FormLabel>
-              <HStack spacing={2}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <IconButton
-                    key={i}
-                    icon={
-                      <Star
-                        size={24}
-                        fill={i < rating ? "#F4A950" : "none"}
-                        color={i < rating ? "#F4A950" : "gray.300"}
-                      />
-                    }
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setRating(i + 1)}
-                    _hover={{ transform: "scale(1.1)" }}
-                  />
-                ))}
-                <Text ml={2} color="gray.600">
-                  {rating > 0 && `${rating} star${rating > 1 ? 's' : ''}`}
-                </Text>
-              </HStack>
-            </FormControl>
-
-            {/* Title */}
-            <FormControl>
-              <FormLabel>Review Title (Optional)</FormLabel>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Summarize your experience..."
-                borderColor="gray.300"
-                _focus={{ borderColor: "#F4A950", shadow: "0 0 0 1px #F4A950" }}
-              />
-            </FormControl>
-
-            {/* Comment */}
-            <FormControl>
-              <FormLabel>Your Review</FormLabel>
-              <Textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Tell others about your experience with this dealer..."
-                rows={5}
-                borderColor="gray.300"
-                _focus={{ borderColor: "#F4A950", shadow: "0 0 0 1px #F4A950" }}
-              />
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                {comment.length}/500 characters
-              </Text>
-            </FormControl>
-          </VStack>
-        </ModalBody>
-        <ModalFooter>
-          <HStack spacing={3}>
-            <Button variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              bg="#F4A950"
-              color="white"
-              _hover={{ bg: "orange.600" }}
-              onClick={handleSubmit}
-              isLoading={isSubmitting}
-              loadingText="Submitting..."
-            >
-              Submit Review
-            </Button>
-          </HStack>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
-  );
-}
+// Write Review Modal Component Removed - using CreateReviewModal from components
 
 export default function DealerProfile() {
   const { dealerId } = useParams();
@@ -519,51 +387,68 @@ export default function DealerProfile() {
   const toast = useToast();
   const { authUser } = useContext(GlobalStore);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [rating, setRating] = useState(0);
-  const [title, setTitle] = useState('');
-  const [comment, setComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    const getData = async () => {
-      try {
-        setLoading(true);
-        // Fetch dealer profile
-        const response = await apiClient.get(`/marketplace/dealership/${dealerId}/`);
+  const getData = useCallback(async () => {
+    try {
+      // setLoading(true); // Don't show full loading state on refresh
+      // Fetch dealer profile
+      const response = await apiClient.get(`/marketplace/dealership/${dealerId}/`);
+      
+      if (response.data) {
+        const dealerData = response.data;
         
-        if (response.data) {
-          const dealerData = response.data;
-          
-          // Fetch dealer listings
-          const listingsResponse = await apiClient.get(`/marketplace/dealership/${dealerId}/listings/`);
-          const dealerListings = listingsResponse.data || [];
-          
-          // Combine data
-          setDealer({
-            ...dealerData,
-            listings: dealerListings,
-            reviews: dealerData.reviews || [], // Ensure reviews array exists
-            rating_breakdown: dealerData.rating_breakdown || {}
-          });
+        // Fetch dealer listings
+        const listingsResponse = await apiClient.get(`/marketplace/dealership/${dealerId}/listings/`);
+        const dealerListings = listingsResponse.data || [];
+        
+        // Fetch reviews specifically using the new service
+        let reviews = dealerData.reviews || [];
+        try {
+           // Try to use UUID if available, otherwise ID
+           const objectId = dealerData.uuid || dealerData.id;
+           if (objectId) {
+             const reviewsResponse = await reviewService.getReviews({ 
+                object_type: 'dealer', 
+                related_object: objectId
+             });
+             // Handle paginated response or list
+             if (reviewsResponse.data && reviewsResponse.data.results) {
+                reviews = reviewsResponse.data.results;
+             } else if (Array.isArray(reviewsResponse.data)) {
+                reviews = reviewsResponse.data;
+             }
+           }
+        } catch (e) {
+           console.log('Failed to fetch separate reviews', e);
         }
-      } catch (error) {
-        console.error("Error fetching dealer data:", error);
-        toast({
-          title: "Error",
-          description: "Could not load dealership profile.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    if (dealerId) {
-      getData();
+        // Combine data
+        setDealer({
+          ...dealerData,
+          listings: dealerListings,
+          reviews: reviews,
+          rating_breakdown: dealerData.rating_breakdown || {}
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching dealer data:", error);
+      toast({
+        title: "Error",
+        description: "Could not load dealership profile.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
     }
   }, [dealerId, toast]);
+
+  useEffect(() => {
+    if (dealerId) {
+      setLoading(true);
+      getData();
+    }
+  }, [dealerId, getData]);
 
   const handleMessage = async () => {
     try {
@@ -822,9 +707,9 @@ export default function DealerProfile() {
                                 </Button>
                              </HStack>
                              
-                             {reviews.length > 0 ? (
-                                reviews.map(review => (
-                                    <ReviewCard key={review.id} review={review} />
+                             {dealer?.reviews?.length > 0 ? (
+                                dealer.reviews.map(review => (
+                                    <ReviewCard key={review.id || review.uuid} review={review} />
                                 ))
                              ) : (
                                 <Alert status="info" borderRadius="lg">
@@ -840,7 +725,13 @@ export default function DealerProfile() {
         </Flex>
       </Container>
       
-      <WriteReviewModal isOpen={isOpen} onClose={onClose} dealer={dealer} />
+      <CreateReviewModal 
+        isOpen={isOpen} 
+        onClose={onClose} 
+        objectType="dealer" 
+        relatedObject={dealer?.uuid || dealer?.id} 
+        onSuccess={getData} 
+      />
     </Box>
   )
 }

@@ -2928,3 +2928,4 @@ export { BusinessLogo } from "./BusinessLogo";
 
 // Export dealer verification component (new)
 export { default as DealerInspectionVerification } from "./DealerInspectionVerification";
+export { CreateReviewModal } from "./CreateReviewModal";
