@@ -20,7 +20,7 @@ import {
   SimpleGrid,
 } from '@chakra-ui/react';
 import { Star } from 'lucide-react';
-import { reviewService } from '../../services';
+import { reviewService } from '../services';
 
 const RATING_CATEGORIES = {
   dealer: [
