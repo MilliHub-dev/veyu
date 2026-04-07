@@ -56,7 +56,7 @@ function WalletDepositPage() {
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderCol = useColorModeValue('lavender', 'gray.700');
 
-  const DEBUG = JSON.parse(import.meta.env.VITE_DEBUG);
+  const DEBUG = import.meta.env.VITE_DEBUG === 'true';
 
   async function processDeposit(response){
     const res = await axios.post('/wallet/deposit/', jsonifyObject(response));

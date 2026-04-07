@@ -52,20 +52,26 @@ import listingsService from '../../../services/listingsService';
 const MotionBox = motion(Box);
 const MotionCard = motion(Card);
 
+const CACHE_KEY = 'veyu_buy_listings_cache';
+
 const BuyListing = ({ }) => {
-    const [listings, setListings] = useState([]);
+    // Load cached listings so content shows instantly — no skeleton on return visits
+    const cached = (() => { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) || null; } catch { return null; } })();
+
+    const [listings, setListings] = useState(cached?.results || []);
     const [appliedFilters, setAppliedFilters] = useState({});
-    const [data, setData] = useState(null);
-    const [carType, setCarType] = useState('all'); // Changed default to 'all'
-    const [vehicleCategory, setVehicleCategory] = useState('all'); // New vehicle category filter
-    const [categoryCounts, setCategoryCounts] = useState({}); // Store vehicle counts from API
+    const [data, setData] = useState(cached || null);
+    const [carType, setCarType] = useState('all');
+    const [vehicleCategory, setVehicleCategory] = useState('all');
+    const [categoryCounts, setCategoryCounts] = useState({});
     const [sort, setSort] = useState('relevance');
     const [searchQuery, setSearchQuery] = useState('');
-    const [viewMode, setViewMode] = useState('grid'); // grid or list
+    const [viewMode, setViewMode] = useState('grid');
     const [showFilters, setShowFilters] = useState(false);
+    const [loading, setLoadingState] = useState(!cached); // skip skeleton if we have cache
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Vehicle categories with icons and colors
-    // Map frontend IDs to API vehicle_type values
     const vehicleCategories = [
         { id: 'all', name: 'All Vehicles', icon: Eye, color: 'gray.600', apiValue: null },
         { id: 'cars', name: 'Cars', icon: Car, color: '#F4A950', apiValue: 'car' },
@@ -76,7 +82,6 @@ const BuyListing = ({ }) => {
     ];
 
     const { axios, notify, commaInt } = useContext(GlobalStore);
-    const [loading, setLoadingState] = useState(true);
     const [isMobile] = useMediaQuery('(max-width: 768px)')
     const isMd = useBreakpointValue({ base: false, md: true });
 
@@ -85,8 +90,7 @@ const BuyListing = ({ }) => {
     const borderColor = useColorModeValue('gray.200', 'gray.700');
 
     function gotoPage(pageNum) {
-        console.log("Page:", pageNum)
-        getData(`/listings/buy/?offset${pageNum * 25}`)
+        getData(`/listings/buy/?offset=${pageNum * 25}&per_page=25`)
         // const res = await axios.get(`/listings/buy/`,);
         // let data = objectifyJSON(res.data);
     }
@@ -123,46 +127,40 @@ const BuyListing = ({ }) => {
     }
 
     async function getData(url = `/listings/buy/`) {
+        const isFiltered = url !== '/listings/buy/';
+        // If we already have listings and this is the initial unfiltered load, show refresh indicator
+        if (!isFiltered && listings.length > 0) setIsRefreshing(true);
+
         try {
-            const res = await axios.get(url,);
+            const res = await axios.get(url);
             let _data = objectifyJSON(res.data);
-            console.log('BuyListing raw response:', res.data);
-            console.log('BuyListing parsed data:', _data);
+            let results = [];
+            let dataObj = null;
 
             if (_data?.data?.results) {
-                console.log('Setting listings from data.data.results:', _data.data.results);
-                setData(_data.data);
-                setListings(_data.data.results);
+                dataObj = _data.data;
+                results = _data.data.results;
             } else if (_data?.results) {
-                 console.log('Setting listings from data.results:', _data.results);
-                 setData(_data);
-                 setListings(_data.results);
+                dataObj = _data;
+                results = _data.results;
             } else if (Array.isArray(_data)) {
-                 console.log('Setting listings from array:', _data);
-                 setData({ results: _data });
-                 setListings(_data);
-            } else {
-                 console.warn('Unexpected data shape:', _data);
-                 setListings([]);
+                dataObj = { results: _data };
+                results = _data;
             }
 
-            if (res.status !== 200) {
-                notify({
-                    title: 'Error',
-                    body: _data?.message || "Something went wrong"
-                })
+            setData(dataObj);
+            setListings(results);
+
+            // Cache the unfiltered results for instant display next visit
+            if (!isFiltered && results.length > 0) {
+                try { localStorage.setItem(CACHE_KEY, JSON.stringify(dataObj)); } catch { /* quota exceeded */ }
             }
         } catch (error) {
-            console.error("Error fetching buy listings:", error);
-            // Don't wipe listings on error, just log it
-            // setListings([]); 
-            
-            // Only notify if it's not a timeout/cancellation to avoid spamming
-            if (error.code !== 'ECONNABORTED' && !axios.isCancel(error)) {
-                // Optional: silent fail or user notification
-            }
+            // Don't wipe existing listings on error
+            if (import.meta.env.DEV) console.error("Error fetching buy listings:", error);
         } finally {
             setLoadingState(false);
+            setIsRefreshing(false);
         }
     }
 
@@ -194,12 +192,11 @@ const BuyListing = ({ }) => {
         
         // Include sort ordering if applied
         if (sort && sort !== 'relevance') {
-            params.set('ordering', sort === 'price_low' ? 'price' : sort === 'price_high' ? '-price' : sort === 'newest' ? '-created_at' : '');
+            params.set('ordering', sort === 'price_low' ? 'price' : sort === 'price_high' ? '-price' : sort === 'newest' ? '-date_created' : '');
             if (!params.get('ordering')) params.delete('ordering');
         }
 
         setAppliedFilters(updatedFilters);
-        console.log("Applied filters", updatedFilters)
 
         // Send updated filter parameters to the server
         getData(`/listings/buy/?${params.toString()}`);
@@ -710,9 +707,16 @@ const BuyListing = ({ }) => {
                                     </HStack>
 
                                     {/* Results Count */}
-                                    <Text color="gray.600" fontSize="sm" fontWeight="medium">
-                                        Showing {filteredListings.length} of {listings?.length || 0} vehicles
-                                    </Text>
+                                    <HStack spacing={2}>
+                                        <Text color="gray.600" fontSize="sm" fontWeight="medium">
+                                            Showing {filteredListings.length} of {listings?.length || 0} vehicles
+                                        </Text>
+                                        {isRefreshing && (
+                                            <Text fontSize="xs" color="orange.400" fontWeight="medium">
+                                                • Updating...
+                                            </Text>
+                                        )}
+                                    </HStack>
                                 </Flex>
 
                                 {/* Advanced Filters */}

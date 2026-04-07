@@ -211,7 +211,7 @@ export const RentListing = ({ props }) => {
           : sort === "price_high"
             ? "-price"
             : sort === "newest"
-              ? "-created_at"
+              ? "-date_created"
               : "",
       );
       if (!params.get("ordering")) params.delete("ordering");
@@ -287,7 +287,7 @@ export const RentListing = ({ props }) => {
         : next === "price_high"
           ? "-price"
           : next === "newest"
-            ? "-created_at"
+            ? "-date_created"
             : "",
     );
     if (!params.get("ordering")) params.delete("ordering");

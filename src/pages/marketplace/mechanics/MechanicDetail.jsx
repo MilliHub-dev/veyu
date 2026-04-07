@@ -14,6 +14,7 @@ import {
   Clock, Award, CheckCircle, Wrench, DollarSign, Users, Heart, Share2
 } from 'lucide-react'
 import { LocationBreadcrumb, ReviewCard, RatingCard, CreateReviewModal } from '../../../components';
+import { AppDownloadModal } from "../../../components/AppDownloadModal";
 import { ChatPopup } from "../../../components/chat";
 import { MapComponent, CustomPlacesAutocomplete } from "../../../components/maps";
 import { CashMoneyIcon, TopRatedBadgeIcon } from "../../../components/icons";
@@ -88,6 +89,7 @@ export const MechanicDetailPage = ({ }) => {
   const [location, setLocation] = useState(null);
   const [address, setAddress] = useState("");
   const [isFavorited, setIsFavorited] = useState(false);
+  const [showAppPopup, setShowAppPopup] = useState(false);
   const { axios, authUser, commaInt, notify } = useContext(GlobalStore);
   const { isOpen: isReviewOpen, onOpen: onReviewOpen, onClose: onReviewClose } = useDisclosure();
   const bgColor = useColorModeValue('white', 'gray.800');
@@ -627,7 +629,17 @@ export const MechanicDetailPage = ({ }) => {
                   {/* Action Buttons */}
                   <VStack spacing={3}>
                     <Button
-                      onClick={gotoBookingPage}
+                      onClick={() => {
+                        if (!address.trim()) {
+                          notify({ title: 'Error', body: 'Please enter your address', color: 'red' });
+                          return;
+                        }
+                        if (!location) {
+                          notify({ title: 'Error', body: 'Please select a location from the dropdown', color: 'red' });
+                          return;
+                        }
+                        setShowAppPopup(true);
+                      }}
                       bg="#F4A950"
                       color="white"
                       _hover={{ bg: "#E09940" }}
@@ -635,7 +647,6 @@ export const MechanicDetailPage = ({ }) => {
                       w="100%"
                       borderRadius="lg"
                       fontWeight="bold"
-                      isDisabled={!address.trim() || !location}
                       leftIcon={<Calendar />}
                     >
                       Book Now
@@ -693,12 +704,21 @@ export const MechanicDetailPage = ({ }) => {
         recipient_id={mechanic?.uuid}
       />
 
-      <CreateReviewModal 
-        isOpen={isReviewOpen} 
-        onClose={onReviewClose} 
-        objectType="mechanic" 
-        relatedObject={mechanic?.uuid || mechanic?.id} 
-        onSuccess={getData} 
+      <CreateReviewModal
+        isOpen={isReviewOpen}
+        onClose={onReviewClose}
+        objectType="mechanic"
+        relatedObject={mechanic?.uuid || mechanic?.id}
+        onSuccess={getData}
+      />
+
+      <AppDownloadModal
+        isOpen={showAppPopup}
+        onClose={() => setShowAppPopup(false)}
+        heading="Book Your Mechanic"
+        subheading="Download the Veyu app to complete your mechanic booking"
+        summaryName={mechanic?.business_name || mechanic?.user?.name}
+        summaryPrice={mechanic?.price_start ? formatCurrency(mechanic.price_start, mechanic.currency) : undefined}
       />
     </Box>
   );

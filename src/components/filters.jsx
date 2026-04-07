@@ -105,7 +105,6 @@ export const CarBrandFilter = ({ onChange, onClose, category = "car" }) => {
   function addOrRemoveBrand(e) {
     const brand = e.target.value;
     let _value = value;
-    console.log("Brand:", brand);
 
     if (_value.includes(brand)) {
       _value.splice(_value.indexOf(brand), 1);

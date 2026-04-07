@@ -24,7 +24,7 @@ import ListingCard from './ListingCard';
 
 
 function ChatRoom() {
-  const DEBUG = import.meta.env.VITE_DEBUG === 'true' || false;
+  const DEBUG = import.meta.env.VITE_DEBUG === 'true';
   const [chatRoom, setChatRoom] = useState({});
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
@@ -33,7 +33,9 @@ function ChatRoom() {
   const {authUser, axios} = useContext(GlobalStore);
   const [socket, setSocket] = useState(null);
   const {room} = useParams();
-  const socketUrl = DEBUG ? 'ws://localhost:8000' : 'wss://server.motaa.net'
+  const socketUrl = DEBUG
+    ? 'ws://localhost:8000'
+    : (import.meta.env.VITE_WS_URL || 'wss://server.motaa.net');
   const messagesEndRef = useRef(null);
 
   async function getData(){
@@ -43,7 +45,6 @@ function ChatRoom() {
         res = await axios.get(`/chat/chats/${room}/`);
       } catch (e) {
         if (e.response?.status === 404) {
-           console.log('Trying fallback endpoint /chats/:room/');
            res = await axios.get(`/chats/${room}/`);
         } else {
            throw e;
@@ -52,7 +53,6 @@ function ChatRoom() {
       
       const data = objectifyJSON(res.data);
 
-      console.log('Chat room data full:', data);
       
       const roomData = data?.data || {};
       setChatRoom(roomData);
@@ -67,7 +67,6 @@ function ChatRoom() {
         msgs = data.messages;
       }
       
-      console.log('Parsed messages:', msgs.length);
       setMessages(msgs);
 
       // API might return 'participants' or 'members'
@@ -93,12 +92,16 @@ function ChatRoom() {
     setSocket(chatSocket);
 
     chatSocket.onmessage = function (ev) {
-      const data = JSON.parse(ev.data);
-      setMessages((prevMessages) => [...prevMessages, data]);
+      try {
+        const data = JSON.parse(ev.data);
+        setMessages((prevMessages) => [...prevMessages, data]);
+      } catch (e) {
+        // Ignore malformed messages
+      }
     };
 
     chatSocket.onclose = function () {
-      console.error('Chat socket closed unexpectedly');
+      // Socket closed — reconnect logic can go here if needed
     };
 
     return () => {
@@ -332,7 +335,6 @@ function ChatRoom() {
           
           const senderInfo = getDisplayInfo(sender);
           
-          console.log('Message sender info:', { senderEmail, sent, senderInfo, sender });
           
           return (
             <HStack key={index} alignSelf={sent ? 'flex-end' : 'flex-start'} maxW="70%" spacing={2}>

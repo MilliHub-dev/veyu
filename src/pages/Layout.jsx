@@ -8,6 +8,7 @@ import {
 import { Box, Stack } from "@chakra-ui/react";
 import { Outlet, useLocation } from "react-router-dom";
 import InstallPrompt from "../components/InstallPrompt";
+import AppDownloadPopup from "../components/AppDownloadPopup";
 
 
 
@@ -46,6 +47,7 @@ export const Layout = ({ children, hideFooter, ...props }) => {
             }
             <Box minH={'50vh'}><Outlet /></Box>
             <InstallPrompt />
+            <AppDownloadPopup />
             {!shouldHideFooter && <Footer />}
         </Stack>
     )

@@ -13,6 +13,7 @@ import { useContext, useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { GlobalStore } from "../../../App";
 import { ImageCarousel, LocationBreadcrumb, ListingItemCard } from "../../../components";
+import { AppDownloadModal } from "../../../components/AppDownloadModal";
 import { ListingDetailSkeleton } from "../../../components/loaders";
 import { ChatPopup } from "../../../components/chat";
 import { objectifyJSON, jsonifyObject, formatCurrency } from "../../../utils";
@@ -30,21 +31,11 @@ export const BuyDetail = ({ }) => {
   const [recommended, setRecommended] = useState([]);
   const [loading, setLoadingState] = useState(true);
   const [showPopup, setPopupState] = useState(false);
+  const [showAppPopup, setShowAppPopup] = useState(false);
   const [listing, setListing] = useState({});
   const [isFavorited, setIsFavorited] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const { notify, commaInt, authUser, isAuthenticated, axios } = useContext(GlobalStore);
-
-  // Debug: Log the listingId and auth state
-  console.log('🔍 BuyDetail - Component mounted');
-  console.log('🔍 BuyDetail - Listing ID from URL:', listingId);
-  console.log('🔍 BuyDetail - isAuthenticated:', isAuthenticated);
-  console.log('🔍 BuyDetail - authUser:', authUser);
-  console.log('🔍 BuyDetail - Tokens:', {
-    access: !!localStorage.getItem('veyu_access_token'),
-    refresh: !!localStorage.getItem('veyu_refresh_token'),
-    userData: !!localStorage.getItem('veyu_user_data')
-  });
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -104,273 +95,123 @@ export const BuyDetail = ({ }) => {
     return defaults[field] || 'Not Available';
   };
 
+  function resolveLocationString(val) {
+    if (!val) return null;
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') return val.city || val.state || val.full_address || val.address || val.country || null;
+    return null;
+  }
+
   async function getData() {
     try {
-      // Debug: Check all possible authentication states
-      const newToken = localStorage.getItem('veyu_access_token');
+      // Migrate old token format if needed
       const oldAuthUser = localStorage.getItem('veyu-auth-user');
-      const userData = localStorage.getItem('veyu_user_data');
-
-      console.log('🔍 Auth Debug - New token exists:', !!newToken);
-      console.log('🔍 Auth Debug - Old auth user exists:', !!oldAuthUser);
-      console.log('🔍 Auth Debug - User data exists:', !!userData);
-
-      if (oldAuthUser && !newToken) {
-        // Try to extract token from old auth user format
+      if (oldAuthUser && !localStorage.getItem('veyu_access_token')) {
         try {
           const authData = JSON.parse(oldAuthUser);
-          console.log('🔍 Auth Debug - Old auth data:', authData);
-          if (authData.token) {
-            console.log('🔍 Auth Debug - Found token in old format, migrating...');
-            localStorage.setItem('veyu_access_token', authData.token);
-          }
-        } catch (e) {
-          console.log('🔍 Auth Debug - Could not parse old auth data');
+          if (authData.token) localStorage.setItem('veyu_access_token', authData.token);
+        } catch (e) { /* ignore */ }
+      }
+
+      // Correct endpoint per backend docs: GET /listings/buy/<uuid>/
+      const res = await apiClient.get(`/listings/buy/${listingId}/`);
+
+      const data = objectifyJSON(res.data);
+      const listingData = data.data?.listing || data.listing || data.data || data;
+      const vehicleData = listingData.vehicle || listingData;
+
+      const extractField = (fieldNames) => {
+        for (const field of fieldNames) {
+          const fromVehicle = vehicleData[field];
+          if (fromVehicle !== undefined && fromVehicle !== null && fromVehicle !== '') return fromVehicle;
+          const fromListing = listingData[field];
+          if (fromListing !== undefined && fromListing !== null && fromListing !== '') return fromListing;
         }
-      }
+        return null;
+      };
 
-      // Try to fetch listing - try multiple possible endpoints in parallel
-      console.log('🔍 Fetching listing with ID:', listingId);
-      
-      let res;
-      let endpointUsed = '';
-      
-      // Try different possible endpoints simultaneously
-      const endpoints = [
-        `/listings/buy/${listingId}/`,
-        `/listings/${listingId}/`,
-        `/listings/detail/${listingId}/`
-      ];
-      
-      try {
-        // Create promises for each endpoint request
-        // We wrap each promise to include the endpoint info on success
-        const promises = endpoints.map(endpoint => 
-          apiClient.get(endpoint, { skipErrorLogging: true })
-            .then(response => ({ endpoint, response }))
-        );
-        
-        // Wait for the first successful response
-        const result = await Promise.any(promises);
-        
-        if (result.response.status === 200) {
-          res = result.response;
-          endpointUsed = result.endpoint;
-          console.log(`✅ Success with endpoint: ${result.endpoint}`);
-        }
-      } catch (err) {
-        // All endpoints failed (AggregateError)
-        // console.log('❌ All direct endpoints failed');
-      }
-      
-      // If all direct endpoints failed, try fetching from the list
-      if (!res || res.status !== 200) {
-        console.log('🔍 All direct endpoints failed, trying to fetch from list...');
-        try {
-          const listRes = await apiClient.get(`/listings/buy/`, { skipErrorLogging: true });
-          if (listRes.status === 200) {
-            const listData = objectifyJSON(listRes.data);
-            const listings = listData?.data?.results || listData?.results || [];
-            console.log(`🔍 Found ${listings.length} listings in list`);
-            
-            // Find the specific listing by ID
-            const foundListing = listings.find(l => 
-              String(l.uuid) === String(listingId) || 
-              String(l.id) === String(listingId) || 
-              String(l.listing_id) === String(listingId)
-            );
-            
-            if (foundListing) {
-              console.log('✅ Found listing in list:', foundListing);
-              res = { status: 200, data: { data: { listing: foundListing } } };
-              endpointUsed = '/listings/buy/ (from list)';
-            } else {
-              console.warn(`⚠️ Listing ${listingId} not found in the first page of listings`);
-              // Don't throw immediately, let it fall through to show 404
-            }
-          }
-        } catch (listErr) {
-          console.error('❌ Failed to fetch from list:', listErr);
-          // Don't throw, let it fall through
-        }
-      }
+      const dealerData = vehicleData.dealer || listingData.dealer || listingData.user || listingData.owner || {};
 
-      if (!res || res.status !== 200) {
-        throw { response: { status: 404 } };
-      }
-      
-      console.log(`✅ Using endpoint: ${endpointUsed}`);
-      
-      if (res.status === 200) {
-        let data = objectifyJSON(res.data);
-        console.log('🔍 Raw API Response:', JSON.stringify(res.data, null, 2));
-        console.log('🔍 Processed Data:', JSON.stringify(data, null, 2));
-        
-        // Try multiple possible data structures
-        const listingData = data.data?.listing || data.listing || data.data || data;
-        console.log('🔍 Extracted Listing Data:', JSON.stringify(listingData, null, 2));
-        
-        // Check if vehicle data exists at the top level or nested
-        const vehicleData = listingData.vehicle || listingData;
-        console.log('🔍 Vehicle Data:', JSON.stringify(vehicleData, null, 2));
-        
-        // More flexible data extraction - check all possible locations
-        const extractField = (fieldNames) => {
-          for (const field of fieldNames) {
-            // Check in vehicle object first
-            if (vehicleData[field] !== undefined && vehicleData[field] !== null && vehicleData[field] !== '') {
-              return vehicleData[field];
-            }
-            // Then check in listing data
-            if (listingData[field] !== undefined && listingData[field] !== null && listingData[field] !== '') {
-              return listingData[field];
-            }
-          }
-          return null;
-        };
+      const dealerLocation =
+        resolveLocationString(dealerData.location) ||
+        resolveLocationString(dealerData.address) ||
+        resolveLocationString(dealerData.city) ||
+        resolveLocationString(listingData.location) ||
+        resolveLocationString(listingData.address) ||
+        resolveLocationString(listingData.city) ||
+        'Location not specified';
 
-        // Extract dealer info from multiple possible locations
-        const dealerData = vehicleData.dealer || listingData.dealer || listingData.user || listingData.owner || {};
-        console.log('🔍 Dealer Data:', JSON.stringify(dealerData, null, 2));
+      const normalizedListing = {
+        ...listingData,
+        title: listingData.title || listingData.name || vehicleData.name || vehicleData.title || 'Vehicle',
+        price: listingData.price || listingData.asking_price || listingData.sale_price || 0,
+        vehicle: {
+          ...vehicleData,
+          name: vehicleData.name || vehicleData.title || listingData.name || listingData.title,
+          make: extractField(['make', 'brand', 'manufacturer']),
+          model: extractField(['model', 'model_name']),
+          images: (
+            Array.isArray(vehicleData.images || listingData.images || vehicleData.photos || listingData.photos)
+              ? (vehicleData.images || listingData.images || vehicleData.photos || listingData.photos)
+              : []
+          ).map(img => {
+            if (typeof img === 'string') return { url: img };
+            if (!img) return { url: '' };
+            return { url: img.url || img.file || img.image || img.src || '' };
+          }).filter(img => img.url),
+          video: extractField(['video', 'video_url', 'media_video', 'listing_video']),
+          mileage: extractField(['mileage', 'odometer', 'miles', 'kilometers', 'km']),
+          transmission: extractField(['transmission', 'transmission_type', 'gearbox']),
+          fuel_system: extractField(['fuel_system', 'fuel_type', 'fuel', 'fuel_kind']),
+          year: extractField(['year', 'model_year', 'manufacture_year', 'production_year']),
+          color: extractField(['color', 'exterior_color', 'paint_color']),
+          type: extractField(['type', 'vehicle_type', 'body_type', 'category', 'car_type']),
+          engine_size: extractField(['engine_size', 'engine', 'engine_capacity', 'displacement']),
+          power: extractField(['power', 'horsepower', 'horse_power', 'hp', 'bhp']),
+          doors: extractField(['doors', 'door_count', 'number_of_doors', 'num_doors']),
+          seats: extractField(['seats', 'seating_capacity', 'number_of_seats', 'num_seats', 'passenger_capacity']),
+          drivetrain: extractField(['drivetrain', 'drive_train', 'drive_type', 'drive']),
+          top_speed: extractField(['top_speed', 'max_speed', 'maximum_speed']),
+          horse_power: extractField(['horse_power', 'horsepower', 'power', 'hp', 'bhp']),
+          condition: extractField(['condition', 'vehicle_condition', 'state']),
+          custom_duty: extractField(['custom_duty', 'duty_paid', 'customs_cleared']),
+          dealer: {
+            ...dealerData,
+            business_name:
+              dealerData.business_name ||
+              dealerData.name ||
+              dealerData.company_name ||
+              dealerData.dealership_name ||
+              (listingData.user || listingData.owner)?.business_name ||
+              (listingData.user || listingData.owner)?.name ||
+              'Dealer',
+            location: dealerLocation,
+            logo: dealerData.logo || dealerData.image || dealerData.profile_image || dealerData.avatar,
+            uuid: dealerData.uuid || dealerData.id || dealerData.dealer_id || dealerData.user_id,
+          },
+        },
+      };
 
-        const normalizedListing = {
-          ...listingData,
-          title: listingData.title || listingData.name || vehicleData.name || vehicleData.title || 'Vehicle',
-          price: listingData.price || listingData.asking_price || listingData.sale_price || 0,
-          vehicle: {
-            ...vehicleData,
-            name: vehicleData.name || vehicleData.title || listingData.name || listingData.title,
-            make: extractField(['make', 'brand', 'manufacturer']),
-            model: extractField(['model', 'model_name']),
-            images: (Array.isArray(vehicleData.images || listingData.images || vehicleData.photos || listingData.photos) 
-              ? (vehicleData.images || listingData.images || vehicleData.photos || listingData.photos) 
-              : []).map(img => {
-                  if (typeof img === 'string') return { url: img };
-                  if (!img) return { url: '' };
-                  return { url: img.url || img.file || img.image || img.src || '' };
-              }).filter(img => img.url),
-            video: extractField(['video', 'video_url', 'media_video', 'listing_video']),
-            mileage: extractField(['mileage', 'odometer', 'miles', 'kilometers', 'km']),
-            transmission: extractField(['transmission', 'transmission_type', 'gearbox']),
-            fuel_system: extractField(['fuel_system', 'fuel_type', 'fuel', 'fuel_kind']),
-            year: extractField(['year', 'model_year', 'manufacture_year', 'production_year']),
-            color: extractField(['color', 'exterior_color', 'paint_color']),
-            type: extractField(['type', 'vehicle_type', 'body_type', 'category', 'car_type']),
-            engine_size: extractField(['engine_size', 'engine', 'engine_capacity', 'displacement']),
-            power: extractField(['power', 'horsepower', 'horse_power', 'hp', 'bhp']),
-            doors: extractField(['doors', 'door_count', 'number_of_doors', 'num_doors']),
-            seats: extractField(['seats', 'seating_capacity', 'number_of_seats', 'num_seats', 'passenger_capacity']),
-            drivetrain: extractField(['drivetrain', 'drive_train', 'drive_type', 'drive']),
-            top_speed: extractField(['top_speed', 'max_speed', 'maximum_speed']),
-            horse_power: extractField(['horse_power', 'horsepower', 'power', 'hp', 'bhp']),
-            condition: extractField(['condition', 'vehicle_condition', 'state']),
-            custom_duty: extractField(['custom_duty', 'duty_paid', 'customs_cleared']),
-            dealer: {
-              ...dealerData,
-              business_name: dealerData.business_name || 
-                            dealerData.name ||
-                            dealerData.company_name ||
-                            dealerData.dealership_name ||
-                            (listingData.user || listingData.owner)?.business_name ||
-                            (listingData.user || listingData.owner)?.name ||
-                            'Dealer',
-              location: dealerData.location || 
-                       dealerData.address ||
-                       dealerData.city ||
-                       listingData.location ||
-                       listingData.address ||
-                       listingData.city ||
-                       'Location not specified',
-              logo: dealerData.logo ||
-                   dealerData.image ||
-                   dealerData.profile_image ||
-                   dealerData.avatar,
-              uuid: dealerData.uuid ||
-                   dealerData.id ||
-                   dealerData.dealer_id ||
-                   dealerData.user_id
-            }
-          }
-        };
-
-        console.log('🔍 Final Normalized Listing:', JSON.stringify(normalizedListing, null, 2));
-        console.log('🔍 Mileage value:', normalizedListing.vehicle.mileage);
-        console.log('🔍 Transmission value:', normalizedListing.vehicle.transmission);
-        console.log('🔍 Fuel system value:', normalizedListing.vehicle.fuel_system);
-        console.log('🔍 Year value:', normalizedListing.vehicle.year);
-        console.log('🔍 Views:', normalizedListing.total_views);
-        console.log('🔍 Reviews:', normalizedListing.total_reviews);
-        console.log('🔍 Rating:', normalizedListing.average_rating);
-
-        setListing(normalizedListing);
-        setRecommended(data.data?.recommended || data.recommended || []);
-      }
+      setListing(normalizedListing);
+      setRecommended(data.data?.recommended || data.recommended || []);
     } catch (error) {
-      console.error('❌ BuyDetail - Error fetching listing:', error);
-      console.error('❌ BuyDetail - Error details:', {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
-
-      if (error.response?.status === 401) {
-        // Check if we have any authentication data at all
-        const newToken = localStorage.getItem('veyu_access_token');
-        const oldAuthUser = localStorage.getItem('veyu-auth-user');
-
-        console.log('❌ BuyDetail - 401 Error, checking tokens:', {
-          hasNewToken: !!newToken,
-          hasOldAuth: !!oldAuthUser
-        });
-
-        if (!newToken && !oldAuthUser) {
-          console.log('🔍 No authentication found, user needs to login');
-          notify({
-            title: 'Login Required',
-            body: 'Please log in to view listing details.',
-            color: 'orange',
-            duration: 5000
-          });
-          
-          // Delay redirect to see logs
+      const status = error.response?.status;
+      if (status === 401) {
+        const hasToken = !!(localStorage.getItem('veyu_access_token') || localStorage.getItem('veyu-auth-user'));
+        if (hasToken) {
+          notify({ title: 'Session Expired', body: 'Please log in again to continue.', color: 'red', duration: 5000 });
           setTimeout(() => {
+            ['veyu_access_token', 'veyu_refresh_token', 'veyu_user_data', 'veyu-auth-user'].forEach(k => localStorage.removeItem(k));
             window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
           }, 2000);
         } else {
-          console.log('🔍 Authentication exists but API returned 401, token may be invalid');
-          // The token refresh already happened in the API interceptor
-          // If we're still getting 401, the refresh token is likely invalid
-          notify({
-            title: 'Session Expired',
-            body: 'Your session has expired. Please log in again to continue.',
-            color: 'red',
-            duration: 5000
-          });
-          
-          // Delay redirect to see logs
-          setTimeout(() => {
-            // Clear all tokens and redirect to login
-            localStorage.removeItem('veyu_access_token');
-            localStorage.removeItem('veyu_refresh_token');
-            localStorage.removeItem('veyu_user_data');
-            localStorage.removeItem('veyu-auth-user');
-            window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
-          }, 2000);
+          notify({ title: 'Login Required', body: 'Please log in to view listing details.', color: 'orange', duration: 5000 });
+          setTimeout(() => { window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`; }, 2000);
         }
-      } else if (error.response?.status === 404) {
-        notify({
-          title: 'Listing Not Found',
-          body: 'The requested listing could not be found.',
-          color: 'red',
-          duration: 3000
-        });
+      } else if (status === 404) {
+        notify({ title: 'Listing Not Found', body: 'This listing could not be found.', color: 'red', duration: 3000 });
       } else {
-        notify({
-          title: 'Error',
-          body: 'Failed to load listing details. Please try again.',
-          color: 'red',
-          duration: 3000
-        });
+        notify({ title: 'Error', body: 'Failed to load listing details. Please try again.', color: 'red', duration: 3000 });
       }
     } finally {
       setLoadingState(false);
@@ -804,26 +645,7 @@ export const BuyDetail = ({ }) => {
                 ) : (
                     <>
                         <Button
-                          onClick={async (e) => {
-                            e.preventDefault();
-                            const isAuthenticated = await checkAuth();
-                            if (!isAuthenticated) {
-                              notify({
-                                title: 'Login Required',
-                                body: 'Please log in to proceed to checkout',
-                                color: 'orange',
-                                duration: 3000,
-                              });
-                              setTimeout(() => {
-                                navigate(`/login?next=${encodeURIComponent(`/checkout/pay?listingId=${listingId}`)}`);
-                              }, 1000);
-                              return;
-                            }
-                            console.log('🔍 Buy Now - Redirecting to checkout with listingId:', listingId);
-                            const checkoutUrl = `/checkout/pay?listingId=${listingId}`;
-                            console.log('🔍 Buy Now - Checkout URL:', checkoutUrl);
-                            navigate(checkoutUrl);
-                          }}
+                          onClick={() => setShowAppPopup(true)}
                           bg={'#F4A950'}
                           color="white"
                           size="lg"
@@ -896,6 +718,16 @@ export const BuyDetail = ({ }) => {
           image: listing?.vehicle?.images?.[0]?.url,
           url: window.location.href
         }}
+      />
+
+      {/* App Download Popup — shown when user clicks Buy Now */}
+      <AppDownloadModal
+        isOpen={showAppPopup}
+        onClose={() => setShowAppPopup(false)}
+        heading="Complete Your Purchase"
+        subheading="Download the Veyu app to buy this vehicle securely"
+        summaryName={listing?.title}
+        summaryPrice={formatCurrency(listing?.price, listing?.currency)}
       />
 
       {/* Detailed Information Tabs */}
@@ -1091,12 +923,15 @@ export const BuyDetail = ({ }) => {
                 <CardBody>
                   <Heading size="sm" mb={4} color="#F4A950">Seller Notes</Heading>
                   <Box
-                    dangerouslySetInnerHTML={{ __html: listing?.notes || "No additional information provided by the seller." }}
                     p={4}
                     bg="gray.50"
                     borderRadius="md"
                     minH="200px"
-                  />
+                    whiteSpace="pre-wrap"
+                    wordBreak="break-word"
+                  >
+                    {listing?.notes || "No additional information provided by the seller."}
+                  </Box>
                 </CardBody>
               </Card>
             </TabPanel>

@@ -10,13 +10,16 @@ class ListingsService {
   /**
    * Get all listings with filters
    * @param {Object} params - Query parameters
-   * @param {number} params.page - Page number
-   * @param {number} params.limit - Items per page
-   * @param {string} params.type - buy|rent
-   * @param {string} params.brand - Vehicle brand
-   * @param {number} params.min_price - Minimum price
-   * @param {number} params.max_price - Maximum price
-   * @param {string} params.location - Location filter
+   * @param {number} params.per_page - Items per page (default 25)
+   * @param {number} params.offset - Pagination offset
+   * @param {string} params.brands - Comma-separated brands, e.g. "Toyota,Honda"
+   * @param {string} params.vehicle_type - Comma-separated types: car,boat,plane,bike,uav
+   * @param {string} params.body_type - Comma-separated body types, e.g. "suv,sedan"
+   * @param {string} params.transmission - Comma-separated: auto,manual
+   * @param {string} params.fuel_system - Comma-separated: petrol,diesel,electric,hybrid
+   * @param {string} params.price - Range in min-max format, e.g. "1000000-5000000"
+   * @param {string} params.location - Dealer state or city, e.g. "Lagos,Abuja"
+   * @param {string} params.ordering - Sort field, e.g. "-date_created", "price", "-price"
    */
   async getAllListings(params = {}) {
     try {
@@ -40,8 +43,17 @@ class ListingsService {
   }
 
   /**
-   * Get buy listings
-   * @param {Object} params - Query parameters
+   * Get buy listings — GET /listings/buy/
+   * @param {Object} params - Query parameters (same filters as getAllListings)
+   * @param {number} params.per_page - Items per page
+   * @param {number} params.offset - Pagination offset
+   * @param {string} params.brands - Comma-separated brands
+   * @param {string} params.price - Range in min-max format, e.g. "1000000-5000000"
+   * @param {string} params.vehicle_type - car|boat|plane|bike|uav
+   * @param {string} params.transmission - auto|manual
+   * @param {string} params.fuel_system - petrol|diesel|electric|hybrid
+   * @param {string} params.location - City or state
+   * @param {string} params.ordering - e.g. "price", "-price", "-date_created"
    */
   async getBuyListings(params = {}) {
     try {
@@ -72,8 +84,8 @@ class ListingsService {
   }
 
   /**
-   * Get rental listings
-   * @param {Object} params - Query parameters
+   * Get rental listings — GET /listings/rentals/
+   * @param {Object} params - Query parameters (same filters as getBuyListings)
    */
   async getRentalListings(params = {}) {
     try {
@@ -104,18 +116,17 @@ class ListingsService {
   }
 
   /**
-   * Search listings
+   * Search listings — GET /listings/find/
    * @param {Object} params - Search parameters
-   * @param {string} params.q - Search query
-   * @param {string} params.brand - Vehicle brand
-   * @param {string} params.model - Vehicle model
-   * @param {number} params.year_min - Minimum year
-   * @param {number} params.year_max - Maximum year
-   * @param {number} params.price_min - Minimum price
-   * @param {number} params.price_max - Maximum price
-   * @param {string} params.condition - new|used|certified
-   * @param {string} params.transmission - automatic|manual
-   * @param {string} params.fuel_type - petrol|diesel|electric|hybrid
+   * @param {string} params.find - Text search on vehicle name/brand, e.g. "camry"
+   * @param {string} params.brands - Comma-separated brands, e.g. "Toyota,Honda"
+   * @param {string} params.vehicle_type - Comma-separated: car,boat,plane,bike,uav
+   * @param {string} params.transmission - Comma-separated: auto,manual
+   * @param {string} params.fuel_system - Comma-separated: petrol,diesel,electric,hybrid
+   * @param {string} params.price - Range in min-max format, e.g. "1000000-5000000"
+   * @param {string} params.location - Dealer state or city, e.g. "Lagos"
+   * @param {number} params.per_page - Items per page
+   * @param {number} params.offset - Pagination offset
    */
   async searchListings(params = {}) {
     try {

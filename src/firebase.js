@@ -2,13 +2,13 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCaxl0WWPcu12eRqT05ZcraY7IMZbAM45I",
-  authDomain: "motaa-501bf.firebaseapp.com",
-  projectId: "motaa-501bf",
-  storageBucket: "motaa-501bf.appspot.com",
-  messagingSenderId: "111373168202",
-  appId: "1:111373168202:web:dd034624adb6e68b9900b3",
-  measurementId: "G-SX7L9QFQTR"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase

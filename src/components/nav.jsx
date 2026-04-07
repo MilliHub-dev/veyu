@@ -1443,6 +1443,93 @@ export const Footer = ({ props }) => {
                   )
                 )}
               </HStack>
+
+              {/* App Store Badges */}
+              <VStack align={{ base: 'center', sm: 'flex-start' }} spacing={3} pt={2}>
+                <Text fontSize="xs" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider">
+                  Download the App
+                </Text>
+                <HStack spacing={3} flexWrap="wrap">
+                  <Box
+                    as="a"
+                    href="https://apps.apple.com/us/app/veyu/id6761031037"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    display="flex"
+                    alignItems="center"
+                    bg="black"
+                    border="1px solid"
+                    borderColor="whiteAlpha.300"
+                    borderRadius="lg"
+                    px={4}
+                    py={2}
+                    gap={2}
+                    _hover={{ borderColor: 'white', transform: 'translateY(-2px)' }}
+                    transition="all 0.2s"
+                    minW="130px"
+                  >
+                    <Box flexShrink={0}>
+                      <svg width="20" height="24" viewBox="0 0 814 1000" fill="white" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.3-155.5-127.4C46.7 790.7 0 663 0 541.8c0-207.2 135.4-316.5 269-316.5 71 0 130.6 46.4 174.5 46.4 42.8 0 109.2-49 192.5-49 31 0 108.2 2.6 108.2 118.3zm-194-150.5c-22.1 26.8-55.2 52-95.9 52-9 0-18-1.3-27-3.2-1.3-9-1.9-18-1.9-26.8 0-57.6 30.4-111.2 65.5-146.3 35-35 97.5-62.2 145.5-62.2 0.6 9 0.6 18 0.6 26.8 0 57-22.1 111.9-57.1 149.8-.2 3.2-19.8 6.9-29.7 9.9z"/>
+                      </svg>
+                    </Box>
+                    <VStack spacing={0} align="flex-start">
+                      <Text fontSize="8px" color="gray.400" lineHeight="1">Download on the</Text>
+                      <Text fontSize="14px" color="white" fontWeight="bold" lineHeight="1.2">App Store</Text>
+                    </VStack>
+                  </Box>
+
+                  <Box
+                    as="a"
+                    href="https://play.google.com/store/apps/details?id=com.millihub.veyu"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    display="flex"
+                    alignItems="center"
+                    bg="black"
+                    border="1px solid"
+                    borderColor="whiteAlpha.300"
+                    borderRadius="lg"
+                    px={4}
+                    py={2}
+                    gap={2}
+                    _hover={{ borderColor: 'white', transform: 'translateY(-2px)' }}
+                    transition="all 0.2s"
+                    minW="130px"
+                  >
+                    <Box flexShrink={0}>
+                      <svg width="20" height="22" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#00C6FF"/>
+                            <stop offset="100%" stopColor="#0072FF"/>
+                          </linearGradient>
+                          <linearGradient id="g2" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#FFD000"/>
+                            <stop offset="100%" stopColor="#FF6D00"/>
+                          </linearGradient>
+                          <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#FF4040"/>
+                            <stop offset="100%" stopColor="#C50000"/>
+                          </linearGradient>
+                          <linearGradient id="g4" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#00D563"/>
+                            <stop offset="100%" stopColor="#00A543"/>
+                          </linearGradient>
+                        </defs>
+                        <path d="M48 0C21.5 0 0 21.5 0 48v416c0 26.5 21.5 48 48 48l224-192L48 0z" fill="url(#g1)"/>
+                        <path d="M464 232L272 128 48 0l224 256 192-24z" fill="url(#g2)"/>
+                        <path d="M48 512c26.5 0 48-21.5 48-48V144L48 512z" fill="url(#g3)" opacity="0.8"/>
+                        <path d="M272 384 48 512l416-24-192-104z" fill="url(#g4)"/>
+                      </svg>
+                    </Box>
+                    <VStack spacing={0} align="flex-start">
+                      <Text fontSize="8px" color="gray.400" lineHeight="1">Get it on</Text>
+                      <Text fontSize="14px" color="white" fontWeight="bold" lineHeight="1.2">Google Play</Text>
+                    </VStack>
+                  </Box>
+                </HStack>
+              </VStack>
             </VStack>
 
             {/* Link Sections */}

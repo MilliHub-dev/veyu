@@ -1292,18 +1292,6 @@ export const ListingItemCard = ({ listing, ...props }) => {
     return null;
   }
 
-  // Debug: Log listing ID and location fields
-  console.log("🔍 ListingItemCard - Listing data:", {
-    uuid: listing?.uuid,
-    id: listing?.id,
-    listing_id: listing?.listing_id,
-    location: listing?.location,
-    address: listing?.address,
-    city: listing?.city,
-    dealer_location: listing?.vehicle?.dealer?.location,
-    dealer_address: listing?.vehicle?.dealer?.address,
-    dealer_city: listing?.vehicle?.dealer?.city,
-  });
 
   const vehicle = listing?.vehicle || {};
   const [image, setImage] = useState({});
@@ -2216,13 +2204,19 @@ export const ListingItemCard = ({ listing, ...props }) => {
                 >
                   <Icon as={LuMapPin} flexShrink={0} color="#F4A950" />
                   <Text noOfLines={1} fontWeight="medium">
-                    {vehicle?.dealer?.location ||
-                      vehicle?.dealer?.address ||
-                      vehicle?.dealer?.city ||
-                      listing?.location ||
-                      listing?.address ||
-                      listing?.city ||
-                      "Location not specified"}
+                    {(() => {
+                      const loc =
+                        vehicle?.dealer?.location ||
+                        vehicle?.dealer?.address ||
+                        vehicle?.dealer?.city ||
+                        listing?.location ||
+                        listing?.address ||
+                        listing?.city;
+                      if (!loc) return "Location not specified";
+                      if (typeof loc === "string") return loc;
+                      // location is an object: {country, state, city, address, zip_code, full_address, ...}
+                      return loc.city || loc.state || loc.full_address || loc.address || loc.country || "Location not specified";
+                    })()}
                   </Text>
                 </HStack>
 

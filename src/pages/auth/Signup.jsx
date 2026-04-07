@@ -124,7 +124,9 @@ export const SignupView = ({ ...props }) => {
       const result = await auth.signInWithPopup(provider);
 
       const _user = result.user;
-      let [first_name, last_name] = _user.displayName.split(" ");
+      const displayName = _user.displayName || '';
+      const [first_name, ...rest] = displayName.split(" ");
+      const last_name = rest.join(" ") || '';
       const data = {
         email: _user.email,
         first_name,
@@ -174,12 +176,10 @@ export const SignupView = ({ ...props }) => {
   });
 
   function nextStep() {
-    console.log('nextStep called: current step', step, 'going to step', step + 1);
     setStepValue((step + 1));
   }
 
   function gotoStep(num) {
-    console.log('gotoStep called: current step', step, 'going to step', num);
     setStepValue(num);
   }
 

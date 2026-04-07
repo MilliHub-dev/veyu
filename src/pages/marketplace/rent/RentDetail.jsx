@@ -2,6 +2,7 @@ import { Fragment, useContext, useEffect, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { GlobalStore } from "../../../App";
 import { LocationBreadcrumb, DatePicker, ReviewCard, RatingCard, ListingItemCard, ImageCarousel } from "../../../components";
+import { AppDownloadModal } from "../../../components/AppDownloadModal";
 import { ListingDetailSkeleton } from "../../../components/loaders";
 import { BusinessLogo } from "../../../components/BusinessLogo";
 import { 
@@ -34,20 +35,21 @@ function FeatureCard({ feature }) {
 
   return (
     <Card bg="white" border="1px" borderColor="gray.200" _hover={{ shadow: "md", borderColor: "#F4A950" }} transition="all 0.2s">
-      <CardBody p={4}>
-        <HStack spacing={3}>
+      <CardBody p={{ base: 3, md: 4 }}>
+        <HStack spacing={{ base: 2, md: 3 }}>
           <Flex
-            w="50px"
-            h="50px"
+            w={{ base: '36px', md: '50px' }}
+            h={{ base: '36px', md: '50px' }}
             bg="#FFF7ED"
             borderRadius="full"
             alignItems="center"
             justifyContent="center"
             color="#F4A950"
+            flexShrink={0}
           >
             {iconObj ? iconObj.icon : <Text>❓</Text>}
           </Flex>
-          <Text fontSize="md" fontWeight="medium">{feature}</Text>
+          <Text fontSize={{ base: 'sm', md: 'md' }} fontWeight="medium" noOfLines={2}>{feature}</Text>
         </HStack>
       </CardBody>
     </Card>
@@ -55,6 +57,13 @@ function FeatureCard({ feature }) {
 }
 
 
+
+function resolveLocation(val) {
+  if (!val) return null;
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') return val.city || val.state || val.full_address || val.address || val.country || null;
+  return null;
+}
 
 export default function RentalDetails() {
     const [selectedDate, setSelectedDate] = useState('')
@@ -66,6 +75,7 @@ export default function RentalDetails() {
     const [loading, setLoadingState] = useState(true);
     const [listing, setListing] = useState();
     const [isFavorited, setIsFavorited] = useState(false);
+    const [showAppPopup, setShowAppPopup] = useState(false);
     const {authUser, axios, notify, commaInt, otherContext, setOtherContext} = useContext(GlobalStore);
     const [isMobile] = useMediaQuery('(max-width: 768px)');
     const bgColor = useColorModeValue('white', 'gray.800');
@@ -103,13 +113,12 @@ export default function RentalDetails() {
           let rats = [], _reviews = data.data.listing.vehicle.dealer.reviews;
           setReviews(_reviews)
           for(var i=0; i < _reviews?.length; i++){
-            console.log("Rat:", _reviews[i].ratings)
             rats.push(_reviews[i].ratings);
           }
           setRatings(rats)
         }
       }catch(error){
-        console.log("Error getting ratings", error)
+        if (import.meta.env.DEV) console.error("RentDetail getData error:", error)
       }finally{
         setLoadingState(false)
       }
@@ -164,54 +173,60 @@ export default function RentalDetails() {
             <LocationBreadcrumb label={listing?.title} />
 
             {/* Header Section */}
-            <Box my={6}>
-              <Flex justify="space-between" align="flex-start" mb={4}>
-                <Box flex={1}>
-                  <Heading size="2xl" color="gray.800" mb={3}> 
-                    {listing?.title} 
+            <Box my={{ base: 4, md: 6 }}>
+              <Flex justify="space-between" align="flex-start" gap={3} mb={4}>
+                <Box flex={1} minW={0}>
+                  <Heading
+                    size={{ base: 'lg', md: '2xl' }}
+                    color="gray.800"
+                    mb={3}
+                    noOfLines={3}
+                  >
+                    {listing?.title}
                   </Heading>
-                  <HStack spacing={4} mb={4}>
-                    <HStack spacing={1}>
-                      <Icon as={MapPin} color="#F4A950" />
-                      <Text color="gray.600" fontSize="md"> 
-                        {listing?.vehicle?.dealer?.location} 
+
+                  <Flex flexWrap="wrap" gap={3} mb={4}>
+                    <HStack spacing={1} flexShrink={0}>
+                      <Icon as={MapPin} color="#F4A950" boxSize={{ base: 4, md: 5 }} />
+                      <Text color="gray.600" fontSize={{ base: 'sm', md: 'md' }} noOfLines={1}>
+                        {resolveLocation(listing?.vehicle?.dealer?.location) || 'Location not specified'}
                       </Text>
                     </HStack>
-                    <HStack spacing={1}>
-                      <Icon as={Star} color="#F4A950" fill="#F4A950" />
-                      <Text fontWeight="bold" color="gray.800">
+                    <HStack spacing={1} flexShrink={0}>
+                      <Icon as={Star} color="#F4A950" fill="#F4A950" boxSize={{ base: 4, md: 5 }} />
+                      <Text fontWeight="bold" color="gray.800" fontSize={{ base: 'sm', md: 'md' }}>
                         {listing?.vehicle?.dealer?.rating || '4.8'}
                       </Text>
-                      <Text color="gray.600" fontSize="sm"> 
-                        ({reviews?.length} reviews) 
+                      <Text color="gray.600" fontSize={{ base: 'xs', md: 'sm' }}>
+                        ({reviews?.length} reviews)
                       </Text>
                     </HStack>
-                  </HStack>
-                  
+                  </Flex>
+
                   {/* Vehicle Badges */}
-                  <HStack spacing={2} flexWrap="wrap">
-                    <Badge colorScheme="green" variant="solid" px={3} py={1}>
+                  <Flex flexWrap="wrap" gap={2}>
+                    <Badge colorScheme="green" variant="solid" px={3} py={1} fontSize={{ base: 'xs', md: 'sm' }}>
                       <Icon as={CheckCircle} mr={1} boxSize={3} />
                       Verified Host
                     </Badge>
-                    <Badge colorScheme="blue" variant="outline" px={3} py={1}>
+                    <Badge colorScheme="blue" variant="outline" px={3} py={1} fontSize={{ base: 'xs', md: 'sm' }}>
                       {listing?.vehicle?.condition}
                     </Badge>
-                    <Badge colorScheme="purple" variant="outline" px={3} py={1}>
+                    <Badge colorScheme="purple" variant="outline" px={3} py={1} fontSize={{ base: 'xs', md: 'sm' }}>
                       Instant Book
                     </Badge>
-                  </HStack>
+                  </Flex>
                 </Box>
-                
+
                 {/* Action Buttons */}
-                <HStack spacing={2}>
+                <HStack spacing={2} flexShrink={0}>
                   <Tooltip label={isFavorited ? "Remove from favorites" : "Add to favorites"}>
                     <IconButton
                       icon={<Heart fill={isFavorited ? "#F4A950" : "none"} />}
                       colorScheme={isFavorited ? "orange" : "gray"}
                       variant={isFavorited ? "solid" : "outline"}
                       onClick={toggleFavorite}
-                      size="lg"
+                      size={{ base: 'sm', md: 'md' }}
                       bg={isFavorited ? "#F4A950" : "white"}
                       _hover={{ bg: isFavorited ? "#E09940" : "gray.50" }}
                     />
@@ -222,7 +237,7 @@ export default function RentalDetails() {
                       colorScheme="gray"
                       variant="outline"
                       onClick={shareVehicle}
-                      size="lg"
+                      size={{ base: 'sm', md: 'md' }}
                       bg="white"
                       _hover={{ bg: "gray.50" }}
                     />
@@ -296,11 +311,11 @@ export default function RentalDetails() {
                 <Card bg={bgColor} border="1px" borderColor={borderColor} borderRadius="xl" mb={8}>
                   <CardBody p={0}>
                     <Tabs variant="enclosed" colorScheme="orange">
-                      <TabList>
-                        <Tab _selected={{ color: '#F4A950', borderColor: '#F4A950' }}>Description</Tab>
-                        <Tab _selected={{ color: '#F4A950', borderColor: '#F4A950' }}>Features</Tab>
-                        <Tab _selected={{ color: '#F4A950', borderColor: '#F4A950' }}>Host Info</Tab>
-                        <Tab _selected={{ color: '#F4A950', borderColor: '#F4A950' }}>Reviews</Tab>
+                      <TabList overflowX="auto" flexWrap="nowrap">
+                        <Tab _selected={{ color: '#F4A950', borderColor: '#F4A950' }} fontSize={{ base: 'xs', md: 'sm' }} whiteSpace="nowrap" flexShrink={0}>Description</Tab>
+                        <Tab _selected={{ color: '#F4A950', borderColor: '#F4A950' }} fontSize={{ base: 'xs', md: 'sm' }} whiteSpace="nowrap" flexShrink={0}>Features</Tab>
+                        <Tab _selected={{ color: '#F4A950', borderColor: '#F4A950' }} fontSize={{ base: 'xs', md: 'sm' }} whiteSpace="nowrap" flexShrink={0}>Host Info</Tab>
+                        <Tab _selected={{ color: '#F4A950', borderColor: '#F4A950' }} fontSize={{ base: 'xs', md: 'sm' }} whiteSpace="nowrap" flexShrink={0}>Reviews</Tab>
                       </TabList>
 
                       <TabPanels>
@@ -342,34 +357,42 @@ export default function RentalDetails() {
                         <TabPanel>
                           <VStack align="stretch" spacing={6}>
                             <Card bg="gray.50" border="1px" borderColor={borderColor}>
-                              <CardBody p={6}>
-                                <HStack spacing={4} mb={4}>
+                              <CardBody p={{ base: 4, md: 6 }}>
+                                <Flex
+                                  direction={{ base: 'column', sm: 'row' }}
+                                  gap={{ base: 3, md: 4 }}
+                                  mb={4}
+                                  align={{ base: 'center', sm: 'flex-start' }}
+                                >
                                   <BusinessLogo
                                     logoUrl={listing?.vehicle?.dealer?.logo}
                                     businessName={listing?.vehicle?.dealer?.business_name}
-                                    size="xl"
+                                    size={{ base: 'lg', md: 'xl' }}
                                     borderRadius="50%"
+                                    flexShrink={0}
                                   />
-                                  <Box flex={1}>
-                                    <HStack mb={2}>
-                                      <Heading size="lg">{listing?.vehicle?.dealer?.business_name}</Heading>
-                                      <Badge colorScheme="blue">
+                                  <Box flex={1} minW={0} textAlign={{ base: 'center', sm: 'left' }}>
+                                    <Flex flexWrap="wrap" gap={2} mb={2} justify={{ base: 'center', sm: 'flex-start' }}>
+                                      <Heading size={{ base: 'sm', md: 'md' }} noOfLines={2}>
+                                        {listing?.vehicle?.dealer?.business_name}
+                                      </Heading>
+                                      <Badge colorScheme="blue" alignSelf="center">
                                         <HStack spacing={1}>
                                           <CheckCircle size={12} />
                                           <Text>VERIFIED</Text>
                                         </HStack>
                                       </Badge>
-                                    </HStack>
-                                    <HStack spacing={1} mb={2}>
-                                      <Icon as={Star} color="#F4A950" fill="#F4A950" />
-                                      <Text fontWeight="bold">{listing?.vehicle?.dealer?.rating || '4.8'}</Text>
-                                      <Text color="gray.500">({reviews?.length} review{reviews?.length !== 1 && 's'})</Text>
+                                    </Flex>
+                                    <HStack spacing={1} mb={2} justify={{ base: 'center', sm: 'flex-start' }}>
+                                      <Icon as={Star} color="#F4A950" fill="#F4A950" boxSize={4} />
+                                      <Text fontWeight="bold" fontSize="sm">{listing?.vehicle?.dealer?.rating || '4.8'}</Text>
+                                      <Text color="gray.500" fontSize="sm">({reviews?.length} review{reviews?.length !== 1 && 's'})</Text>
                                     </HStack>
                                     <Text fontSize="sm" color="gray.600">
                                       Joined {new Date().getFullYear() - 2} years ago
                                     </Text>
                                   </Box>
-                                </HStack>
+                                </Flex>
                                 
                                 <Text fontSize="sm" color="gray.700" mb={4}>
                                   Top rated host on Veyu with exceptional rental service and customer satisfaction.
@@ -424,7 +447,7 @@ export default function RentalDetails() {
                 {/* Recommended Rentals */}
                 {recommended?.length > 0 && (
                   <Box>
-                    <Heading size="lg" mb={6} color="gray.800">
+                    <Heading size={{ base: 'md', md: 'lg' }} mb={6} color="gray.800">
                       Similar Rentals
                     </Heading>
                     <SimpleGrid
@@ -446,14 +469,23 @@ export default function RentalDetails() {
               </Box>
 
               {/* Right Column - Booking Form */}
-              <BookingForm listing={listing} />
+              <BookingForm listing={listing} onRequestBook={() => setShowAppPopup(true)} />
             </Grid>
       </Container>
+
+      <AppDownloadModal
+        isOpen={showAppPopup}
+        onClose={() => setShowAppPopup(false)}
+        heading="Complete Your Booking"
+        subheading="Download the Veyu app to book this rental securely"
+        summaryName={listing?.title}
+        summaryPrice={listing?.price ? `${listing?.currency || ''} ${listing?.price?.toLocaleString()}` : undefined}
+      />
     </Box>
   )
 }
 
-const BookingForm = ({ listing, ...props }) => {
+const BookingForm = ({ listing, onRequestBook, ...props }) => {
   const {authUser, axios, notify, commaInt, otherContext, setOtherContext} = useContext(GlobalStore);
   const navigate = useNavigate();
   const [from, setFrom] = useState(otherContext?.rental?.from);
@@ -533,10 +565,10 @@ const BookingForm = ({ listing, ...props }) => {
         top="20px"
         shadow="2xl"
       >
-        <CardHeader p={6} pb={4}>
+        <CardHeader p={{ base: 4, md: 6 }} pb={{ base: 3, md: 4 }}>
           <Flex justify="space-between" align="center">
             <VStack align="start" spacing={0}>
-              <Heading size="2xl" color="#F4A950">
+              <Heading size={{ base: 'xl', md: '2xl' }} color="#F4A950">
                 {formatCurrency(basePrice, listing?.currency)}
               </Heading>
               <Text color="gray.600" fontSize="sm">
@@ -550,7 +582,7 @@ const BookingForm = ({ listing, ...props }) => {
           </Flex>
         </CardHeader>
 
-        <CardBody p={6} pt={2}>
+        <CardBody p={{ base: 4, md: 6 }} pt={2}>
           <VStack spacing={4} align="stretch">
             {/* Date Selection */}
             <SimpleGrid columns={2} spacing={3}>
@@ -645,16 +677,15 @@ const BookingForm = ({ listing, ...props }) => {
 
             {/* Book Button */}
             <Button
-              as={Link}
-              to={`/checkout/?listingId=${listing?.uuid}`}
+              onClick={onRequestBook}
               bg="#F4A950"
               color="white"
               _hover={{ bg: "#E09940" }}
-              size="lg"
+              size={{ base: 'md', md: 'lg' }}
               isDisabled={!where?.trim() || !from || !until}
               borderRadius="lg"
               fontWeight="bold"
-              py={6}
+              py={{ base: 5, md: 6 }}
             >
               Book Rental
             </Button>
@@ -663,9 +694,9 @@ const BookingForm = ({ listing, ...props }) => {
             <Button
               variant="outline"
               colorScheme="orange"
-              size="lg"
+              size={{ base: 'md', md: 'lg' }}
               borderRadius="lg"
-              leftIcon={<Phone size={18} />}
+              leftIcon={<Phone size={16} />}
             >
               Contact Host
             </Button>
