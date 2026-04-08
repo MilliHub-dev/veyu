@@ -1,4 +1,4 @@
-import {GlobalStore} from '../../../../App'
+import {GlobalStore} from '../../../../contexts/GlobalStore'
 import {objectifyJSON, jsonifyObject} from '../../../../utils'
 import {StatusBadge} from '../../../../components'
 import { useState, useEffect, useContext } from "react"

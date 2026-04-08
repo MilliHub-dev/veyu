@@ -5,7 +5,7 @@ import {
   Wrap, WrapItem, Menu, MenuButton, MenuList, MenuItem, Spacer, Tooltip, IconButton
 } from "@chakra-ui/react";
 import { useContext, useEffect, useState, Fragment } from "react";
-import { GlobalStore } from "../../../App";
+import { GlobalStore } from "../../../contexts/GlobalStore";
 import { objectifyJSON, formatCurrency } from "../../../utils";
 import { Link } from "react-router-dom";
 import { SearchIcon, ChevronDownIcon } from '@chakra-ui/icons';

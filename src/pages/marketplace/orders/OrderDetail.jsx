@@ -1,6 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { GlobalStore } from '../../../App';
+import { GlobalStore } from '../../../contexts/GlobalStore';
 import { objectifyJSON } from '../../../utils';
 import {
   Box,

@@ -4,7 +4,7 @@ import {
     Text, VStack, HStack, Badge, Divider, Avatar, useColorModeValue
 } from "@chakra-ui/react";
 import { useState, useContext } from "react";
-import { GlobalStore } from "../App";
+import { GlobalStore } from "../contexts/GlobalStore";
 import { IoMdClose, IoMdSend } from "react-icons/io";
 import { FaCar, FaCheckCircle } from "react-icons/fa";
 import { MdSpeed, MdLocalGasStation } from "react-icons/md";

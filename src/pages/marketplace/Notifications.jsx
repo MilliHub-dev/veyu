@@ -16,7 +16,7 @@ import { X, AlertCircle, CheckCircle, AlertTriangle, Info } from 'lucide-react'
 import { useContext, useState, useEffect } from 'react'
 import {Link} from 'react-router-dom'
 import { objectifyJSON, jsonifyObject } from '../../utils'
-import { GlobalStore } from '../../App'
+import { GlobalStore } from '../../contexts/GlobalStore'
 
 function NotificationCard({ type, title, message, action, onClose, read }) {
   const borderColors = {

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ChakraProvider } from '@chakra-ui/react';
 import CreateListing from '../CreateListing';
-import { GlobalStore } from '../../../../../App';
+import { GlobalStore } from '../../../../../contexts/GlobalStore';
 
 // Mock child components to simplify testing and focus on CreateListing logic
 vi.mock('../../../../../components/forms', () => ({

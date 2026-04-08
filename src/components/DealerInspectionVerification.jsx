@@ -33,7 +33,7 @@ import {
   FileText,
   AlertCircle,
 } from 'lucide-react';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import inspectionService from '../services/inspectionService';
 
 /**

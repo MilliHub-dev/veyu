@@ -1,6 +1,6 @@
 import { useState, useCallback, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import { handleError, withRetry, ERROR_TYPES } from '../utils/errorHandler';
 
 /**

@@ -26,7 +26,7 @@ import {
     Checkbox,
  } from "@chakra-ui/react";
 import { useContext, useEffect, useState } from "react";
-import { GlobalStore } from "../../../App";
+import { GlobalStore } from "../../../contexts/GlobalStore";
 import { jsonifyObject, objectifyJSON } from "../../../utils";
 import { useNavigate, useSearchParams } from "react-router-dom";
 // import { SearchIcon, StarIcon, ZapIcon } from '@chakra-ui/icons';

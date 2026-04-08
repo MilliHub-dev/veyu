@@ -33,7 +33,7 @@ import {
 } from '@chakra-ui/react';
 import { Calendar, Clock, CreditCard, Wallet, Building2, CheckCircle2, Info, CheckCircle, FileText, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import inspectionService from '../services/inspectionService';
 import walletService from '../services/walletService';
 import { PaystackPaymentModal } from './wallet';

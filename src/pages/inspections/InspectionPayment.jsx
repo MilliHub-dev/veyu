@@ -18,7 +18,7 @@ import {
 } from '@chakra-ui/react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowBackIcon } from '@chakra-ui/icons';
-import { GlobalStore } from '../../App';
+import { GlobalStore } from '../../contexts/GlobalStore';
 import inspectionService from '../../services/inspectionService';
 import walletService from '../../services/walletService';
 import { PaystackPaymentModal } from '../../components/wallet';

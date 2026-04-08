@@ -34,7 +34,7 @@ import {
 } from "@chakra-ui/react";
 import {CloseIcon, ChevronLeftIcon, ChevronRightIcon, InfoIcon, CheckIcon} from "@chakra-ui/icons";
 import {BackButton} from './nav';
-import {GlobalStore} from '../App';
+import {GlobalStore} from '../contexts/GlobalStore';
 import { getBrandNames, getModelsForBrand } from '../data/vehicleBrands';
 import {objectifyJSON, formatCurrency} from '../utils';
 import { 

@@ -23,7 +23,7 @@ import {
 } from "@chakra-ui/react";
 import { useContext, useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { GlobalStore } from "../../App";
+import { GlobalStore } from "../../contexts/GlobalStore";
 import { objectifyJSON } from "../../utils";
 import {
     ClipboardCheck,

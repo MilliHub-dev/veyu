@@ -862,5 +862,4 @@ function App() {
   );
 }
 
-export { GlobalStore };
 export default App;

@@ -1,5 +1,5 @@
 import {useState, useEffect, useContext, useRef} from 'react';
-import {GlobalStore} from '../../../App';
+import {GlobalStore} from '../../../contexts/GlobalStore';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import {
   Box,

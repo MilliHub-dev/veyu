@@ -5,7 +5,7 @@ import { LuTriangleAlert } from 'react-icons/lu';
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorMessage: null };
   }
 
   static getDerivedStateFromError(error) {
@@ -14,7 +14,10 @@ class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error("ErrorBoundary caught an error:", error, errorInfo);
+    }
+    this.setState({ errorMessage: error?.message || String(error) });
   }
 
   handleRefresh = () => {
@@ -42,6 +45,11 @@ class ErrorBoundary extends Component {
                 <Text textAlign="center" color="gray.600">
                   We're sorry, but an error occurred. Please try again later or contact support if the issue persists.
                 </Text>
+                {process.env.NODE_ENV !== 'production' && this.state.errorMessage && (
+                  <Text mt={3} textAlign="center" fontSize="sm" color="red.500" fontFamily="mono">
+                    {this.state.errorMessage}
+                  </Text>
+                )}
               </CardBody>
               <CardFooter justifyContent="center">
                 <VStack spacing={4} w={'100%'}>

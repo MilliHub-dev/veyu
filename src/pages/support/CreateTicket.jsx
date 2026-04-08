@@ -5,7 +5,7 @@ import {
   TagLabel, TagCloseButton, Wrap, WrapItem
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
-import { GlobalStore } from '../../App';
+import { GlobalStore } from '../../contexts/GlobalStore';
 import supportService from '../../services/supportService';
 
 const CreateTicket = () => {

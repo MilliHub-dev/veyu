@@ -13,7 +13,7 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
-import { GlobalStore } from '../../../App';
+import { GlobalStore } from '../../../contexts/GlobalStore';
 import InspectionForm from '../../../components/InspectionForm';
 import inspectionService from '../../../services/inspectionService';
 

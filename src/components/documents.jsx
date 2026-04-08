@@ -4,7 +4,7 @@ import {
   Box, Button, Flex, HStack, Input, Radio, RadioGroup, Stack, Textarea, VStack
 } from '@chakra-ui/react';
 import SignaturePad from 'react-signature-canvas';
-import {GlobalStore} from '../App';
+import {GlobalStore} from '../contexts/GlobalStore';
 
 export const PreviewWithSignature = ({ docType, params }) => {
   const [sigMode, setSigMode] = useState('type');      // 'type' or 'draw'

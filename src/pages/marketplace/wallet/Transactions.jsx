@@ -2,7 +2,7 @@
 
 import {useState, useEffect, useContext} from 'react';
 import {Link, NavLink, Outlet} from 'react-router-dom';
-import {GlobalStore} from '../../../App';
+import {GlobalStore} from '../../../contexts/GlobalStore';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import {
   Box,

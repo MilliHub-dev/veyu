@@ -44,7 +44,7 @@ import {
   FaChevronRight,
 } from 'react-icons/fa6'
 import {useState, useEffect, useContext, Fragment} from 'react';
-import {GlobalStore} from '../../../App';
+import {GlobalStore} from '../../../contexts/GlobalStore';
 import {MechanicContext} from './Layout';
 import { Link } from 'react-router-dom';
 import {objectifyJSON, jsonifyObject} from '../../../utils';

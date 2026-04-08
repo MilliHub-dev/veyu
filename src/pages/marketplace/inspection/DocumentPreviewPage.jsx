@@ -19,7 +19,7 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import { ArrowLeft } from 'lucide-react';
-import { GlobalStore } from '../../../App';
+import { GlobalStore } from '../../../contexts/GlobalStore';
 import DocumentPreview from '../../../components/DocumentPreview';
 import SignaturePad from '../../../components/SignaturePad';
 import inspectionService from '../../../services/inspectionService';

@@ -19,7 +19,7 @@ import {
 import { PaystackButton } from 'react-paystack';
 import {PinField, CenteredLayout} from '.';
 import {EmptyWalletIcon,} from './icons';
-import {GlobalStore} from '../App';
+import {GlobalStore} from '../contexts/GlobalStore';
 import {objectifyJSON, jsonifyObject} from '../utils';
 
 

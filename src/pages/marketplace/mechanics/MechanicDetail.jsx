@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { GlobalStore } from "../../../App";
+import { GlobalStore } from "../../../contexts/GlobalStore";
 import { objectifyJSON, formatCurrency } from "../../../utils";
 import { useParams, useNavigate } from "react-router-dom";
 import { BusinessLogo } from "../../../components/BusinessLogo";

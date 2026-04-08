@@ -1,7 +1,7 @@
 import {useState, useEffect, useContext} from 'react';
 import {motion} from "framer-motion";
 import {useParams, useSearchParams, Link, useNavigate} from 'react-router-dom';
-import {GlobalStore} from "../../../App";
+import {GlobalStore} from "../../../contexts/GlobalStore";
 import {objectifyJSON, jsonifyObject, formatCurrency} from "../../../utils";
 import {
   Box,

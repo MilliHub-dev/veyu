@@ -9,7 +9,7 @@ import { useState, useContext } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {CalendarPicker, TimePicker} from '../../../components';
 import {jsonifyObject, objectifyJSON} from '../../../utils';
-import {GlobalStore} from '../../../App';
+import {GlobalStore} from '../../../contexts/GlobalStore';
 
 function CheckoutInspection() {
   const [selectedDate, setSelectedDate] = useState();

@@ -8,7 +8,7 @@ import {
 } from "@chakra-ui/react";
 import { useState, useEffect, useContext, useRef } from "react";
 import { FaUpload } from "react-icons/fa";
-import {GlobalStore} from '../../../../App'
+import {GlobalStore} from '../../../../contexts/GlobalStore'
 import {objectifyJSON, jsonifyObject} from '../../../../utils'
 import { Search, Bell, CloudUpload, ChevronDown, ArrowRight, User, Building, Phone, Mail, FileText, MapPin } from "lucide-react";
 import { getBusinessDisplayName } from '../../../../utils/userDataUtils';

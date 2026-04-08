@@ -13,7 +13,7 @@ import {
 } from "@chakra-ui/react"
 
 import { Fragment, useContext, useEffect, useState } from "react"
-import { GlobalStore } from "../../../App"
+import { GlobalStore } from "../../../contexts/GlobalStore"
 import {
     Filter,
     SlidersHorizontal,

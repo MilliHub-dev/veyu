@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from "react"
-import {GlobalStore} from '../../../../App';
+import {GlobalStore} from '../../../../contexts/GlobalStore';
 import {objectifyJSON, jsonifyObject} from '../../../../utils';
 import {ComboBox} from '../../../../components';
 import {

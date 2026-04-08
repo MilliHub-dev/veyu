@@ -11,7 +11,7 @@ import {
 import { useState, useContext, useRef, useEffect, useCallback } from "react";
 import { FaMapMarkerAlt, FaSearch, FaEdit, FaTrash, FaPlus } from "react-icons/fa";
 import { Map, Marker, APIProvider, useMapsLibrary, useMap } from "@vis.gl/react-google-maps";
-import { GlobalStore } from "../../../../App";
+import { GlobalStore } from "../../../../contexts/GlobalStore";
 import locationService from "../../../../services/locationService";
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyBcwRVb-mzVQuHVJyaOkgbGXtmFT-c_II0";

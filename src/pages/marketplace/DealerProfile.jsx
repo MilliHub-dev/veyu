@@ -53,7 +53,7 @@ import { BusinessLogo } from '../../components/BusinessLogo';
 import { ListingItemCard, CreateReviewModal } from '../../components';
 import {useState, useEffect, useContext, useCallback} from 'react';
 import {useParams, useNavigate} from 'react-router-dom';
-import {GlobalStore} from '../../App';
+import {GlobalStore} from '../../contexts/GlobalStore';
 import {BackButton} from '../../components/nav';
 import {objectifyJSON, jsonifyObject} from '../../utils';
 import { 

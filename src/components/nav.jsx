@@ -39,7 +39,7 @@ import {
 } from '@chakra-ui/react';
 import { RiCoinsFill, RiCoinsLine } from "react-icons/ri";
 import { motion } from 'framer-motion';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import { FcMenu } from 'react-icons/fc';
 import { CheckCircleIcon } from '@chakra-ui/icons'
 import { FaChevronLeft, FaChevronRight, FaChevronDown, FaChevronUp, FaUser } from "react-icons/fa";

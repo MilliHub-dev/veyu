@@ -15,7 +15,7 @@ import {
 import { Search } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import chatService from '../services/chatService';
 
 function ChatRoomList() {

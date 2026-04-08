@@ -69,7 +69,7 @@ import '../assets/Home.css';
 import ScrollAnimation from 'react-animate-on-scroll';
 import { DashboardSearchBar, ListingItemCard } from '../components';
 import { MdHeight } from 'react-icons/md';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import { objectifyJSON } from '../utils';
 import listingsService from '../services/listingsService';
 

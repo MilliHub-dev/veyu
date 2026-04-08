@@ -35,7 +35,7 @@ import {
   ListingReviewCard,
   CreateSaleForm,
 } from '../../../../components/forms';
-import { GlobalStore } from '../../../../App';
+import { GlobalStore } from '../../../../contexts/GlobalStore';
 import { objectifyJSON, jsonifyObject } from '../../../../utils';
 import { ArrowLeft, DeleteIcon, Upload, AlertTriangle, Zap, Clock, Settings, MessageCircle, Bell } from "lucide-react"
 import { useState, useEffect, useContext, useRef } from "react";

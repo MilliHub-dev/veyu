@@ -1,6 +1,6 @@
 import { Fragment, useContext, useEffect, useState } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
-import { GlobalStore } from "../../../App";
+import { GlobalStore } from "../../../contexts/GlobalStore";
 import { LocationBreadcrumb, DatePicker, ReviewCard, RatingCard, ListingItemCard, ImageCarousel } from "../../../components";
 import { AppDownloadModal } from "../../../components/AppDownloadModal";
 import { ListingDetailSkeleton } from "../../../components/loaders";

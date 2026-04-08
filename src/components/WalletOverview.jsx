@@ -20,7 +20,7 @@ import {
   useToast,
   Icon,
 } from '@chakra-ui/react';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import walletService from '../services/walletService';
 
 /**

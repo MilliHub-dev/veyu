@@ -6,7 +6,7 @@ import {
 	Text,
 } from '@chakra-ui/react'
 import { PreviewWithSignature } from "../../../components/documents";
-import { GlobalStore } from "../../../App";
+import { GlobalStore } from "../../../contexts/GlobalStore";
 import {useSearchParams} from 'react-router-dom'
 
 export const DocumentSigningPage = ({ ...props }) => {

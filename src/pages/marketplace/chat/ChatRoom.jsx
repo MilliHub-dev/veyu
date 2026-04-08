@@ -15,7 +15,7 @@ import {
 } from '@chakra-ui/react';
 import { Search, Phone, Send, Smile, Mic, MoreVertical, Check, PlayCircle } from 'lucide-react';
 import { useState, useEffect, useContext, useRef } from 'react';
-import {GlobalStore} from '../../../App';
+import {GlobalStore} from '../../../contexts/GlobalStore';
 import {objectifyJSON} from '../../../utils';
 import {useParams, Link} from 'react-router-dom';
 import {ChevronLeftIcon, CloseIcon} from '@chakra-ui/icons';

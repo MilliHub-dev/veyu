@@ -66,7 +66,7 @@ import {
   Globe,
 } from "lucide-react"
 import { ListingItemCard, ImageCarousel, LocationBreadcrumb } from "../../components";
-import { GlobalStore } from "../../App";
+import { GlobalStore } from "../../contexts/GlobalStore";
 import { objectifyJSON } from "../../utils";
 import { apiClient } from "../../services/api";
 import ScrollAnimation from 'react-animate-on-scroll';

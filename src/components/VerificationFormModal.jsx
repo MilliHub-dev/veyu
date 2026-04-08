@@ -24,7 +24,7 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import { CloudUpload, FileText, X } from 'lucide-react';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import authService from '../services/authService';
 import { ApiError } from '../services/api';
 

@@ -23,7 +23,7 @@ import {
   AlertIcon,
   Textarea,
 } from '@chakra-ui/react';
-import { GlobalStore } from '../App';
+import { GlobalStore } from '../contexts/GlobalStore';
 import walletService from '../services/walletService';
 import { PinField } from './index';
 

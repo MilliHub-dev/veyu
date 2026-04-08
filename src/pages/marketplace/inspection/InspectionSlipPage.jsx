@@ -22,7 +22,7 @@ import {
   Divider,
 } from '@chakra-ui/react';
 import { ArrowLeft, CheckCircle, Calendar, Clock, User, Mail, Phone, Car, FileText, Download, Printer, AlertCircle } from 'lucide-react';
-import { GlobalStore } from '../../../App';
+import { GlobalStore } from '../../../contexts/GlobalStore';
 import InspectionSlip from '../../../components/InspectionSlip';
 import inspectionService from '../../../services/inspectionService';
 import { QRCodeSVG } from 'qrcode.react';

@@ -11,7 +11,7 @@ import {
 } from "@chakra-ui/react";
 import { useContext, useEffect, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { GlobalStore } from "../../../App";
+import { GlobalStore } from "../../../contexts/GlobalStore";
 import { ImageCarousel, LocationBreadcrumb, ListingItemCard } from "../../../components";
 import { AppDownloadModal } from "../../../components/AppDownloadModal";
 import { ListingDetailSkeleton } from "../../../components/loaders";

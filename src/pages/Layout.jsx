@@ -1,5 +1,5 @@
 import {useContext, useEffect,} from "react";
-import {GlobalStore} from "../App";
+import {GlobalStore} from "../contexts/GlobalStore";
 import {
     FormStepper, Footer,
     UnauthenticatedNavbar, CustomerNavbar,

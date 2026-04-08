@@ -21,7 +21,7 @@ import {
 } from '@chakra-ui/react';
 import { Search, MessageCircle, MoreVertical, CheckCheck, Clock } from 'lucide-react';
 import { useState, useEffect, useContext } from 'react';
-import { GlobalStore } from '../../../App';
+import { GlobalStore } from '../../../contexts/GlobalStore';
 import { objectifyJSON } from '../../../utils';
 import { useParams, Outlet, Link, useNavigate } from 'react-router-dom';
 import { FaInbox } from 'react-icons/fa';

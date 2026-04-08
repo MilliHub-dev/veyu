@@ -5,7 +5,7 @@ import {
   Tag, Avatar, Input, IconButton
 } from '@chakra-ui/react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { GlobalStore } from '../../App';
+import { GlobalStore } from '../../contexts/GlobalStore';
 import supportService from '../../services/supportService';
 import { MdArrowBack, MdSend } from 'react-icons/md';
 

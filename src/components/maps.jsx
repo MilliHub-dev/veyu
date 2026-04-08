@@ -28,7 +28,7 @@ import {
     useColorModeValue,
  } from "@chakra-ui/react";
 import { useContext, useEffect, useState, Fragment, useRef } from "react";
-import { GlobalStore } from "../App";
+import { GlobalStore } from "../contexts/GlobalStore";
 import { jsonifyObject, objectifyJSON } from "../utils";
 import { useSearchParams, Link } from "react-router-dom";
 

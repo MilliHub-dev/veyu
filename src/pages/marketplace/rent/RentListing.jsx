@@ -44,7 +44,7 @@ import {
   IconButton,
 } from "@chakra-ui/react";
 import { Fragment, useContext, useEffect, useState, useRef } from "react";
-import { GlobalStore } from "../../../App";
+import { GlobalStore } from "../../../contexts/GlobalStore";
 import {
   RiClockwiseLine,
   RiGasStationLine,

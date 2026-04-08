@@ -1,6 +1,6 @@
 import {useState, useEffect, useContext, createContext, Fragment} from 'react';
 import {Link, Routes, Route, Outlet, useLocation} from 'react-router-dom';
-import {GlobalStore} from '../../../App';
+import {GlobalStore} from '../../../contexts/GlobalStore';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import {MechanicDashboardSideBar, MechanicNavbar, UnauthenticatedNavbar} from '../../../components/nav';
 import {VerificationNotice} from '../../../components';

@@ -6,7 +6,7 @@ import {
   Skeleton, Icon,
 } from "@chakra-ui/react";
 import { useState, useEffect, useContext, useRef } from "react";
-import { GlobalStore } from '../../../../App'
+import { GlobalStore } from '../../../../contexts/GlobalStore'
 import { CloudUpload, MapPin } from "lucide-react";
 import { apiClient } from '../../../../services/api';
 import VerificationStatusDisplay from '../../../../components/VerificationStatusDisplay';

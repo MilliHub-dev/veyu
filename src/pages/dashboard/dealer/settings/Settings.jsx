@@ -10,7 +10,7 @@ import { Outlet } from 'react-router-dom';
 import BusinessProfile from './BusinessProfile';
 import LocationSettings from './LocationSettings';
 import { objectifyJSON } from '../../../../utils';
-import { GlobalStore } from '../../../../App';
+import { GlobalStore } from '../../../../contexts/GlobalStore';
 
 
 const DealershipSettings = () => {

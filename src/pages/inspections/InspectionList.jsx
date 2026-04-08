@@ -34,7 +34,7 @@ import {
 import { AddIcon, ViewIcon, EditIcon, DownloadIcon } from '@chakra-ui/icons';
 import { FiMoreVertical } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import { GlobalStore } from '../../App';
+import { GlobalStore } from '../../contexts/GlobalStore';
 import inspectionService from '../../services/inspectionService';
 import CreateInspectionModal from '../../components/inspections/CreateInspectionModal';
 

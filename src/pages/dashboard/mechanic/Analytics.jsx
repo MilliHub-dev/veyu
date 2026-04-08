@@ -15,7 +15,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import {GlobalStore} from '../../../App';
+import {GlobalStore} from '../../../contexts/GlobalStore';
 import {MechanicContext} from './Layout';
 import {objectifyJSON, jsonifyObject} from '../../../utils';
 import { useState, useContext, useEffect, useRef} from 'react';
