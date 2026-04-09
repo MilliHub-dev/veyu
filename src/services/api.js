@@ -3,20 +3,20 @@ import axios from 'axios';
 // Base API configuration
 const API_BASE_URL = import.meta.env.DEV ? '/api' : 'https://dev.veyu.cc/api/v1';
 
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 60000,
-  withCredentials: false,
-  headers: {
-    'Accept': 'application/json',
-  },
-});
+// ─── Custom error class (must be declared before any function that uses it) ───
+class ApiError extends Error {
+  constructor(message, status, data) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+  }
+}
 
-// Token management utilities
+// ─── Token management ─────────────────────────────────────────────────────────
 const TokenManager = {
   getAccessToken: () => {
     let token = localStorage.getItem('veyu_access_token');
-
     if (!token) {
       try {
         const oldAuthUser = localStorage.getItem('veyu-auth-user');
@@ -28,18 +28,15 @@ const TokenManager = {
           }
         }
       } catch (e) {
-        // Ignore parsing errors
+        // ignore
       }
     }
-
     return token;
   },
   getRefreshToken: () => localStorage.getItem('veyu_refresh_token'),
   setTokens: (accessToken, refreshToken) => {
     localStorage.setItem('veyu_access_token', accessToken);
-    if (refreshToken) {
-      localStorage.setItem('veyu_refresh_token', refreshToken);
-    }
+    if (refreshToken) localStorage.setItem('veyu_refresh_token', refreshToken);
   },
   clearTokens: () => {
     localStorage.removeItem('veyu_access_token');
@@ -59,12 +56,18 @@ const TokenManager = {
       return true;
     }
   },
-  isAccessTokenExpired: () => {
-    return TokenManager.isTokenExpired(TokenManager.getAccessToken());
-  },
+  isAccessTokenExpired: () => TokenManager.isTokenExpired(TokenManager.getAccessToken()),
 };
 
-// Refresh mutex — prevents multiple concurrent refresh calls
+// ─── Axios client ─────────────────────────────────────────────────────────────
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 60000,
+  withCredentials: false,
+  headers: { Accept: 'application/json' },
+});
+
+// ─── Refresh mutex ────────────────────────────────────────────────────────────
 let _refreshPromise = null;
 
 async function refreshAccessToken() {
@@ -76,11 +79,11 @@ async function refreshAccessToken() {
       throw new Error('Refresh token missing or expired');
     }
 
-    const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
-      refresh: refreshToken,
-    }, {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const response = await axios.post(
+      `${API_BASE_URL}/token/refresh/`,
+      { refresh: refreshToken },
+      { headers: { 'Content-Type': 'application/json' } },
+    );
 
     const tokenData = response.data.data || response.data;
     const { access, refresh } = tokenData;
@@ -95,7 +98,19 @@ async function refreshAccessToken() {
   return _refreshPromise;
 }
 
-// Request interceptor
+// ─── Request interceptor ──────────────────────────────────────────────────────
+const PUBLIC_ENDPOINTS = [
+  '/accounts/login/',
+  '/accounts/signup/',
+  '/accounts/password/reset/',
+  '/accounts/password/reset/validate/',
+  '/accounts/password/reset/confirm/',
+  '/accounts/verify-email-unauthenticated/',
+  '/token/',
+  '/token/refresh/',
+  '/token/verify/',
+];
+
 apiClient.interceptors.request.use(
   async (config) => {
     if (!config.headers) config.headers = {};
@@ -106,74 +121,51 @@ apiClient.interceptors.request.use(
       config.headers['Content-Type'] = 'application/json';
     }
 
-    const publicEndpoints = [
-      '/accounts/login/',
-      '/accounts/signup/',
-      '/accounts/password/reset/',
-      '/accounts/password/reset/validate/',
-      '/accounts/password/reset/confirm/',
-      '/accounts/verify-email-unauthenticated/',
-      '/token/',
-      '/token/refresh/',
-      '/token/verify/',
-    ];
+    const isPublic = PUBLIC_ENDPOINTS.some((ep) => config.url?.includes(ep));
 
-    const isPublicEndpoint = publicEndpoints.some(endpoint =>
-      config.url?.includes(endpoint)
-    );
-
-    if (!isPublicEndpoint) {
+    if (!isPublic) {
       let token = TokenManager.getAccessToken();
-
       if (!config._isRetry && token && TokenManager.isTokenExpired(token)) {
         try {
           token = await refreshAccessToken();
         } catch (e) {
-          // Continue with expired token — response interceptor will handle it
+          // fall through — response interceptor handles 401
         }
       }
-
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      if (token) config.headers.Authorization = `Bearer ${token}`;
     }
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
-// Response interceptor
+// ─── Response interceptor ─────────────────────────────────────────────────────
+const AUTH_ENDPOINTS = [
+  '/accounts/login/', '/accounts/signup/', '/accounts/logout/',
+  '/token/', '/token/refresh/', '/token/verify/',
+];
+const isAuthEndpoint = (url) => AUTH_ENDPOINTS.some((e) => url?.includes(e));
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Handle 401 — attempt token refresh once
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       originalRequest._isRetry = true;
 
-      const AUTH_ENDPOINTS = [
-        '/accounts/login/', '/accounts/signup/', '/accounts/logout/',
-        '/token/', '/token/refresh/', '/token/verify/',
-      ];
-      const isAuthEndpoint = (url) => AUTH_ENDPOINTS.some(e => url?.includes(e));
-
       try {
         const newToken = await refreshAccessToken();
-
         if (!originalRequest.headers) originalRequest.headers = {};
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-
         return await apiClient(originalRequest);
       } catch (refreshError) {
         const status = refreshError.response?.status;
-        const isInvalid = status === 401 || status === 400;
-
-        if (isInvalid && isAuthEndpoint(originalRequest.url)) {
+        if ((status === 401 || status === 400) && isAuthEndpoint(originalRequest.url)) {
           TokenManager.clearTokens();
-          if (window.notify) {
+          if (typeof window !== 'undefined' && window.notify) {
             window.notify({
               title: 'Session Expired',
               body: 'Your session has expired. Please log in again.',
@@ -181,39 +173,36 @@ apiClient.interceptors.response.use(
             });
           }
           if (
+            typeof window !== 'undefined' &&
             !window.location.pathname.includes('/login') &&
             !window.location.pathname.includes('/signup') &&
             !window.location.pathname.includes('/forgot-password')
           ) {
-            setTimeout(() => {
-              window.location.href = '/login?session_expired=true';
-            }, 1000);
+            setTimeout(() => { window.location.href = '/login?session_expired=true'; }, 1000);
           }
         }
-
         return Promise.reject(refreshError);
       }
     }
 
-    const shouldSkipLogging =
-      error.config?.skipErrorLogging ||
-      error.response?.config?.skipErrorLogging;
-
-    if (!shouldSkipLogging && import.meta.env.DEV) {
-      console.error('API Error:', {
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
-      });
+    if (import.meta.env.DEV) {
+      const skip = error.config?.skipErrorLogging || error.response?.config?.skipErrorLogging;
+      if (!skip) {
+        console.error('API Error:', {
+          url: error.config?.url,
+          method: error.config?.method,
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+        });
+      }
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
-// Standardized API response handler
+// ─── Response / error helpers ─────────────────────────────────────────────────
 const handleApiResponse = (response) => {
   const data = response.data;
   if (data.error === true) {
@@ -222,28 +211,7 @@ const handleApiResponse = (response) => {
   return data.data || data;
 };
 
-// Custom API Error class
-class ApiError extends Error {
-  constructor(message, status, data) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.data = data;
-  }
-}
-
-// Enhanced API error handler
 const handleApiError = (error) => {
-  const shouldSkipLogging =
-    error.config?.skipErrorLogging ||
-    error.response?.config?.skipErrorLogging;
-
-  if (!shouldSkipLogging) {
-    if (error instanceof ApiError) throw error;
-  } else {
-    throw error;
-  }
-
   if (error instanceof ApiError) throw error;
 
   if (error.response) {
@@ -309,7 +277,7 @@ const handleApiError = (error) => {
   }
 };
 
-// Utility to create FormData from an object
+// ─── FormData helper ──────────────────────────────────────────────────────────
 const createFormData = (data) => {
   const formData = new FormData();
   Object.entries(data).forEach(([key, value]) => {
@@ -322,6 +290,7 @@ const createFormData = (data) => {
   return formData;
 };
 
+// ─── Exports ──────────────────────────────────────────────────────────────────
 export {
   apiClient,
   handleApiResponse,
