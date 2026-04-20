@@ -480,201 +480,107 @@ function App() {
   };
 
   if (loading) {
-    return (
-      <ChakraProvider theme={VeyuTheme}>
-        <LoadingSpinner fullscreen message="Veyu is Loading..." />
-      </ChakraProvider>
-    );
+    return <LoadingSpinner fullscreen message="Veyu is Loading..." />;
   }
 
   return (
-    <ChakraProvider theme={VeyuTheme}>
-      <ErrorBoundary>
-        <GlobalStore.Provider value={context}>
-          <Router
-            future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    <ErrorBoundary>
+      <GlobalStore.Provider value={context}>
+        <Router
+          future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+        >
+          <Suspense
+            fallback={
+              <LoadingSpinner fullscreen message="Veyu is Loading..." />
+            }
           >
-            <Suspense
-              fallback={
-                <LoadingSpinner fullscreen message="Veyu is Loading..." />
-              }
-            >
-              <Routes>
-                  {authUser ? (
-                    <Fragment>
-                      {/* Wallet Routes - Moved to top to avoid shadowing by catch-all routes */}
-                      <Route
-                        element={
-                          authUser.user_type === "dealer" ? (
-                            <DealerDashboardLayout hideSidebar hideFooter />
-                          ) : authUser.user_type === "mechanic" ? (
-                            <MechanicDashboardLayout hideSidebar hideFooter />
-                          ) : (
-                            <Layout hideFooter />
-                          )
-                        }
-                      >
-                        <Route path="/wallet" element={<WalletLayout />}>
-                          <Route path="home" element={<WalletHomePage />} />
-                          <Route
-                            path="transactions"
-                            element={<WalletTransactionsPage />}
-                          />
-                          <Route
-                            path="deposit"
-                            element={<WalletDepositPage />}
-                          />
-                          <Route
-                            path="withdraw"
-                            element={<WalletWithdrawalPage />}
-                          />
-                          <Route path="" element={<Navigate to="home" />} />
-                        </Route>
+            <Routes>
+                {authUser ? (
+                  <Fragment>
+                    {/* Wallet Routes - Moved to top to avoid shadowing by catch-all routes */}
+                    <Route
+                      element={
+                        authUser.user_type === "dealer" ? (
+                          <DealerDashboardLayout hideSidebar hideFooter />
+                        ) : authUser.user_type === "mechanic" ? (
+                          <MechanicDashboardLayout hideSidebar hideFooter />
+                        ) : (
+                          <Layout hideFooter />
+                        )
+                      }
+                    >
+                      <Route path="/wallet" element={<WalletLayout />}>
+                        <Route path="home" element={<WalletHomePage />} />
+                        <Route
+                          path="transactions"
+                          element={<WalletTransactionsPage />}
+                        />
+                        <Route
+                          path="deposit"
+                          element={<WalletDepositPage />}
+                        />
+                        <Route
+                          path="withdraw"
+                          element={<WalletWithdrawalPage />}
+                        />
+                        <Route path="" element={<Navigate to="home" />} />
                       </Route>
-                      {/* Dealer Dashboard */}
-                      {authUser.user_type === "dealer" ? (
-                        <>
-                          <Route element={<DealerDashboardLayout />}>
+                    </Route>
+                    {/* Dealer Dashboard */}
+                    {authUser.user_type === "dealer" ? (
+                      <>
+                        <Route element={<DealerDashboardLayout />}>
+                          <Route
+                            path="/dashboard"
+                            element={<DealerDashboard />}
+                          />
+                          <Route
+                            path="/orders"
+                            element={<OrderListAdmin />}
+                          />
+                          <Route path="/inventory" element={<Outlet />}>
                             <Route
-                              path="/dashboard"
-                              element={<DealerDashboard />}
+                              path="edit/:listingId"
+                              element={<EditListingAdmin />}
                             />
                             <Route
-                              path="/orders"
-                              element={<OrderListAdmin />}
+                              path="add"
+                              element={<CreateListingAdmin />}
                             />
-                            <Route path="/inventory" element={<Outlet />}>
-                              <Route
-                                path="edit/:listingId"
-                                element={<EditListingAdmin />}
-                              />
-                              <Route
-                                path="add"
-                                element={<CreateListingAdmin />}
-                              />
-                              <Route path="boost" element={<MyBoosts />} />
-                              <Route path="" element={<ListingsAdmin />} />
-                            </Route>
-                            <Route
-                              path="/analytics"
-                              element={<AnalyticsDashboard />}
-                            />
-                            <Route
-                              path="/verify-inspection"
-                              element={<VerifyInspectionPage />}
-                            />
-                            <Route
-                              path="/settings"
-                              element={<DealershipSettings />}
-                            />
-                            <Route
-                              path="/notifications"
-                              element={<NotificationsPage />}
-                            />
-                            <Route path="/support" element={<TicketList />} />
-                            <Route
-                              path="/support/create"
-                              element={<CreateTicket />}
-                            />
-                            <Route
-                              path="/support/tickets/:id"
-                              element={<TicketDetail />}
-                            />
-                            <Route
-                              path="/*"
-                              element={<Navigate to="/dashboard" />}
-                            />
+                            <Route path="boost" element={<MyBoosts />} />
+                            <Route path="" element={<ListingsAdmin />} />
                           </Route>
-                          {/* Marketplace routes for dealers */}
-                          <Route element={<Layout />}>
-                            <Route path="/buy" element={<BuyListing />} />
-                            <Route
-                              path="/buy/:listingId"
-                              element={<BuyDetail />}
-                            />
-                            <Route path="/rent" element={<RentListing />} />
-                            {/* Business Profile Setup - needed for redirects */}
-                            <Route
-                              path="/business-profile"
-                              element={<BusinessProfileSetup />}
-                            />
-                            <Route
-                              path="/rent/:listingId"
-                              element={<RentDetail />}
-                            />
-                            <Route path="/cart" element={<CartPage />} />
-                            <Route
-                              path="/checkout/pay"
-                              element={<CheckoutPage />}
-                            />
-                            <Route
-                              path="/checkout/docs"
-                              element={<DocumentSigningPage />}
-                            />
-                            <Route
-                              path="/checkout/inspection"
-                              element={<CheckoutWithInspection />}
-                            />
-                            <Route
-                              path="/inspections/:inspectionId"
-                              element={<InspectionDetailPage />}
-                            />
-                            <Route
-                              path="/inspections/slip/:slipReference"
-                              element={<InspectionSlipPage />}
-                            />
-                          </Route>
-                        </>
-                      ) : authUser.user_type === "mechanic" ? (
-                        /* Mechanic Dashboard */
-                        <>
-                          <Route element={<MechanicDashboardLayout />}>
-                            <Route
-                              path="/dashboard"
-                              element={<MechanicDashboard />}
-                            />
-                            <Route
-                              path="/bookings"
-                              element={<BookingsAdmin />}
-                            />
-                            <Route
-                              path="/analytics"
-                              element={<MechanicAnalytics />}
-                            />
-                            <Route path="/services" element={<Outlet />}>
-                              <Route
-                                path="edit/:serviceId"
-                                element={<ServiceOfferings />}
-                              />
-                              <Route
-                                path="add"
-                                element={<CreateServiceOffering />}
-                              />
-                              <Route path="" element={<ServiceOfferings />} />
-                            </Route>
-                            <Route
-                              path="/settings"
-                              element={<MechanicSettings />}
-                            />
-                            <Route
-                              path="/notifications"
-                              element={<NotificationsPage />}
-                            />
-                            <Route path="/support" element={<TicketList />} />
-                            <Route
-                              path="/support/create"
-                              element={<CreateTicket />}
-                            />
-                            <Route
-                              path="/support/tickets/:id"
-                              element={<TicketDetail />}
-                            />
-                            <Route
-                              path="/*"
-                              element={<Navigate to="/dashboard" />}
-                            />
-                          </Route>
-                        {/* Marketplace routes for mechanics */}
+                          <Route
+                            path="/analytics"
+                            element={<AnalyticsDashboard />}
+                          />
+                          <Route
+                            path="/verify-inspection"
+                            element={<VerifyInspectionPage />}
+                          />
+                          <Route
+                            path="/settings"
+                            element={<DealershipSettings />}
+                          />
+                          <Route
+                            path="/notifications"
+                            element={<NotificationsPage />}
+                          />
+                          <Route path="/support" element={<TicketList />} />
+                          <Route
+                            path="/support/create"
+                            element={<CreateTicket />}
+                          />
+                          <Route
+                            path="/support/tickets/:id"
+                            element={<TicketDetail />}
+                          />
+                          <Route
+                            path="/*"
+                            element={<Navigate to="/dashboard" />}
+                          />
+                        </Route>
+                        {/* Marketplace routes for dealers */}
                         <Route element={<Layout />}>
                           <Route path="/buy" element={<BuyListing />} />
                           <Route
@@ -687,61 +593,9 @@ function App() {
                             path="/business-profile"
                             element={<BusinessProfileSetup />}
                           />
-                            <Route
-                              path="/rent/:listingId"
-                              element={<RentDetail />}
-                            />
-                            <Route path="/cart" element={<CartPage />} />
-                            <Route
-                              path="/checkout/pay"
-                              element={<CheckoutPage />}
-                            />
-                            <Route
-                              path="/checkout/docs"
-                              element={<DocumentSigningPage />}
-                            />
-                            <Route
-                              path="/checkout/inspection"
-                              element={<CheckoutWithInspection />}
-                            />
-                            <Route
-                              path="/inspections/:inspectionId"
-                              element={<InspectionDetailPage />}
-                            />
-                            <Route
-                              path="/inspections/slip/:slipReference"
-                              element={<InspectionSlipPage />}
-                            />
-                          </Route>
-                        </>
-                      ) : (
-                        /* General Marketplace */
-                        <Route element={<Layout />}>
-                          <Route path="/rent" element={<RentListing />} />
                           <Route
                             path="/rent/:listingId"
                             element={<RentDetail />}
-                          />
-                          <Route path="/buy" element={<BuyListing />} />
-                          <Route
-                            path="/buy/:listingId"
-                            element={<BuyDetail />}
-                          />
-                          <Route
-                            path="/mechanics"
-                            element={<MechanicListPage />}
-                          />
-                          <Route
-                            path="/mechanics/book/:mechId"
-                            element={<ConfirmMechanicBookingPage />}
-                          />
-                          <Route
-                            path="/mechanics/:mechId"
-                            element={<MechanicDetailPage />}
-                          />
-                          <Route
-                            path="/dealership/:dealerId"
-                            element={<DealerProfile />}
                           />
                           <Route path="/cart" element={<CartPage />} />
                           <Route
@@ -757,18 +611,6 @@ function App() {
                             element={<CheckoutWithInspection />}
                           />
                           <Route
-                            path="/inspection/slip"
-                            element={<InspectionSlipPage />}
-                          />
-                          <Route
-                            path="/inspection/form"
-                            element={<InspectionFormPage />}
-                          />
-                          <Route
-                            path="/inspection/document"
-                            element={<DocumentPreviewPage />}
-                          />
-                          <Route
                             path="/inspections/:inspectionId"
                             element={<InspectionDetailPage />}
                           />
@@ -776,13 +618,38 @@ function App() {
                             path="/inspections/slip/:slipReference"
                             element={<InspectionSlipPage />}
                           />
+                        </Route>
+                      </>
+                    ) : authUser.user_type === "mechanic" ? (
+                      /* Mechanic Dashboard */
+                      <>
+                        <Route element={<MechanicDashboardLayout />}>
                           <Route
-                            path="/search/cars"
-                            element={<CarSearchPage />}
+                            path="/dashboard"
+                            element={<MechanicDashboard />}
                           />
                           <Route
-                            path="/search/mechanics"
-                            element={<MechanicSearchPage />}
+                            path="/bookings"
+                            element={<BookingsAdmin />}
+                          />
+                          <Route
+                            path="/analytics"
+                            element={<MechanicAnalytics />}
+                          />
+                          <Route path="/services" element={<Outlet />}>
+                            <Route
+                              path="edit/:serviceId"
+                              element={<ServiceOfferings />}
+                            />
+                            <Route
+                              path="add"
+                              element={<CreateServiceOffering />}
+                            />
+                            <Route path="" element={<ServiceOfferings />} />
+                          </Route>
+                          <Route
+                            path="/settings"
+                            element={<MechanicSettings />}
                           />
                           <Route
                             path="/notifications"
@@ -797,68 +664,195 @@ function App() {
                             path="/support/tickets/:id"
                             element={<TicketDetail />}
                           />
-                          <Route path="/home" element={<HomePage />} />
-                          <Route path="/*" element={<Navigate to="/home" />} />
+                          <Route
+                            path="/*"
+                            element={<Navigate to="/dashboard" />}
+                          />
                         </Route>
-                      )}
+                      {/* Marketplace routes for mechanics */}
+                      <Route element={<Layout />}>
+                        <Route path="/buy" element={<BuyListing />} />
+                        <Route
+                          path="/buy/:listingId"
+                          element={<BuyDetail />}
+                        />
+                        <Route path="/rent" element={<RentListing />} />
+                        {/* Business Profile Setup - needed for redirects */}
+                        <Route
+                          path="/business-profile"
+                          element={<BusinessProfileSetup />}
+                        />
+                          <Route
+                            path="/rent/:listingId"
+                            element={<RentDetail />}
+                          />
+                          <Route path="/cart" element={<CartPage />} />
+                          <Route
+                            path="/checkout/pay"
+                            element={<CheckoutPage />}
+                          />
+                          <Route
+                            path="/checkout/docs"
+                            element={<DocumentSigningPage />}
+                          />
+                          <Route
+                            path="/checkout/inspection"
+                            element={<CheckoutWithInspection />}
+                          />
+                          <Route
+                            path="/inspections/:inspectionId"
+                            element={<InspectionDetailPage />}
+                          />
+                          <Route
+                            path="/inspections/slip/:slipReference"
+                            element={<InspectionSlipPage />}
+                          />
+                        </Route>
+                      </>
+                    ) : (
+                      /* General Marketplace */
+                      <Route element={<Layout />}>
+                        <Route path="/rent" element={<RentListing />} />
+                        <Route
+                          path="/rent/:listingId"
+                          element={<RentDetail />}
+                        />
+                        <Route path="/buy" element={<BuyListing />} />
+                        <Route
+                          path="/buy/:listingId"
+                          element={<BuyDetail />}
+                        />
+                        <Route
+                          path="/mechanics"
+                          element={<MechanicListPage />}
+                        />
+                        <Route
+                          path="/mechanics/book/:mechId"
+                          element={<ConfirmMechanicBookingPage />}
+                        />
+                        <Route
+                          path="/mechanics/:mechId"
+                          element={<MechanicDetailPage />}
+                        />
+                        <Route
+                          path="/dealership/:dealerId"
+                          element={<DealerProfile />}
+                        />
+                        <Route path="/cart" element={<CartPage />} />
+                        <Route
+                          path="/checkout/pay"
+                          element={<CheckoutPage />}
+                        />
+                        <Route
+                          path="/checkout/docs"
+                          element={<DocumentSigningPage />}
+                        />
+                        <Route
+                          path="/checkout/inspection"
+                          element={<CheckoutWithInspection />}
+                        />
+                        <Route
+                          path="/inspection/slip"
+                          element={<InspectionSlipPage />}
+                        />
+                        <Route
+                          path="/inspection/form"
+                          element={<InspectionFormPage />}
+                        />
+                        <Route
+                          path="/inspection/document"
+                          element={<DocumentPreviewPage />}
+                        />
+                        <Route
+                          path="/inspections/:inspectionId"
+                          element={<InspectionDetailPage />}
+                        />
+                        <Route
+                          path="/inspections/slip/:slipReference"
+                          element={<InspectionSlipPage />}
+                        />
+                        <Route
+                          path="/search/cars"
+                          element={<CarSearchPage />}
+                        />
+                        <Route
+                          path="/search/mechanics"
+                          element={<MechanicSearchPage />}
+                        />
+                        <Route
+                          path="/notifications"
+                          element={<NotificationsPage />}
+                        />
+                        <Route path="/support" element={<TicketList />} />
+                        <Route
+                          path="/support/create"
+                          element={<CreateTicket />}
+                        />
+                        <Route
+                          path="/support/tickets/:id"
+                          element={<TicketDetail />}
+                        />
+                        <Route path="/home" element={<HomePage />} />
+                        <Route path="/*" element={<Navigate to="/home" />} />
+                      </Route>
+                    )}
 
 
 
-                      {/* Chat Routes */}
-                      <Route path="/chat" element={<ChatLayout />} />
-                      <Route path="/chat/:room" element={<ChatRoom />} />
-                    </Fragment>
-                  ) : (
-                    /* Public Routes */
-                    <Route element={<Layout />}>
-                      <Route path="/about" element={<AboutPage />} />
-                      <Route path="/services" element={<ServicesPage />} />
-                      <Route path="/contact" element={<ContactPage />} />
-                      <Route path="/profile" element={<PublicProfilePage />} />
-                      <Route
-                        path="/support"
-                        element={<Navigate to="/login" />}
-                      />
-                      <Route path="/login" element={<LoginView />} />
-                      <Route path="/signup" element={<SignupView />} />
-                      <Route
-                        path="/signup/business"
-                        element={<BusinessSignupView />}
-                      />
-                      <Route
-                        path="/business-profile"
-                        element={<BusinessProfileSetup />}
-                      />
-                      <Route
-                        path="/privacy-policy"
-                        element={<PrivacyPolicyPage />}
-                      />
-                      <Route
-                        path="/terms-of-service"
-                        element={<TermsOfServicePage />}
-                      />
+                    {/* Chat Routes */}
+                    <Route path="/chat" element={<ChatLayout />} />
+                    <Route path="/chat/:room" element={<ChatRoom />} />
+                  </Fragment>
+                ) : (
+                  /* Public Routes */
+                  <Route element={<Layout />}>
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/services" element={<ServicesPage />} />
+                    <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/profile" element={<PublicProfilePage />} />
+                    <Route
+                      path="/support"
+                      element={<Navigate to="/login" />}
+                    />
+                    <Route path="/login" element={<LoginView />} />
+                    <Route path="/signup" element={<SignupView />} />
+                    <Route
+                      path="/signup/business"
+                      element={<BusinessSignupView />}
+                    />
+                    <Route
+                      path="/business-profile"
+                      element={<BusinessProfileSetup />}
+                    />
+                    <Route
+                      path="/privacy-policy"
+                      element={<PrivacyPolicyPage />}
+                    />
+                    <Route
+                      path="/terms-of-service"
+                      element={<TermsOfServicePage />}
+                    />
 
-                      {/* Public marketplace access so guests can view listings */}
-                      <Route path="/rent" element={<RentListing />} />
-                      <Route
-                        path="/rent/:listingId"
-                        element={<RentDetail />}
-                      />
-                      <Route path="/buy" element={<BuyListing />} />
-                      <Route
-                        path="/buy/:listingId"
-                        element={<BuyDetail />}
-                      />
+                    {/* Public marketplace access so guests can view listings */}
+                    <Route path="/rent" element={<RentListing />} />
+                    <Route
+                      path="/rent/:listingId"
+                      element={<RentDetail />}
+                    />
+                    <Route path="/buy" element={<BuyListing />} />
+                    <Route
+                      path="/buy/:listingId"
+                      element={<BuyDetail />}
+                    />
 
-                      <Route path="/*" element={<LandingPage />} />
-                    </Route>
-                  )}
-                </Routes>
-              </Suspense>
-            </Router>
-          </GlobalStore.Provider>
-        </ErrorBoundary>
-      </ChakraProvider>
+                    <Route path="/*" element={<LandingPage />} />
+                  </Route>
+                )}
+            </Routes>
+          </Suspense>
+        </Router>
+      </GlobalStore.Provider>
+    </ErrorBoundary>
   );
 }
 
