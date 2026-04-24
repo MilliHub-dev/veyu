@@ -165,7 +165,7 @@ export const Paginator = ({ onNext, onPrevious, onClick, pagination }) => {
 }
 
 
-export const UnauthenticatedNavbar = ({ props }) => {
+export const UnauthenticatedNavbar = (props = {}) => {
   const [navIsOpen, setNavState] = useState(false);
   const [searchIsOpen, setSearchState] = useState(false);
   const { authUser, onLogout } = useContext(GlobalStore);
@@ -1766,7 +1766,6 @@ export const FormStepper = () => {
     </Box>
   );
 };
-
 
 
 
