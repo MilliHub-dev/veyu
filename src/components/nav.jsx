@@ -1255,6 +1255,7 @@ export const MechanicDashboardSideBar = ({ mechanic, sidebarOpen, setSidebarStat
 export const Sidebar = ({ show, onClose, }) => {
   const [isMobile] = useMediaQuery('(max-width: 768px)');
   const { authUser, logout } = useContext(GlobalStore);
+  const navigate = useNavigate();
   const isLoggedIn = !!authUser;
   return (
     <Drawer className="sidebar" position="fixed" zIndex="20" isOpen={show} onClose={onClose} placement='right'>

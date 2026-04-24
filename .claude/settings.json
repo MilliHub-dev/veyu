@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/ok/Documents/projects/veyu log --oneline -10)",
+      "Bash(git -C /Users/ok/Documents/projects/veyu show 54936f1 --stat)",
+      "Bash(git -C /Users/ok/Documents/projects/veyu diff HEAD~1 HEAD -- src/components/nav.jsx)",
+      "Bash(git -C /Users/ok/Documents/projects/veyu diff HEAD~3 HEAD -- src/components/nav.jsx)"
+    ]
+  }
+}

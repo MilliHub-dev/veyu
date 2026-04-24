@@ -378,7 +378,7 @@ export const LoginView = ({ ...props }) => {
   };
 
   return (
-    <Box bg={bgGradient} minH="100vh" py={8}>
+    <Box bgGradient={bgGradient} minH="100vh" py={8}>
       <Container maxW="7xl" px={{ base: 4, md: 8 }}>
         <MotionBox
           initial="hidden"
