@@ -14,9 +14,7 @@ class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error("ErrorBoundary caught an error:", error, errorInfo);
-    }
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
     this.setState({ errorMessage: error?.message || String(error) });
   }
 
@@ -45,7 +43,7 @@ class ErrorBoundary extends Component {
                 <Text textAlign="center" color="gray.600">
                   We're sorry, but an error occurred. Please try again later or contact support if the issue persists.
                 </Text>
-                {process.env.NODE_ENV !== 'production' && this.state.errorMessage && (
+                {this.state.errorMessage && (
                   <Text mt={3} textAlign="center" fontSize="sm" color="red.500" fontFamily="mono">
                     {this.state.errorMessage}
                   </Text>
