@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base API configuration
-const API_BASE_URL = import.meta.env.DEV ? '/api' : 'https://dev.veyu.cc/api/v1';
+const API_BASE_URL = import.meta.env.DEV ? '/api' : 'https://dev.veyu.autos/api/v1';
 
 // ─── Custom error class (must be declared before any function that uses it) ───
 class ApiError extends Error {

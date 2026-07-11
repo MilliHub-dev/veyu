@@ -77,7 +77,7 @@ class ChatService {
 
   // WebSocket connection helper
   getWebSocketUrl(token) {
-    return `wss://dev.veyu.cc/ws/chat/?token=${token}`;
+    return `wss://dev.veyu.autos/ws/chat/?token=${token}`;
   }
 }
 

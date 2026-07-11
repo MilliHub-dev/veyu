@@ -11,7 +11,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'https://dev.veyu.cc',
+        target: 'https://dev.veyu.autos',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, '/api/v1'),
