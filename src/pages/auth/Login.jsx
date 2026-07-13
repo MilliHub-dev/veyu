@@ -107,7 +107,7 @@ export const LoginView = ({ ...props }) => {
     e.preventDefault();
     if (isLoading) return;
     setIsLoading(true);
-    
+
     try {
       const result = await authService.login(email, password);
       
@@ -613,19 +613,19 @@ export const LoginView = ({ ...props }) => {
 
                       {/* Login Button */}
                       <Button
-                        type="submit"
-                        size="lg"
-                        colorScheme="blue"
-                        w="full"
-                        rightIcon={<ArrowRight size={20} />}
-                        isLoading={isLoading}
-                        loadingText="Signing in..."
-                        _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
-                        transition="all 0.2s"
-                        py={6}
-                      >
-                        Sign In
-                      </Button>
+                            type="submit"
+                            size="lg"
+                            colorScheme="blue"
+                            w="full"
+                            rightIcon={<ArrowRight size={20} />}
+                            isLoading={isLoading}
+                            loadingText="Signing in..."
+                            _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
+                            transition="all 0.2s"
+                            py={6}
+                          >
+                            Sign In
+                          </Button>
 
                       {/* Divider */}
                       <HStack w="full">
