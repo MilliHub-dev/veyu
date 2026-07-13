@@ -60,6 +60,8 @@ const MechanicDetailPage = lazy(
 );
 const LoginView = lazy(() => import("./pages/auth/Login"));
 const SignupView = lazy(() => import("./pages/auth/Signup"));
+const ForgotPasswordView = lazy(() => import("./pages/auth/ForgotPassword"));
+const ResetPasswordView = lazy(() => import("./pages/auth/ResetPassword"));
 const BusinessSignupView = lazy(() => import("./pages/auth/BusinessProfile"));
 const BusinessProfileSetup = lazy(() => import("./pages/auth/BusinessProfile"));
 const ChatLayout = lazy(() => import("./pages/marketplace/chat/Layout"));
@@ -816,6 +818,8 @@ function App() {
                     />
                     <Route path="/login" element={<LoginView />} />
                     <Route path="/signup" element={<SignupView />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordView />} />
+                    <Route path="/reset-password/:uidb64/:token" element={<ResetPasswordView />} />
                     <Route
                       path="/signup/business"
                       element={<BusinessSignupView />}
