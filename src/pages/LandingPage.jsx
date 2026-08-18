@@ -1,4 +1,4 @@
-import { useRef, useContext, Fragment, useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -21,20 +21,13 @@ import {
   Tabs,
   TabList,
   Tab,
-  ButtonGroup,
-  Stack,
   Input,
   Avatar,
-  Select,
-  InputRightElement,
   useToast,
-  Badge,
   useColorModeValue,
-  Divider,
-  Center,
-  Grid,
-  GridItem
+  Divider
 } from '@chakra-ui/react';
+import { keyframes } from '@emotion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Globe,
@@ -45,73 +38,140 @@ import {
   Car,
   DollarSign,
   Key,
-  PenToolIcon as Tools,
   ArrowRight,
   CheckCircle,
   Users,
   TrendingUp,
   Award,
   Zap,
-  Heart,
-  Play,
-  ChevronRight,
+  Quote,
   MapPin,
   Phone,
-  Mail,
-  RefreshCw as RefreshIcon
+  Mail
 } from 'lucide-react';
-import Layout from './Layout';
 import { motion } from 'framer-motion';
-import { FaCirclePlus, FaCircleMinus, FaPlus } from 'react-icons/fa6';
-import { RxArrowRight } from 'react-icons/rx';
+import { FaCircleMinus, FaCirclePlus, FaPlus } from 'react-icons/fa6';
 import faqs from '../data/faqs.json';
 import '../assets/Home.css';
-import ScrollAnimation from 'react-animate-on-scroll';
-import { DashboardSearchBar, ListingItemCard } from '../components';
-import { MdHeight } from 'react-icons/md';
-import { GlobalStore } from '../contexts/GlobalStore';
+import { ListingItemCard } from '../components';
 import { objectifyJSON } from '../utils';
 import listingsService from '../services/listingsService';
 
-const MotionBox = motion(Box);
-const MotionFlex = motion(Flex);
+/* ────────────────────────────────────────────────────────────────────────────
+   Shared layout tokens — one rhythm for every section on the page.
+   ──────────────────────────────────────────────────────────────────────────── */
+const SECTION_PY = { base: 16, md: 24 };
+const SHELL_PX = { base: 5, md: 8 };
 
-const featureList = [
-  {
-    label: 'Buy',
-    background: { xAxis: '90%', yAxis: '10%' },
-    image: '/assets/images/sell_car.jpg',
-    cta: { label: 'Find your car', link: '' },
-    content: 'Get more value for your car faster, easier and more securely',
-    card: {
-      image: { mobile: '/assets/images/buy-widget-mobile.svg', desktop: '/assets/images/buy-widget.svg' },
-      posX: '10%', posY: '27.5%'
-    }
-  },
-  {
-    label: 'Sell',
-    background: { xAxis: '50%', yAxis: '10%' },
-    image: '/assets/images/list_car.jpg',
-    cta: { label: 'List your car', link: '' },
-    content: 'List your car for sale and get it sold in no time. Veyu connects you to verified dealers and certified mechanics across the Globe.',
-    card: {
-      image: { mobile: '/assets/images/sale-widget-mobile.svg', desktop: '/assets/images/sell-widget.svg' },
-      posX: '50%', posY: '25px'
-    }
-  }
-];
+const marqueeScroll = keyframes`
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+`;
 
-export const HomePage = ({ props }) => {
-  const heroRef = useRef();
-  const [isMobile] = useMediaQuery('(max-width: 760px)');
+const shimmer = keyframes`
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+`;
 
+const displayHeading = {
+  fontWeight: 800,
+  letterSpacing: '-0.03em',
+  lineHeight: 1.05,
+  // Spans nested in a heading don't inherit its line-height — they pick up the
+  // global 1.5, which inflates the line box around them.
+  sx: { '& span': { lineHeight: 'inherit' } }
+};
+
+function Eyebrow({ colorScheme = 'blue', dark = false, children }) {
+  return (
+    <Box
+      display="inline-flex"
+      alignItems="center"
+      px={3.5}
+      py={1.5}
+      borderRadius="full"
+      bg={dark ? 'whiteAlpha.200' : `${colorScheme}.50`}
+      border="1px solid"
+      borderColor={dark ? 'whiteAlpha.300' : `${colorScheme}.100`}
+      backdropFilter={dark ? 'blur(10px)' : undefined}
+    >
+      <Text
+        fontSize="xs"
+        fontWeight="700"
+        textTransform="uppercase"
+        letterSpacing="0.12em"
+        color={dark ? 'whiteAlpha.900' : `${colorScheme}.700`}
+        whiteSpace="nowrap"
+      >
+        {children}
+      </Text>
+    </Box>
+  );
+}
+
+function SectionHeader({
+  eyebrow,
+  colorScheme = 'blue',
+  title,
+  subtitle,
+  align = 'center',
+  dark = false,
+  action
+}) {
+  const centered = align === 'center';
+
+  return (
+    <Flex
+      w="full"
+      direction={{ base: 'column', md: action ? 'row' : 'column' }}
+      align={{ base: centered ? 'center' : 'flex-start', md: action ? 'flex-end' : centered ? 'center' : 'flex-start' }}
+      justify="space-between"
+      gap={6}
+      mb={{ base: 10, md: 14 }}
+    >
+      <VStack
+        spacing={4}
+        align={centered && !action ? 'center' : 'flex-start'}
+        textAlign={centered && !action ? 'center' : 'left'}
+        maxW={centered && !action ? '3xl' : '2xl'}
+        mx={centered && !action ? 'auto' : undefined}
+      >
+        {eyebrow && (
+          <Eyebrow colorScheme={colorScheme} dark={dark}>
+            {eyebrow}
+          </Eyebrow>
+        )}
+
+        <Heading
+          as="h2"
+          fontSize={{ base: '2rem', sm: '2.5rem', md: '3.25rem' }}
+          color={dark ? 'white' : 'gray.900'}
+          {...displayHeading}
+        >
+          {title}
+        </Heading>
+
+        {subtitle && (
+          <Text
+            fontSize={{ base: 'md', md: 'lg' }}
+            color={dark ? 'whiteAlpha.800' : 'gray.600'}
+            lineHeight="tall"
+          >
+            {subtitle}
+          </Text>
+        )}
+      </VStack>
+
+      {action}
+    </Flex>
+  );
+}
+
+export const HomePage = () => {
   const bgGradient = useColorModeValue(
     'linear(to-br, blue.50, purple.50, pink.50)',
     'linear(to-br, gray.900, blue.900, purple.900)'
   );
-
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const textColor = useColorModeValue('gray.600', 'gray.300');
 
   return (
     <Box bg={bgGradient}>
@@ -130,33 +190,40 @@ export const HomePage = ({ props }) => {
   );
 };
 
-export default HomePage; function
-  SearchHero() {
-  const [isMobile] = useMediaQuery('(max-width: 760px)');
+export default HomePage;
+
+/* ──────────────────────────────── HERO ─────────────────────────────────── */
+
+function SearchHero() {
   const navigate = useNavigate();
-  const [type, setType] = useState('vehicles');
+  const [type, setType] = useState('cars');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [location, setLocation] = useState('');
-  const [places, setPlaces] = useState(null);
   const [showMakeSug, setShowMakeSug] = useState(false);
-  const [showModelSug, setShowModelSug] = useState(false);
 
   const makesByType = {
-    vehicles: ['Toyota', 'Honda', 'BMW', 'Mercedes', 'Lexus', 'Kia', 'Ford', 'Audi'],
+    cars: ['Toyota', 'Honda', 'BMW', 'Mercedes', 'Lexus', 'Kia', 'Ford', 'Audi'],
+    aircraft: ['Cessna', 'Bombardier', 'Airbus', 'Boeing'],
     bikes: ['Yamaha', 'Honda', 'Kawasaki', 'Ducati', 'Suzuki'],
     boats: ['Bayliner', 'Sea Ray', 'Yamaha Boats', 'Tracker'],
+    mechanics: []
   };
 
-  const modelsByMake = {
-    Toyota: ['Camry', 'Corolla', 'RAV4', 'Highlander'],
-    Honda: ['Accord', 'Civic', 'CR-V'],
-    BMW: ['3 Series', '5 Series', 'X3', 'X5'],
-    Yamaha: ['R1', 'R6', 'MT-07'],
+  const placeholderByType = {
+    cars: 'Make (e.g., Toyota)',
+    aircraft: 'Manufacturer (e.g., Cessna)',
+    bikes: 'Brand (e.g., Yamaha)',
+    boats: 'Brand (e.g., Bayliner)',
+    mechanics: 'Service or workshop name'
   };
+
+  const suggestions = (makesByType[type] || []).filter(
+    (m) => !make || m.toLowerCase().includes(make.toLowerCase())
+  );
 
   useEffect(() => {
-    setShowModelSug(false);
+    setModel('');
   }, [type, make]);
 
   function onSearch() {
@@ -181,14 +248,21 @@ export default HomePage; function
     });
   }
 
+  const trustPoints = [
+    { icon: Shield, label: 'Verified dealers' },
+    { icon: DollarSign, label: 'Transparent pricing' },
+    { icon: Clock, label: 'Fast checkout' },
+    { icon: Award, label: 'Trusted by 50,000+' }
+  ];
+
   return (
     <Box
       as={motion.section}
       id="welcome"
       position="relative"
       overflow="hidden"
-      py={{ base: 20, md: 32 }}
-      minH="100vh"
+      py={{ base: 24, md: 32 }}
+      minH={{ base: 'auto', md: '100vh' }}
       display="flex"
       alignItems="center"
     >
@@ -198,142 +272,256 @@ export default HomePage; function
         bgImage={`url('/assets/veyu/land1.jpg')`}
         bgSize="cover"
         bgPos="center"
-        filter="blur(2px)"
-        transform="scale(1.02)"
+        transform="scale(1.04)"
+      />
+      {/* Layered scrim: keeps the photo readable and anchors the copy to the left */}
+      <Box
+        position="absolute"
+        inset={0}
+        bgGradient="linear(to-r, blackAlpha.900, blackAlpha.700 45%, blackAlpha.500)"
       />
       <Box
         position="absolute"
         inset={0}
-        bgGradient="linear(to-br, blackAlpha.700, blackAlpha.500, blackAlpha.800)"
+        bgGradient="linear(to-t, blackAlpha.800, transparent 35%)"
       />
 
-      <Container position="relative" zIndex={1} maxW="7xl" px={{ base: 4, md: 8 }}>
-        <VStack align="start" spacing={8} color="white">
-          <Badge
-            colorScheme="blue"
-            px={4}
-            py={2}
-            borderRadius="full"
-            fontSize="sm"
-            mb={6}
-            bg="whiteAlpha.200"
-            color="white"
-            backdropFilter="blur(10px)"
-          >
+      <Container position="relative" zIndex={1} maxW="7xl" px={SHELL_PX}>
+        <VStack align="start" spacing={{ base: 7, md: 9 }} color="white">
+          <Eyebrow colorScheme="blue" dark>
             🚀 Africa's #1 Vehicle Marketplace
-          </Badge>
+          </Eyebrow>
 
           <Heading
-            size={{ base: '2xl', md: '4xl' }}
-            lineHeight={1.1}
-            mb={6}
-            bgGradient="linear(to-r, white, blue.200)"
-            bgClip="text"
+            as="h1"
+            fontSize={{ base: '2.75rem', sm: '3.5rem', md: '5rem' }}
+            fontWeight="800"
+            letterSpacing="-0.04em"
+            lineHeight="0.98"
+            maxW="5xl"
+            sx={{ '& span': { lineHeight: 'inherit' } }}
           >
-            Find Your Next Vehicle
-            <br />
-            <Text as="span" color="blue.300">or Service</Text>
+            {/* Explicit block spans so each line is its own box and the gradient
+                clip applies per line. */}
+            <Box
+              as="span"
+              display="block"
+              bgGradient="linear(to-r, white, blue.200)"
+              bgClip="text"
+            >
+              Find Your Next Vehicle
+            </Box>
+            <Box as="span" display="block" color="blue.300">
+              or Service
+            </Box>
           </Heading>
 
           <Text
-            maxW={{ base: '100%', md: '70%' }}
-            fontSize={{ base: 'lg', md: 'xl' }}
+            maxW={{ base: '100%', md: '60%' }}
+            fontSize={{ base: 'md', md: 'xl' }}
             lineHeight="tall"
-            color="whiteAlpha.900"
-            mb={8}
+            color="whiteAlpha.800"
           >
             Buy, rent, or service cars, aircraft, bikes, boats, and more.
             Compare prices, explore deals, and book with verified partners across Africa.
           </Text>
 
+          {/* Search panel */}
           <Box
             bg="whiteAlpha.100"
-            backdropFilter="blur(20px)"
+            backdropFilter="blur(24px)"
             borderRadius="2xl"
-            p={{ base: 4, md: 6 }}
+            p={{ base: 3, md: 4 }}
             w="100%"
-            maxW="1200px"
+            maxW="1000px"
             border="1px solid"
             borderColor="whiteAlpha.200"
-            shadow="2xl"
+            shadow="0 24px 60px -20px rgba(0,0,0,0.6)"
           >
             <Tabs
-              variant="soft-rounded"
-              colorScheme="blue"
-              onChange={(i) => setType(['cars', 'bikes', 'boats', 'mechanics'][i])}
-              mb={4}
+              variant="unstyled"
+              onChange={(i) =>
+                setType(['cars', 'aircraft', 'bikes', 'boats', 'mechanics'][i])
+              }
+              mb={3}
             >
-              <TabList flexWrap="wrap" bg="whiteAlpha.100" p={2} borderRadius="xl">
-                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}> cars</Tab>
-                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}> Aircraft</Tab>
-                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}> Bikes</Tab>
-                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}> Boats</Tab>
-                <Tab color="white" _selected={{ bg: 'blue.500', color: 'white' }}> Mechanics</Tab>
+              <TabList
+                flexWrap="wrap"
+                gap={1}
+                bg="blackAlpha.400"
+                p={1}
+                borderRadius="full"
+                w="fit-content"
+                maxW="full"
+              >
+                {['cars', 'Aircraft', 'Bikes', 'Boats', 'Mechanics'].map((label) => (
+                  <Tab
+                    key={label}
+                    px={{ base: 3.5, md: 5 }}
+                    py={2}
+                    fontSize="sm"
+                    fontWeight="600"
+                    borderRadius="full"
+                    color="whiteAlpha.700"
+                    textTransform="capitalize"
+                    transition="all 0.2s"
+                    _hover={{ color: 'white' }}
+                    _selected={{ bg: 'blue.500', color: 'white', shadow: 'md' }}
+                  >
+                    {label}
+                  </Tab>
+                ))}
               </TabList>
             </Tabs>
 
-            <Flex direction={{ base: 'column', md: 'row' }} gap={3}>
-              <InputGroup position="relative" flex={1}>
-                <InputLeftElement pointerEvents="none">
-                  <Icon as={Search} color="gray.400" />
-                </InputLeftElement>
-                <Input
-                  value={make}
-                  onChange={(e) => { setMake(e.target.value); setShowMakeSug(true); }}
-                  onFocus={() => setShowMakeSug(true)}
-                  onBlur={() => setTimeout(() => setShowMakeSug(false), 150)}
-                  placeholder={type === 'bikes' ? 'Brand (e.g., Yamaha)' : type === 'boats' ? 'Brand (e.g., Bayliner)' : 'Make (e.g., Toyota)'}
-                  bg="whiteAlpha.200"
-                  border="1px solid"
-                  borderColor="whiteAlpha.300"
-                  color="white"
-                  _placeholder={{ color: 'whiteAlpha.700' }}
-                  _focus={{ borderColor: 'blue.400', bg: 'whiteAlpha.300' }}
-                />
-              </InputGroup>
+            <Flex direction={{ base: 'column', md: 'row' }} gap={2.5}>
+              <Box position="relative" flex={1}>
+                <InputGroup size="lg">
+                  <InputLeftElement pointerEvents="none" h="full">
+                    <Icon as={Search} boxSize={5} color="whiteAlpha.600" />
+                  </InputLeftElement>
+                  <Input
+                    value={make}
+                    onChange={(e) => {
+                      setMake(e.target.value);
+                      setShowMakeSug(true);
+                    }}
+                    onFocus={() => setShowMakeSug(true)}
+                    onBlur={() => setTimeout(() => setShowMakeSug(false), 150)}
+                    onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+                    placeholder={placeholderByType[type]}
+                    bg="whiteAlpha.200"
+                    border="1px solid"
+                    borderColor="whiteAlpha.300"
+                    borderRadius="xl"
+                    color="white"
+                    _placeholder={{ color: 'whiteAlpha.600' }}
+                    _hover={{ borderColor: 'whiteAlpha.400' }}
+                    _focus={{
+                      borderColor: 'blue.400',
+                      bg: 'whiteAlpha.300',
+                      boxShadow: '0 0 0 1px var(--chakra-colors-blue-400)'
+                    }}
+                  />
+                </InputGroup>
+
+                {showMakeSug && suggestions.length > 0 && (
+                  <VStack
+                    position="absolute"
+                    top="calc(100% + 8px)"
+                    left={0}
+                    right={0}
+                    zIndex={3}
+                    align="stretch"
+                    spacing={0}
+                    bg="white"
+                    borderRadius="xl"
+                    overflow="hidden"
+                    shadow="2xl"
+                    maxH="240px"
+                    overflowY="auto"
+                  >
+                    {suggestions.map((suggestion) => (
+                      <Box
+                        key={suggestion}
+                        as="button"
+                        type="button"
+                        textAlign="left"
+                        px={4}
+                        py={2.5}
+                        fontSize="sm"
+                        fontWeight="500"
+                        color="gray.700"
+                        _hover={{ bg: 'blue.50', color: 'blue.700' }}
+                        transition="all 0.15s"
+                        onMouseDown={() => {
+                          setMake(suggestion);
+                          setShowMakeSug(false);
+                        }}
+                      >
+                        {suggestion}
+                      </Box>
+                    ))}
+                  </VStack>
+                )}
+              </Box>
 
               <Button
                 onClick={onSearch}
                 colorScheme="blue"
                 size="lg"
-                px={8}
-                rightIcon={<ArrowRight size={20} />}
+                px={10}
+                borderRadius="xl"
+                rightIcon={<ArrowRight size={18} />}
                 _hover={{ transform: 'translateY(-2px)', shadow: 'xl' }}
+                _active={{ transform: 'translateY(0)' }}
                 transition="all 0.2s"
-                minW="140px"
+                minW={{ base: 'full', md: '160px' }}
               >
                 Search
               </Button>
             </Flex>
 
-            <HStack spacing={4} mt={4} color="whiteAlpha.800" flexWrap="wrap" fontSize="sm">
-              <Text>🔥 Popular: Toyota, Honda, BMW • Motorbikes • Boats</Text>
-            </HStack>
+            <Flex
+              mt={3.5}
+              align="center"
+              justify="space-between"
+              gap={3}
+              flexWrap="wrap"
+            >
+              <Text fontSize="sm" color="whiteAlpha.700">
+                🔥 Popular: Toyota, Honda, BMW • Motorbikes • Boats
+              </Text>
+              <Button
+                onClick={useMyLocation}
+                variant="link"
+                size="sm"
+                color="blue.200"
+                fontWeight="600"
+                leftIcon={<MapPin size={14} />}
+                _hover={{ color: 'white' }}
+              >
+                Use my location
+              </Button>
+            </Flex>
           </Box>
 
-          <HStack spacing={8} pt={4} color="whiteAlpha.900" flexWrap="wrap">
-            <HStack spacing={2}>
-              <Icon as={Shield} size={5} />
-              <Text fontWeight="medium">Verified dealers</Text>
-            </HStack>
-            <HStack spacing={2}>
-              <Icon as={DollarSign} size={5} />
-              <Text fontWeight="medium">Transparent pricing</Text>
-            </HStack>
-            <HStack spacing={2}>
-              <Icon as={Clock} size={5} />
-              <Text fontWeight="medium">Fast checkout</Text>
-            </HStack>
-            <HStack spacing={2}>
-              <Icon as={Award} size={5} />
-              <Text fontWeight="medium">Trusted by 50,000+</Text>
-            </HStack>
-          </HStack>
+          {/* Trust strip — plain Flex rather than Stack's `divider` prop, which
+              overwrites the divider's own margins with the stack spacing (0). */}
+          <Flex
+            pt={2}
+            align="center"
+            flexWrap="wrap"
+            columnGap={{ base: 6, md: 0 }}
+            rowGap={2}
+          >
+            {trustPoints.map(({ icon, label }, i) => (
+              <Fragment key={label}>
+                {i > 0 && (
+                  <Box
+                    w="1px"
+                    h="14px"
+                    bg="whiteAlpha.400"
+                    mx={5}
+                    display={{ base: 'none', md: 'block' }}
+                  />
+                )}
+                <HStack spacing={2.5} py={1} color="whiteAlpha.900">
+                  <Icon as={icon} boxSize={4} color="blue.300" />
+                  <Text fontSize="sm" fontWeight="600">
+                    {label}
+                  </Text>
+                </HStack>
+              </Fragment>
+            ))}
+          </Flex>
         </VStack>
       </Container>
     </Box>
   );
 }
+
+/* ──────────────────────────────── STATS ────────────────────────────────── */
 
 function StatsSection() {
   const stats = [
@@ -344,33 +532,58 @@ function StatsSection() {
   ];
 
   return (
-    <Box py={16} bg="white">
-      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
-        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={8}>
-          {stats.map((stat, i) => (
+    <Box py={{ base: 12, md: 16 }} bg="white">
+      <Container maxW="7xl" px={SHELL_PX}>
+        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={{ base: 4, md: 6 }}>
+          {stats.map((stat) => (
             <VStack
-              key={i}
-              spacing={3}
-              textAlign="center"
-              p={6}
-              borderRadius="xl"
+              key={stat.label}
+              spacing={4}
+              align="flex-start"
+              p={{ base: 5, md: 7 }}
+              borderRadius="2xl"
               bg="gray.50"
-              _hover={{ bg: `${stat.color}.50`, shadow: 'md' }}
-              transition="all 0.3s"
+              border="1px solid"
+              borderColor="gray.100"
+              position="relative"
+              overflow="hidden"
+              _hover={{
+                borderColor: `${stat.color}.200`,
+                bg: `${stat.color}.50`,
+                transform: 'translateY(-3px)',
+                shadow: 'lg'
+              }}
+              transition="all 0.3s ease"
             >
-              <Box
-                p={3}
-                borderRadius="full"
+              <Flex
+                boxSize={11}
+                borderRadius="xl"
                 bg={`${stat.color}.100`}
+                align="center"
+                justify="center"
               >
-                <Icon as={stat.icon} size={8} color={`${stat.color}.600`} />
+                <Icon as={stat.icon} boxSize={5} color={`${stat.color}.600`} />
+              </Flex>
+
+              <Box>
+                <Text
+                  fontSize={{ base: '2rem', md: '2.5rem' }}
+                  color="gray.900"
+                  {...displayHeading}
+                >
+                  {stat.value}
+                </Text>
+                <Text
+                  mt={1}
+                  fontSize="sm"
+                  color="gray.500"
+                  fontWeight="600"
+                  textTransform="uppercase"
+                  letterSpacing="0.08em"
+                >
+                  {stat.label}
+                </Text>
               </Box>
-              <Text fontSize="3xl" fontWeight="bold" color={`${stat.color}.600`}>
-                {stat.value}
-              </Text>
-              <Text fontSize="sm" color="gray.600" fontWeight="medium">
-                {stat.label}
-              </Text>
             </VStack>
           ))}
         </SimpleGrid>
@@ -378,6 +591,8 @@ function StatsSection() {
     </Box>
   );
 }
+
+/* ───────────────────────────── FEATURED DEALS ──────────────────────────── */
 
 function FeaturedDeals() {
   const [listings, setListings] = useState([]);
@@ -391,16 +606,16 @@ function FeaturedDeals() {
       // If /listings/ endpoint fails or returns empty, we might try a fallback
       // but let's assume listingsService handles it.
       let items = [];
-      
+
       try {
         const response = await listingsService.getAllListings({
           limit: 8,
           is_active: true,
-          ordering: "-created_at",
+          ordering: '-created_at'
         });
 
         const raw = objectifyJSON(response);
-        
+
         if (Array.isArray(raw?.data?.results)) {
           items = raw.data.results;
         } else if (Array.isArray(raw?.results)) {
@@ -415,9 +630,9 @@ function FeaturedDeals() {
         // Fallback to buy listings if main endpoint fails
         const buyRes = await listingsService.getBuyListings({
           limit: 8,
-          ordering: "-created_at"
+          ordering: '-created_at'
         });
-        
+
         if (buyRes && buyRes.results) {
           items = buyRes.results;
         }
@@ -429,7 +644,7 @@ function FeaturedDeals() {
         setListings([]);
       }
     } catch (error) {
-      console.error("Error fetching listings:", error);
+      console.error('Error fetching listings:', error);
       setListings([]);
     } finally {
       setLoading(false);
@@ -441,56 +656,103 @@ function FeaturedDeals() {
   }, []);
 
   return (
-    <Box py={16} bg="gray.50">
-      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
-        <VStack spacing={8} mb={12} textAlign="center">
-          <Badge colorScheme="blue" px={4} py={2} borderRadius="full" fontSize="sm" mb={4}>
-            🚗 Latest Listings
-          </Badge>
-          <Heading size="xl" color="gray.800" mb={4}>
-            Recently Added Vehicles
-          </Heading>
-          <Text fontSize="lg" color="gray.600" maxW="2xl">
-            Browse through our latest vehicle listings from trusted sellers.
-          </Text>
-        </VStack>
+    <Box py={SECTION_PY} bg="gray.50">
+      <Container maxW="7xl" px={SHELL_PX}>
+        <SectionHeader
+          eyebrow="🚗 Latest Listings"
+          colorScheme="blue"
+          title="Recently Added Vehicles"
+          subtitle="Browse through our latest vehicle listings from trusted sellers."
+          align="left"
+          action={
+            <Button
+              as={Link}
+              to="/buy"
+              variant="outline"
+              colorScheme="blue"
+              borderRadius="full"
+              px={6}
+              rightIcon={<ArrowRight size={16} />}
+              _hover={{ bg: 'blue.50', transform: 'translateY(-2px)' }}
+              transition="all 0.2s"
+              flexShrink={0}
+            >
+              Browse All Vehicles
+            </Button>
+          }
+        />
 
         {loading ? (
-          <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={6}>
             {[1, 2, 3, 4].map((i) => (
-              <Box key={i} bg="white" borderRadius="2xl" overflow="hidden" shadow="lg" h="400px">
-                <Box bg="gray.200" h="240px" />
-                <Box p={4}>
-                  <Box bg="gray.200" h="20px" mb={3} borderRadius="md" />
-                  <Box bg="gray.200" h="16px" mb={2} borderRadius="md" w="60%" />
-                  <Box bg="gray.200" h="16px" borderRadius="md" w="40%" />
+              <Box
+                key={i}
+                bg="white"
+                borderRadius="2xl"
+                overflow="hidden"
+                border="1px solid"
+                borderColor="gray.100"
+                h="400px"
+                sx={{
+                  '& .skeleton': {
+                    background:
+                      'linear-gradient(90deg, var(--chakra-colors-gray-100) 25%, var(--chakra-colors-gray-200) 50%, var(--chakra-colors-gray-100) 75%)',
+                    backgroundSize: '200% 100%',
+                    animation: `${shimmer} 1.6s linear infinite`
+                  },
+                  '@media (prefers-reduced-motion: reduce)': {
+                    '& .skeleton': { animation: 'none' }
+                  }
+                }}
+              >
+                <Box className="skeleton" h="240px" />
+                <Box p={5}>
+                  <Box className="skeleton" h="20px" mb={3} borderRadius="md" />
+                  <Box className="skeleton" h="16px" mb={2} borderRadius="md" w="60%" />
+                  <Box className="skeleton" h="16px" borderRadius="md" w="40%" />
                 </Box>
               </Box>
             ))}
           </SimpleGrid>
         ) : listings.length > 0 ? (
-          <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={8}>
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing={6}>
             {listings.map((listing) => (
               <ListingItemCard key={listing.uuid} listing={listing} requireAuth={true} />
             ))}
           </SimpleGrid>
         ) : (
-          <VStack spacing={6} textAlign="center" py={12}>
-            <Icon as={Car} size={16} color="gray.400" />
-            <VStack spacing={2}>
-              <Text fontSize="xl" fontWeight="semibold" color="gray.600">
+          <VStack
+            spacing={5}
+            textAlign="center"
+            py={16}
+            bg="white"
+            borderRadius="2xl"
+            border="1px dashed"
+            borderColor="gray.200"
+          >
+            <Flex
+              boxSize={16}
+              borderRadius="2xl"
+              bg="gray.100"
+              align="center"
+              justify="center"
+            >
+              <Icon as={Car} boxSize={7} color="gray.400" />
+            </Flex>
+            <VStack spacing={1}>
+              <Text fontSize="xl" fontWeight="700" color="gray.700">
                 No listings available at the moment
               </Text>
-              <Text color="gray.500">
-                Check back later for new listings
-              </Text>
+              <Text color="gray.500">Check back later for new listings</Text>
             </VStack>
             <Button
               as={Link}
               to="/buy"
               colorScheme="blue"
               size="lg"
-              rightIcon={<ArrowRight size={20} />}
+              borderRadius="full"
+              px={8}
+              rightIcon={<ArrowRight size={18} />}
               _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
               transition="all 0.2s"
             >
@@ -502,6 +764,8 @@ function FeaturedDeals() {
     </Box>
   );
 }
+
+/* ──────────────────────────── HOW IT WORKS ─────────────────────────────── */
 
 function HowItWorks() {
   const steps = [
@@ -528,109 +792,110 @@ function HowItWorks() {
       title: 'Drive & Enjoy',
       text: 'Enjoy your purchase or service with our guarantee and 24/7 customer support.',
       color: 'orange'
-    },
+    }
   ];
 
   return (
-    <Box py={20} bg="white">
-      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
-        <VStack spacing={12} textAlign="center">
-          <Badge colorScheme="purple" px={4} py={2} borderRadius="full" fontSize="sm" mb={4}>
-            ⚡ Simple Process
-          </Badge>
-          <Heading size="xl" color="gray.800" mb={4}>
-            How Veyu Works
-          </Heading>
-          <Text fontSize="lg" color="gray.600" maxW="2xl">
-            Get started in minutes with our streamlined process designed for your convenience.
-          </Text>
+    <Box py={SECTION_PY} bg="white">
+      <Container maxW="7xl" px={SHELL_PX}>
+        <SectionHeader
+          eyebrow="⚡ Simple Process"
+          colorScheme="purple"
+          title="How Veyu Works"
+          subtitle="Get started in minutes with our streamlined process designed for your convenience."
+        />
 
-          <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={8} w="full">
+        <Box position="relative">
+          {/* Connector rail behind the steps */}
+          <Box
+            position="absolute"
+            top="60px"
+            left="12%"
+            right="12%"
+            h="1px"
+            borderTop="2px dashed"
+            borderColor="gray.200"
+            display={{ base: 'none', md: 'block' }}
+          />
+
+          <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={6} w="full">
             {steps.map((step, i) => (
               <VStack
-                key={i}
-                spacing={6}
-                p={8}
-                bg="gray.50"
+                key={step.title}
+                spacing={5}
+                p={7}
+                bg="white"
                 borderRadius="2xl"
+                border="1px solid"
+                borderColor="gray.200"
                 position="relative"
+                align="flex-start"
                 _hover={{
-                  bg: `${step.color}.50`,
+                  borderColor: `${step.color}.300`,
                   shadow: 'xl',
                   transform: 'translateY(-4px)'
                 }}
-                transition="all 0.3s"
+                transition="all 0.3s ease"
                 h="full"
               >
-                <Badge
+                <Text
                   position="absolute"
-                  top={4}
-                  right={4}
-                  colorScheme={step.color}
-                  borderRadius="full"
-                  w={8}
-                  h={8}
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  fontSize="sm"
-                  fontWeight="bold"
+                  top={5}
+                  right={6}
+                  fontSize="3xl"
+                  fontWeight="800"
+                  color={`${step.color}.100`}
+                  lineHeight={1}
                 >
-                  {i + 1}
-                </Badge>
+                  {String(i + 1).padStart(2, '0')}
+                </Text>
 
-                <Box
-                  p={4}
-                  borderRadius="full"
-                  bg={`${step.color}.100`}
-                  border="4px solid"
-                  borderColor={`${step.color}.200`}
+                <Flex
+                  boxSize={14}
+                  borderRadius="2xl"
+                  bg={`${step.color}.50`}
+                  border="1px solid"
+                  borderColor={`${step.color}.100`}
+                  align="center"
+                  justify="center"
                 >
-                  <Icon as={step.icon} size={8} color={`${step.color}.600`} />
-                </Box>
+                  <Icon as={step.icon} boxSize={6} color={`${step.color}.600`} />
+                </Flex>
 
-                <VStack spacing={3} textAlign="center">
-                  <Text fontWeight="bold" fontSize="lg" color="gray.800">
+                <VStack spacing={2} align="flex-start">
+                  <Text fontWeight="700" fontSize="lg" color="gray.900" letterSpacing="-0.01em">
                     {step.title}
                   </Text>
                   <Text color="gray.600" fontSize="sm" lineHeight="tall">
                     {step.text}
                   </Text>
                 </VStack>
-
-                {i < steps.length - 1 && (
-                  <Box
-                    position="absolute"
-                    top="50%"
-                    right="-20px"
-                    transform="translateY(-50%)"
-                    display={{ base: 'none', md: 'block' }}
-                    zIndex={1}
-                  >
-                    <Icon as={ChevronRight} size={6} color="gray.300" />
-                  </Box>
-                )}
               </VStack>
             ))}
           </SimpleGrid>
+        </Box>
 
+        <Flex justify="center" mt={12}>
           <Button
             as={Link}
             to="/signup"
             size="lg"
             colorScheme="blue"
-            rightIcon={<ArrowRight size={20} />}
-            px={8}
+            borderRadius="full"
+            rightIcon={<ArrowRight size={18} />}
+            px={10}
             _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
             transition="all 0.2s"
           >
             Get Started Now
           </Button>
-        </VStack>
+        </Flex>
       </Container>
     </Box>
   );
 }
+
+/* ───────────────────────────── TRUSTED BY ──────────────────────────────── */
 
 function TrustedBy() {
   const brands = [
@@ -640,53 +905,82 @@ function TrustedBy() {
     'Cessna', 'Bombardier', 'Airbus', 'Boeing'
   ];
 
+  const rows = [brands.slice(0, 9), brands.slice(9)];
+
   return (
-    <Box py={16} bg="gray.50">
-      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
-        <VStack spacing={8} textAlign="center">
-          <Heading size="lg" color="gray.700" mb={2}>
+    <Box py={SECTION_PY} bg="gray.50" overflow="hidden">
+      <Container maxW="7xl" px={SHELL_PX}>
+        <VStack spacing={3} textAlign="center" mb={12}>
+          <Heading
+            as="h2"
+            fontSize={{ base: '1.75rem', md: '2.5rem' }}
+            color="gray.900"
+            {...displayHeading}
+          >
             Trusted by Leading Brands
           </Heading>
-          <Text color="gray.600">
+          <Text color="gray.600" fontSize={{ base: 'md', md: 'lg' }}>
             Partnering with top manufacturers and service providers worldwide
           </Text>
-
-          <Flex
-            wrap="wrap"
-            gap={4}
-            justify="center"
-            align="center"
-            maxW="6xl"
-          >
-            {brands.map((brand, i) => (
-              <Box
-                key={i}
-                px={6}
-                py={3}
-                borderRadius="full"
-                bg="white"
-                shadow="sm"
-                border="1px solid"
-                borderColor="gray.200"
-                _hover={{
-                  shadow: 'md',
-                  borderColor: 'blue.300',
-                  bg: 'blue.50'
-                }}
-                transition="all 0.3s"
-                cursor="pointer"
-              >
-                <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  {brand}
-                </Text>
-              </Box>
-            ))}
-          </Flex>
         </VStack>
       </Container>
+
+      {/* Two counter-scrolling rails, faded at both edges */}
+      <VStack
+        spacing={4}
+        sx={{
+          maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)'
+        }}
+      >
+        {rows.map((row, rowIndex) => (
+          <Flex
+            key={rowIndex}
+            w="max-content"
+            gap={4}
+            sx={{
+              animation: `${marqueeScroll} ${rowIndex === 0 ? 45 : 38}s linear infinite`,
+              animationDirection: rowIndex === 0 ? 'normal' : 'reverse',
+              '@media (prefers-reduced-motion: reduce)': { animation: 'none' }
+            }}
+            _hover={{ animationPlayState: 'paused' }}
+          >
+            {/* The strip translates by -50%, so each half must be wider than the
+                viewport or a gap opens up at the wrap point. Two copies per half. */}
+            {[...row, ...row, ...row, ...row].map((brand, i) => (
+              <Flex
+                key={`${brand}-${i}`}
+                px={7}
+                py={3.5}
+                borderRadius="full"
+                bg="white"
+                border="1px solid"
+                borderColor="gray.200"
+                align="center"
+                flexShrink={0}
+                cursor="pointer"
+                _hover={{ borderColor: 'blue.300', bg: 'blue.50', shadow: 'md' }}
+                transition="all 0.25s"
+              >
+                <Text
+                  fontSize="sm"
+                  fontWeight="700"
+                  color="gray.700"
+                  letterSpacing="0.02em"
+                  whiteSpace="nowrap"
+                >
+                  {brand}
+                </Text>
+              </Flex>
+            ))}
+          </Flex>
+        ))}
+      </VStack>
     </Box>
   );
 }
+
+/* ────────────────────────────── FEATURES ───────────────────────────────── */
 
 function Features() {
   const features = [
@@ -717,64 +1011,86 @@ function Features() {
   ];
 
   return (
-    <Box py={20} bg="white">
-      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
-        <VStack spacing={12} textAlign="center">
-          <Badge colorScheme="green" px={4} py={2} borderRadius="full" fontSize="sm" mb={4}>
-            ✨ Why Choose Us
-          </Badge>
-          <Heading size="xl" color="gray.800" mb={4}>
-            Why Veyu<Text as="span" color="blue.500">?</Text>
-          </Heading>
-          <Text fontSize="lg" color="gray.600" maxW="2xl">
-            Experience the future of automotive commerce with features designed for your success.
-          </Text>
+    <Box py={SECTION_PY} bg="white">
+      <Container maxW="7xl" px={SHELL_PX}>
+        <SectionHeader
+          eyebrow="✨ Why Choose Us"
+          colorScheme="green"
+          title={
+            <>
+              Why Veyu
+              <Text as="span" color="blue.500">?</Text>
+            </>
+          }
+          subtitle="Experience the future of automotive commerce with features designed for your success."
+        />
 
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={8} w="full">
-            {features.map((feature, i) => (
-              <VStack
-                key={i}
-                spacing={6}
-                p={8}
-                bg="gray.50"
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} w="full">
+          {features.map((feature) => (
+            <VStack
+              key={feature.title}
+              spacing={5}
+              p={7}
+              align="flex-start"
+              bg="gray.50"
+              borderRadius="2xl"
+              h="full"
+              border="1px solid"
+              borderColor="gray.200"
+              position="relative"
+              overflow="hidden"
+              _hover={{
+                bg: 'white',
+                borderColor: `${feature.color}.300`,
+                shadow: 'xl',
+                transform: 'translateY(-4px)'
+              }}
+              transition="all 0.3s ease"
+            >
+              {/* Soft accent wash in the corner */}
+              <Box
+                position="absolute"
+                top="-40px"
+                right="-40px"
+                boxSize="120px"
+                borderRadius="full"
+                bg={`${feature.color}.100`}
+                opacity={0.5}
+                filter="blur(30px)"
+              />
+
+              <Flex
+                boxSize={14}
+                fontSize="2xl"
                 borderRadius="2xl"
-                h="full"
-                _hover={{
-                  bg: `${feature.color}.50`,
-                  shadow: 'xl',
-                  transform: 'translateY(-4px)'
-                }}
-                transition="all 0.3s"
+                bg="white"
                 border="1px solid"
-                borderColor="gray.200"
+                borderColor={`${feature.color}.200`}
+                align="center"
+                justify="center"
+                shadow="sm"
+                position="relative"
               >
-                <Box
-                  fontSize="4xl"
-                  p={4}
-                  borderRadius="full"
-                  bg={`${feature.color}.100`}
-                  border="3px solid"
-                  borderColor={`${feature.color}.200`}
-                >
-                  {feature.icon}
-                </Box>
+                {feature.icon}
+              </Flex>
 
-                <VStack spacing={3} textAlign="center">
-                  <Text fontSize="lg" fontWeight="bold" color="gray.800">
-                    {feature.title}
-                  </Text>
-                  <Text color="gray.600" fontSize="sm" lineHeight="tall">
-                    {feature.description}
-                  </Text>
-                </VStack>
+              <VStack spacing={2.5} align="flex-start" position="relative">
+                <Text fontSize="lg" fontWeight="700" color="gray.900" letterSpacing="-0.01em">
+                  {feature.title}
+                </Text>
+                <Text color="gray.600" fontSize="sm" lineHeight="tall">
+                  {feature.description}
+                </Text>
               </VStack>
-            ))}
-          </SimpleGrid>
-        </VStack>
+            </VStack>
+          ))}
+        </SimpleGrid>
       </Container>
     </Box>
   );
 }
+
+/* ───────────────────────────── VIN DECODER ─────────────────────────────── */
 
 function VinCheckSection() {
   const [vin, setVin] = useState('');
@@ -823,39 +1139,55 @@ function VinCheckSection() {
   ];
 
   return (
-    <Box py={20} bg="gray.50">
-      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
-        <VStack spacing={8} textAlign="center">
-          <Badge colorScheme="orange" px={4} py={2} borderRadius="full" fontSize="sm" mb={4}>
-            🔍 VIN Decoder
-          </Badge>
-          <Heading size="xl" color="gray.800" mb={4}>
-            Check a VIN
-          </Heading>
-          <Text fontSize="lg" color="gray.600" mb={8} maxW="2xl">
-            Enter a vehicle VIN to decode make, model, year and more details instantly.
-          </Text>
+    <Box py={SECTION_PY} bg="gray.50">
+      <Container maxW="7xl" px={SHELL_PX}>
+        <SectionHeader
+          eyebrow="🔍 VIN Decoder"
+          colorScheme="orange"
+          title="Check a VIN"
+          subtitle="Enter a vehicle VIN to decode make, model, year and more details instantly."
+        />
 
-          <Box w="full" maxW="900px">
-            <Flex direction={{ base: 'column', md: 'row' }} gap={4}>
+        <VStack spacing={6} maxW="900px" mx="auto">
+          <Box
+            w="full"
+            bg="white"
+            borderRadius="2xl"
+            border="1px solid"
+            borderColor="gray.200"
+            p={{ base: 4, md: 5 }}
+            shadow="sm"
+          >
+            <Flex direction={{ base: 'column', md: 'row' }} gap={3}>
               <Input
                 value={vin}
                 onChange={(e) => setVin(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && onCheckVin()}
                 placeholder="Enter VIN e.g. 1HGCM82633A004352"
-                bg="white"
+                bg="gray.50"
                 textTransform="uppercase"
                 size="lg"
-                border="2px solid"
+                borderRadius="xl"
+                border="1px solid"
                 borderColor="gray.200"
-                _focus={{ borderColor: 'blue.400' }}
+                fontFamily="mono"
+                letterSpacing="0.05em"
+                _hover={{ borderColor: 'gray.300' }}
+                _focus={{
+                  borderColor: 'blue.400',
+                  bg: 'white',
+                  boxShadow: '0 0 0 1px var(--chakra-colors-blue-400)'
+                }}
                 flex={1}
               />
               <Button
                 onClick={onCheckVin}
                 colorScheme="blue"
                 isLoading={loading}
+                loadingText="Decoding"
                 size="lg"
-                px={8}
+                borderRadius="xl"
+                px={10}
                 _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
                 transition="all 0.2s"
               >
@@ -864,54 +1196,63 @@ function VinCheckSection() {
             </Flex>
 
             {error && (
-              <Text mt={4} color="red.500" textAlign="center" fontSize="sm">
-                {error}
-              </Text>
+              <HStack mt={3} spacing={2} px={1}>
+                <Box boxSize="6px" borderRadius="full" bg="red.500" />
+                <Text color="red.500" fontSize="sm" fontWeight="500">
+                  {error}
+                </Text>
+              </HStack>
             )}
           </Box>
 
           {result && (
-            <Box w="full" maxW="900px">
-              <Box
-                bg="white"
-                borderWidth="2px"
-                borderColor="green.200"
-                borderRadius="2xl"
-                shadow="lg"
-                p={8}
-              >
-                <VStack spacing={6}>
-                  <HStack spacing={2} mb={4}>
-                    <Icon as={CheckCircle} color="green.500" size={6} />
-                    <Text fontSize="lg" fontWeight="bold" color="green.600">
-                      VIN Successfully Decoded
-                    </Text>
-                  </HStack>
+            <Box
+              w="full"
+              bg="white"
+              borderWidth="1px"
+              borderColor="green.200"
+              borderRadius="2xl"
+              overflow="hidden"
+              shadow="lg"
+            >
+              <HStack spacing={2.5} px={7} py={4} bg="green.50" borderBottom="1px solid" borderColor="green.100">
+                <Icon as={CheckCircle} color="green.500" boxSize={5} />
+                <Text fontSize="sm" fontWeight="700" color="green.700" letterSpacing="0.02em">
+                  VIN Successfully Decoded
+                </Text>
+              </HStack>
 
-                  <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4} w="full">
-                    {fields.map((field) => (
-                      <Flex
-                        key={field.key}
-                        justify="space-between"
-                        align="center"
-                        p={3}
-                        bg="gray.50"
-                        borderRadius="lg"
+              <Box p={{ base: 5, md: 7 }}>
+                <SimpleGrid columns={{ base: 1, sm: 2 }} spacingX={8} spacingY={0} w="full">
+                  {fields.map((field) => (
+                    <Flex
+                      key={field.key}
+                      justify="space-between"
+                      align="center"
+                      py={3.5}
+                      borderBottom="1px solid"
+                      borderColor="gray.100"
+                      gap={4}
+                    >
+                      <Text
+                        color="gray.500"
+                        fontSize="xs"
+                        fontWeight="700"
+                        textTransform="uppercase"
+                        letterSpacing="0.08em"
                       >
-                        <Text color="gray.600" fontWeight="medium">
-                          {field.label}
-                        </Text>
-                        <Text fontWeight="semibold" color="gray.800">
-                          {result?.[field.key] || '—'}
-                        </Text>
-                      </Flex>
-                    ))}
-                  </SimpleGrid>
+                        {field.label}
+                      </Text>
+                      <Text fontWeight="600" color="gray.900" textAlign="right" noOfLines={1}>
+                        {result?.[field.key] || '—'}
+                      </Text>
+                    </Flex>
+                  ))}
+                </SimpleGrid>
 
-                  <Text fontSize="sm" color="gray.500" textAlign="center">
-                    Data provided by NHTSA. Always verify details with the seller.
-                  </Text>
-                </VStack>
+                <Text fontSize="xs" color="gray.500" textAlign="center" mt={6}>
+                  Data provided by NHTSA. Always verify details with the seller.
+                </Text>
               </Box>
             </Box>
           )}
@@ -920,6 +1261,8 @@ function VinCheckSection() {
     </Box>
   );
 }
+
+/* ─────────────────────────── POPULAR BRANDS ────────────────────────────── */
 
 function PopularBrands() {
   const categories = [
@@ -971,125 +1314,132 @@ function PopularBrands() {
   ];
 
   return (
-    <Box py={20} bg="white">
-      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
-        <VStack spacing={12}>
-          <VStack spacing={4} textAlign="center">
-            <Badge colorScheme="purple" px={4} py={2} borderRadius="full" fontSize="sm" mb={4}>
-              🏆 Popular Brands
-            </Badge>
-            <Heading size="xl" color="gray.800" mb={4}>
-              Browse All Vehicle Categories
-            </Heading>
-            <Text fontSize="lg" color="gray.600" maxW="2xl">
-              Discover top brands across cars, bikes, boats, aircraft, and more.
-            </Text>
-          </VStack>
+    <Box py={SECTION_PY} bg="white">
+      <Container maxW="7xl" px={SHELL_PX}>
+        <SectionHeader
+          eyebrow="🏆 Popular Brands"
+          colorScheme="purple"
+          title="Browse All Vehicle Categories"
+          subtitle="Discover top brands across cars, bikes, boats, aircraft, and more."
+        />
 
-          {/* Show only first 18 brands initially */}
-          <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 6 }} spacing={6} w="full">
-            {categories.slice(0, 18).map((item, idx) => (
-              <VStack
-                key={idx}
-                spacing={4}
-                p={6}
-                bg="gray.50"
+        {/* Show only first 18 brands initially */}
+        <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 6 }} spacing={4} w="full">
+          {categories.slice(0, 18).map((item, idx) => (
+            <VStack
+              key={`${item.name}-${item.type}-${idx}`}
+              spacing={4}
+              p={5}
+              bg="white"
+              borderRadius="2xl"
+              border="1px solid"
+              borderColor="gray.200"
+              _hover={{
+                borderColor: `${item.color}.300`,
+                shadow: 'lg',
+                transform: 'translateY(-4px)',
+                '& .brand-logo': { filter: 'grayscale(0)', opacity: 1 }
+              }}
+              transition="all 0.3s ease"
+              cursor="pointer"
+              h="full"
+              minH="150px"
+              justify="center"
+            >
+              <Flex
+                w="full"
+                minH="56px"
+                align="center"
+                justify="center"
                 borderRadius="xl"
-                border="2px solid"
-                borderColor="gray.200"
-                _hover={{
-                  bg: `${item.color}.50`,
-                  borderColor: `${item.color}.300`,
-                  shadow: 'lg',
-                  transform: 'translateY(-4px)'
-                }}
-                transition="all 0.3s"
-                cursor="pointer"
-                h="full"
-                minH="140px"
+                bg="gray.50"
               >
-                <Box
-                  p={3}
-                  borderRadius="lg"
-                  bg="white"
-                  shadow="sm"
-                  border="1px solid"
-                  borderColor="gray.100"
-                  w="full"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  minH="60px"
-                >
-                  <Image
-                    src={item.logo}
-                    alt={`${item.name} logo`}
-                    maxH="50px"
-                    maxW="50px"
-                    objectFit="contain"
-                    fallback={
-                      <Box
-                        w="50px"
-                        h="50px"
-                        bg={`${item.color}.100`}
-                        borderRadius="md"
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                      >
-                        <Text fontSize="xs" fontWeight="bold" color={`${item.color}.600`}>
-                          {item.name.charAt(0)}
-                        </Text>
-                      </Box>
-                    }
-                  />
-                </Box>
+                <Image
+                  className="brand-logo"
+                  src={item.logo}
+                  alt={`${item.name} logo`}
+                  maxH="42px"
+                  maxW="42px"
+                  objectFit="contain"
+                  filter="grayscale(1)"
+                  opacity={0.75}
+                  transition="all 0.3s ease"
+                  fallback={
+                    <Flex
+                      boxSize="42px"
+                      bg={`${item.color}.100`}
+                      borderRadius="lg"
+                      align="center"
+                      justify="center"
+                    >
+                      <Text fontSize="md" fontWeight="800" color={`${item.color}.600`}>
+                        {item.name.charAt(0)}
+                      </Text>
+                    </Flex>
+                  }
+                />
+              </Flex>
 
-                <VStack spacing={1} textAlign="center">
-                  <Text fontWeight="bold" fontSize="sm" color="gray.800" noOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Badge
-                    colorScheme={item.color}
-                    variant="subtle"
-                    fontSize="xs"
-                    borderRadius="full"
-                    px={2}
-                  >
-                    {item.type}
-                  </Badge>
-                </VStack>
+              <VStack spacing={1.5} textAlign="center">
+                <Text fontWeight="700" fontSize="sm" color="gray.900" noOfLines={1}>
+                  {item.name}
+                </Text>
+                <Text
+                  fontSize="10px"
+                  fontWeight="700"
+                  textTransform="uppercase"
+                  letterSpacing="0.1em"
+                  color={`${item.color}.500`}
+                >
+                  {item.type}
+                </Text>
               </VStack>
+            </VStack>
+          ))}
+        </SimpleGrid>
+
+        {/* Category breakdown */}
+        <VStack spacing={4} w="full" maxW="4xl" mx="auto" mt={12}>
+          <Text
+            fontSize="xs"
+            color="gray.500"
+            fontWeight="700"
+            textTransform="uppercase"
+            letterSpacing="0.14em"
+          >
+            Browse by Category
+          </Text>
+          <Flex wrap="wrap" gap={2.5} justify="center">
+            {['Cars', 'Motorcycles', 'Boats', 'Aircraft', 'Trucks', 'Electric'].map((category) => (
+              <Flex
+                key={category}
+                align="center"
+                gap={2}
+                px={4}
+                py={2}
+                borderRadius="full"
+                border="1px solid"
+                borderColor="gray.200"
+                cursor="pointer"
+                _hover={{ bg: 'blue.50', borderColor: 'blue.400' }}
+                transition="all 0.2s"
+              >
+                <Text fontSize="sm" fontWeight="600" color="gray.700">
+                  {category}
+                </Text>
+                <Text fontSize="xs" fontWeight="700" color="blue.500">
+                  {categories.filter((item) => item.type === category).length}
+                </Text>
+              </Flex>
             ))}
-          </SimpleGrid>
+          </Flex>
+        </VStack>
 
-          {/* Category breakdown */}
-          <VStack spacing={4} w="full" maxW="4xl">
-            <Text fontSize="md" color="gray.600" textAlign="center">
-              Browse by Category
-            </Text>
-            <Flex wrap="wrap" gap={3} justify="center">
-              {['Cars', 'Motorcycles', 'Boats', 'Aircraft', 'Trucks', 'Electric'].map((category) => (
-                <Badge
-                  key={category}
-                  colorScheme="blue"
-                  variant="outline"
-                  px={4}
-                  py={2}
-                  borderRadius="full"
-                  cursor="pointer"
-                  _hover={{ bg: 'blue.50', borderColor: 'blue.400' }}
-                  transition="all 0.2s"
-                >
-                  {category} ({categories.filter(item => item.type === category).length})
-                </Badge>
-              ))}
-            </Flex>
-          </VStack>
-
+        <Flex justify="center" mt={10}>
           <Button
             variant="outline"
             size="lg"
+            borderRadius="full"
             rightIcon={<FaPlus />}
             colorScheme="blue"
             px={8}
@@ -1098,62 +1448,77 @@ function PopularBrands() {
           >
             Show All Brands
           </Button>
-        </VStack>
+        </Flex>
       </Container>
     </Box>
   );
 }
 
+/* ──────────────────────────── TESTIMONIALS ─────────────────────────────── */
+
 function TestimonialCard({ name, role, comment, rating, avatar, title }) {
   return (
-    <Box
+    <VStack
       bg="white"
-      p={8}
+      p={7}
       borderRadius="2xl"
-      shadow="lg"
       border="1px solid"
       borderColor="gray.200"
-      minW="320px"
-      maxW="320px"
-      h="full"
+      minW={{ base: '280px', sm: '340px' }}
+      maxW={{ base: '280px', sm: '340px' }}
+      h="auto"
+      align="start"
+      spacing={5}
+      position="relative"
+      overflow="hidden"
       _hover={{ shadow: 'xl', borderColor: 'blue.300', transform: 'translateY(-4px)' }}
-      transition="all 0.3s"
+      transition="all 0.3s ease"
     >
-      <VStack spacing={6} align="start" h="full">
-        <HStack spacing={4}>
-          <Avatar name={name} src={avatar} size="md" />
-          <VStack align="start" spacing={0}>
-            <Text fontWeight="bold" fontSize="sm">
-              {name}
-            </Text>
-            <Text fontSize="xs" color="gray.500">
-              {role}
-            </Text>
-          </VStack>
-        </HStack>
+      <Icon
+        as={Quote}
+        boxSize={12}
+        color="gray.100"
+        position="absolute"
+        top={4}
+        right={4}
+        transform="scaleX(-1)"
+      />
 
-        <HStack spacing={1}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Icon
-              key={i}
-              as={Star}
-              size={4}
-              color={i < rating ? 'yellow.400' : 'gray.300'}
-              fill={i < rating ? 'currentColor' : 'none'}
-            />
-          ))}
-        </HStack>
+      <HStack spacing={1} position="relative">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Icon
+            key={i}
+            as={Star}
+            boxSize={4}
+            color={i < rating ? 'yellow.400' : 'gray.200'}
+            fill={i < rating ? 'currentColor' : 'none'}
+          />
+        ))}
+      </HStack>
 
-        <VStack spacing={3} align="start" flex={1}>
-          <Text fontWeight="bold" fontSize="md" color="gray.800">
-            "{title}"
+      <VStack spacing={2.5} align="start" flex={1} position="relative">
+        <Text fontWeight="700" fontSize="md" color="gray.900" letterSpacing="-0.01em">
+          "{title}"
+        </Text>
+        <Text color="gray.600" fontSize="sm" lineHeight="tall">
+          {comment}
+        </Text>
+      </VStack>
+
+      <Divider borderColor="gray.100" />
+
+      <HStack spacing={3.5}>
+        <Avatar name={name} src={avatar} size="md" />
+        <VStack align="start" spacing={0.5}>
+          <Text fontWeight="700" fontSize="sm" color="gray.900">
+            {name}
           </Text>
-          <Text color="gray.600" fontSize="sm" lineHeight="tall">
-            {comment}
+          <Text fontSize="xs" color="gray.500">
+            {role}
           </Text>
         </VStack>
-      </VStack>
-    </Box>
+      </HStack>
+    </VStack>
   );
 }
 
@@ -1165,7 +1530,7 @@ function Testimonials() {
       title: 'Seamless from search to keys',
       comment: 'Found the exact spec I wanted and closed in days. Pricing transparency is A+.',
       rating: 5,
-      avatar: '/assets/images/list_car.jpg',
+      avatar: '/assets/images/list_car.jpg'
     },
     {
       name: 'Tunde A.',
@@ -1173,7 +1538,7 @@ function Testimonials() {
       title: 'Reliable pros, fast booking',
       comment: 'The mechanic arrived on time and fixed my brakes same day. Will use again.',
       rating: 5,
-      avatar: '/assets/images/mechanic.jpg',
+      avatar: '/assets/images/mechanic.jpg'
     },
     {
       name: 'Chioma N.',
@@ -1181,7 +1546,7 @@ function Testimonials() {
       title: 'Great selection and service',
       comment: 'Smooth checkout, fair pricing, and the boat was immaculate. Perfect getaway!',
       rating: 5,
-      avatar: '/assets/images/image.jpg',
+      avatar: '/assets/images/image.jpg'
     },
     {
       name: 'Ola D.',
@@ -1189,145 +1554,173 @@ function Testimonials() {
       title: 'Love the multi-vehicle options',
       comment: 'Nice to have bikes, cars, and boats in one place. Super convenient!',
       rating: 5,
-      avatar: '/assets/images/sell_car.jpg',
-    },
+      avatar: '/assets/images/sell_car.jpg'
+    }
   ];
 
   return (
-    <Box py={20} bg="gray.50">
-      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
-        <VStack spacing={12} textAlign="center">
-          <Badge colorScheme="yellow" px={4} py={2} borderRadius="full" fontSize="sm" mb={4}>
-            ⭐ Customer Stories
-          </Badge>
-          <Heading size="xl" color="gray.800" mb={4}>
-            What Our Clients Say
-          </Heading>
-          <Text fontSize="lg" color="gray.600" maxW="2xl">
-            Real experiences from thousands of satisfied customers across Africa.
-          </Text>
+    <Box py={SECTION_PY} bg="gray.50">
+      <Container maxW="7xl" px={SHELL_PX}>
+        <SectionHeader
+          eyebrow="⭐ Customer Stories"
+          colorScheme="yellow"
+          title="What Our Clients Say"
+          subtitle="Real experiences from thousands of satisfied customers across Africa."
+        />
 
-          <Box w="full" overflow="hidden">
-            <Flex
-              gap={6}
-              overflowX="auto"
-              pb={4}
-              className="hidden-scroll"
-              justify={{ base: 'start', lg: 'center' }}
-            >
-              {testimonials.map((testimonial, index) => (
-                <TestimonialCard key={index} {...testimonial} />
-              ))}
-            </Flex>
-          </Box>
-        </VStack>
+        <Box
+          w="full"
+          overflow="hidden"
+          sx={{
+            maskImage: {
+              base: 'none',
+              lg: 'linear-gradient(to right, transparent, black 4%, black 96%, transparent)'
+            },
+            WebkitMaskImage: {
+              base: 'none',
+              lg: 'linear-gradient(to right, transparent, black 4%, black 96%, transparent)'
+            }
+          }}
+        >
+          <Flex
+            gap={5}
+            overflowX="auto"
+            pt={2}
+            pb={5}
+            px={1}
+            justify="flex-start"
+            sx={{
+              scrollSnapType: 'x mandatory',
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
+              '& > *': { scrollSnapAlign: 'start' }
+            }}
+          >
+            {testimonials.map((testimonial, index) => (
+              <TestimonialCard key={index} {...testimonial} />
+            ))}
+          </Flex>
+        </Box>
       </Container>
     </Box>
   );
 }
 
+/* ───────────────────────────── PARTNERSHIP ─────────────────────────────── */
+
 function Partnership() {
+  const [isMobile] = useMediaQuery('(max-width: 760px)');
+
+  const perks = [
+    {
+      icon: TrendingUp,
+      title: 'Grow Your Revenue',
+      text: 'Access thousands of verified buyers'
+    },
+    {
+      icon: Shield,
+      title: 'Secure Transactions',
+      text: 'Protected payments and escrow services'
+    },
+    {
+      icon: Zap,
+      title: 'Easy Management',
+      text: 'Powerful dashboard and analytics'
+    }
+  ];
+
   return (
     <Box
-      py={24}
+      py={{ base: 20, md: 28 }}
       position="relative"
       color="white"
+      overflow="hidden"
       backgroundImage={`url('/assets/veyu/homes.jpg')`}
       backgroundRepeat="no-repeat"
       backgroundSize="cover"
       backgroundPosition="center"
-      backgroundAttachment="fixed"
+      backgroundAttachment={isMobile ? 'scroll' : 'fixed'}
     >
       <Box
         position="absolute"
         inset={0}
-        bgGradient="linear(to-br, blackAlpha.800, blackAlpha.600, blackAlpha.900)"
+        bgGradient="linear(to-br, blackAlpha.900, blackAlpha.700, blackAlpha.900)"
       />
 
-      <Container position="relative" zIndex={1} maxW="7xl" px={{ base: 4, md: 8 }}>
+      <Container position="relative" zIndex={1} maxW="7xl" px={SHELL_PX}>
         <VStack spacing={8} textAlign="center">
-          <Badge
-            colorScheme="yellow"
-            px={4}
-            py={2}
-            borderRadius="full"
-            fontSize="sm"
-            mb={6}
-            bg="yellow.400"
-            color="gray.800"
-          >
+          <Eyebrow colorScheme="yellow" dark>
             🤝 Partner With Us
-          </Badge>
+          </Eyebrow>
 
-          <Heading size="2xl" mb={6} lineHeight="shorter">
-            Ready to Move Your Business Forward
-            <Text as="span" color="yellow.400">?</Text>
-            <br />
-            Partner with us today.
+          <Heading
+            as="h2"
+            fontSize={{ base: '2.25rem', sm: '3rem', md: '4rem' }}
+            fontWeight="800"
+            letterSpacing="-0.035em"
+            lineHeight="1.05"
+            maxW="4xl"
+            sx={{ '& span': { lineHeight: 'inherit' } }}
+          >
+            <Box as="span" display="block">
+              Ready to Move Your Business Forward
+              <Text as="span" color="yellow.400">?</Text>
+            </Box>
+            <Box as="span" display="block">
+              Partner with us today.
+            </Box>
           </Heading>
 
-          <Text fontSize="xl" maxW="3xl" lineHeight="tall" color="whiteAlpha.900">
+          <Text fontSize={{ base: 'md', md: 'xl' }} maxW="3xl" lineHeight="tall" color="whiteAlpha.800">
             Whether you're a dealer, mechanic, or fleet operator, Veyu helps you grow
             with cutting-edge tools, verified customers, and seamless transactions that convert.
           </Text>
 
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8} mb={8} maxW="4xl">
-            <VStack spacing={3} textAlign="center">
-              <Box
-                p={3}
-                borderRadius="full"
-                bg="whiteAlpha.200"
-                backdropFilter="blur(10px)"
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} maxW="4xl" w="full" pt={4}>
+            {perks.map((perk) => (
+              <VStack
+                key={perk.title}
+                spacing={3.5}
+                textAlign="center"
+                p={7}
+                borderRadius="2xl"
+                bg="whiteAlpha.100"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+                backdropFilter="blur(12px)"
+                _hover={{ bg: 'whiteAlpha.200', borderColor: 'whiteAlpha.400', transform: 'translateY(-4px)' }}
+                transition="all 0.3s ease"
               >
-                <Icon as={TrendingUp} size={6} />
-              </Box>
-              <Text fontWeight="bold">Grow Your Revenue</Text>
-              <Text fontSize="sm" color="whiteAlpha.800">
-                Access thousands of verified buyers
-              </Text>
-            </VStack>
-
-            <VStack spacing={3} textAlign="center">
-              <Box
-                p={3}
-                borderRadius="full"
-                bg="whiteAlpha.200"
-                backdropFilter="blur(10px)"
-              >
-                <Icon as={Shield} size={6} />
-              </Box>
-              <Text fontWeight="bold">Secure Transactions</Text>
-              <Text fontSize="sm" color="whiteAlpha.800">
-                Protected payments and escrow services
-              </Text>
-            </VStack>
-
-            <VStack spacing={3} textAlign="center">
-              <Box
-                p={3}
-                borderRadius="full"
-                bg="whiteAlpha.200"
-                backdropFilter="blur(10px)"
-              >
-                <Icon as={Zap} size={6} />
-              </Box>
-              <Text fontWeight="bold">Easy Management</Text>
-              <Text fontSize="sm" color="whiteAlpha.800">
-                Powerful dashboard and analytics
-              </Text>
-            </VStack>
+                <Flex
+                  boxSize={12}
+                  borderRadius="xl"
+                  bg="yellow.400"
+                  align="center"
+                  justify="center"
+                >
+                  <Icon as={perk.icon} boxSize={5} color="gray.900" />
+                </Flex>
+                <Text fontWeight="700" fontSize="md">
+                  {perk.title}
+                </Text>
+                <Text fontSize="sm" color="whiteAlpha.800" lineHeight="tall">
+                  {perk.text}
+                </Text>
+              </VStack>
+            ))}
           </SimpleGrid>
 
-          <HStack spacing={4} flexWrap="wrap" justify="center">
+          <HStack spacing={3} flexWrap="wrap" justify="center" pt={4}>
             <Button
               as={Link}
               to="/signup/business"
               size="lg"
               colorScheme="yellow"
               bg="yellow.400"
-              color="gray.800"
-              rightIcon={<ArrowRight size={20} />}
-              px={8}
+              color="gray.900"
+              borderRadius="full"
+              rightIcon={<ArrowRight size={18} />}
+              px={10}
               _hover={{
                 transform: 'translateY(-2px)',
                 shadow: 'xl',
@@ -1340,12 +1733,13 @@ function Partnership() {
             <Button
               variant="outline"
               size="lg"
+              borderRadius="full"
               borderColor="whiteAlpha.400"
               color="white"
-              px={8}
+              px={10}
               _hover={{
                 bg: 'whiteAlpha.200',
-                borderColor: 'whiteAlpha.600',
+                borderColor: 'whiteAlpha.700',
                 transform: 'translateY(-2px)'
               }}
               transition="all 0.2s"
@@ -1359,117 +1753,127 @@ function Partnership() {
   );
 }
 
+/* ─────────────────────────────── FAQ ───────────────────────────────────── */
+
 function FAQSection() {
   return (
-    <Box bg="white" py={20}>
-      <Container maxW="7xl" px={{ base: 4, md: 8 }}>
-        <VStack spacing={12} textAlign="center">
-          <Badge colorScheme="blue" px={4} py={2} borderRadius="full" fontSize="sm" mb={4}>
-            ❓ Got Questions?
-          </Badge>
-          <Heading size="2xl" color="gray.800" mb={4}>
-            Frequently Asked Questions
-          </Heading>
-          <Text fontSize="lg" color="gray.600" maxW="2xl">
-            Still not convinced?{' '}
-            <Text as="span" color="blue.500" fontWeight="semibold" cursor="pointer" _hover={{ textDecoration: 'underline' }}>
-              Chat with our team here.
-            </Text>
-          </Text>
+    <Box bg="white" py={SECTION_PY}>
+      <Container maxW="7xl" px={SHELL_PX}>
+        <SectionHeader
+          eyebrow="❓ Got Questions?"
+          colorScheme="blue"
+          title="Frequently Asked Questions"
+          subtitle={
+            <>
+              Still not convinced?{' '}
+              <Text
+                as="span"
+                color="blue.500"
+                fontWeight="600"
+                cursor="pointer"
+                _hover={{ textDecoration: 'underline' }}
+              >
+                Chat with our team here.
+              </Text>
+            </>
+          }
+        />
 
-          <Box maxW="4xl" w="full">
-            <Accordion allowMultiple allowToggle>
-              {faqs.map((faq, idx) => (
-                <AccordionItem key={idx} border="none" mb={4}>
-                  {({ isExpanded }) => (
-                    <Box
-                      bg="gray.50"
-                      borderRadius="xl"
-                      overflow="hidden"
-                      shadow={isExpanded ? 'lg' : 'md'}
-                      transition="all 0.3s"
-                      _hover={{ shadow: 'lg' }}
-                      border="2px solid"
-                      borderColor={isExpanded ? 'blue.200' : 'gray.200'}
+        <Box maxW="4xl" w="full" mx="auto">
+          <Accordion allowMultiple allowToggle>
+            {faqs.map((faq, idx) => (
+              <AccordionItem key={idx} border="none" mb={3}>
+                {({ isExpanded }) => (
+                  <Box
+                    bg={isExpanded ? 'blue.50' : 'gray.50'}
+                    borderRadius="2xl"
+                    overflow="hidden"
+                    transition="all 0.25s ease"
+                    border="1px solid"
+                    borderColor={isExpanded ? 'blue.200' : 'gray.200'}
+                    _hover={{ borderColor: isExpanded ? 'blue.300' : 'gray.300' }}
+                  >
+                    <AccordionButton
+                      py={5}
+                      px={{ base: 5, md: 6 }}
+                      _hover={{ bg: 'transparent' }}
+                      _focusVisible={{ boxShadow: 'outline' }}
                     >
-                      <AccordionButton
-                        py={6}
-                        px={6}
-                        _hover={{ bg: isExpanded ? 'blue.50' : 'gray.100' }}
-                        transition="all 0.2s"
-                      >
-                        <HStack flex={1} spacing={4} align="center">
-                          <Box
-                            w={12}
-                            h={12}
-                            borderRadius="full"
-                            bg={isExpanded ? 'blue.500' : 'gray.300'}
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="center"
-                            transition="all 0.3s"
+                      <HStack flex={1} spacing={4} align="center">
+                        <Flex
+                          boxSize={9}
+                          flexShrink={0}
+                          borderRadius="full"
+                          bg={isExpanded ? 'blue.500' : 'white'}
+                          border="1px solid"
+                          borderColor={isExpanded ? 'blue.500' : 'gray.200'}
+                          align="center"
+                          justify="center"
+                          transition="all 0.25s ease"
+                        >
+                          <Icon
+                            fontSize="16px"
+                            color={isExpanded ? 'white' : 'gray.500'}
                           >
-                            <Icon
-                              fontSize="20px"
-                              color="white"
-                            >
-                              {isExpanded ? <FaCircleMinus /> : <FaCirclePlus />}
-                            </Icon>
-                          </Box>
-                          <Text
-                            flex={1}
-                            fontSize={{ base: 'md', md: 'lg' }}
-                            fontWeight="semibold"
-                            textAlign="left"
-                            color="gray.800"
-                          >
-                            {faq?.question}
-                          </Text>
-                        </HStack>
-                      </AccordionButton>
+                            {isExpanded ? <FaCircleMinus /> : <FaCirclePlus />}
+                          </Icon>
+                        </Flex>
+                        <Text
+                          flex={1}
+                          fontSize={{ base: 'md', md: 'lg' }}
+                          fontWeight="600"
+                          textAlign="left"
+                          color="gray.900"
+                          letterSpacing="-0.01em"
+                        >
+                          {faq?.question}
+                        </Text>
+                      </HStack>
+                    </AccordionButton>
 
-                      <AccordionPanel pb={6} px={6}>
-                        <Box pl={16}>
-                          <Text
-                            fontSize={{ base: 'sm', md: 'md' }}
-                            color="gray.600"
-                            lineHeight="tall"
-                          >
-                            {faq?.answer}
-                          </Text>
-                        </Box>
-                      </AccordionPanel>
-                    </Box>
-                  )}
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </Box>
+                    <AccordionPanel pb={6} px={{ base: 5, md: 6 }} pt={0}>
+                      <Box pl={{ base: 0, md: 13 }}>
+                        <Text
+                          fontSize={{ base: 'sm', md: 'md' }}
+                          color="gray.600"
+                          lineHeight="tall"
+                        >
+                          {faq?.answer}
+                        </Text>
+                      </Box>
+                    </AccordionPanel>
+                  </Box>
+                )}
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </Box>
 
-          <VStack spacing={4}>
-            <Text color="gray.600">
-              Still have questions? We're here to help!
-            </Text>
-            <HStack spacing={4}>
-              <Button
-                leftIcon={<Mail size={20} />}
-                colorScheme="blue"
-                variant="outline"
-                _hover={{ transform: 'translateY(-2px)', shadow: 'md' }}
-                transition="all 0.2s"
-              >
-                Email Support
-              </Button>
-              <Button
-                leftIcon={<Phone size={20} />}
-                colorScheme="green"
-                _hover={{ transform: 'translateY(-2px)', shadow: 'md' }}
-                transition="all 0.2s"
-              >
-                Call Us
-              </Button>
-            </HStack>
-          </VStack>
+        <VStack spacing={4} mt={14}>
+          <Text color="gray.600">Still have questions? We're here to help!</Text>
+          <HStack spacing={3} flexWrap="wrap" justify="center">
+            <Button
+              leftIcon={<Mail size={18} />}
+              colorScheme="blue"
+              variant="outline"
+              borderRadius="full"
+              px={7}
+              _hover={{ transform: 'translateY(-2px)', shadow: 'md', bg: 'blue.50' }}
+              transition="all 0.2s"
+            >
+              Email Support
+            </Button>
+            <Button
+              leftIcon={<Phone size={18} />}
+              colorScheme="green"
+              borderRadius="full"
+              px={7}
+              _hover={{ transform: 'translateY(-2px)', shadow: 'md' }}
+              transition="all 0.2s"
+            >
+              Call Us
+            </Button>
+          </HStack>
         </VStack>
       </Container>
     </Box>
