@@ -5,13 +5,27 @@
  * including logo URL resolution and API response mapping.
  */
 
+// Media paths come back relative to the API host, so derive the origin from the
+// same env var api.js uses instead of hardcoding a domain that can go stale.
+const API_ORIGIN = (() => {
+  const configured = import.meta.env?.VITE_API_BASE_URL;
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      /* not an absolute URL — fall through to the default */
+    }
+  }
+  return 'https://dev.veyu.autos';
+})();
+
 /**
  * Resolves logo URL to handle both relative and absolute URLs
  * @param {string} url - The original URL (can be relative or absolute)
- * @param {string} baseUrl - Base URL for relative paths (defaults to dev.veyu.cc)
+ * @param {string} baseUrl - Base URL for relative paths (defaults to the API origin)
  * @returns {string|null} - Resolved URL or null if invalid
  */
-export const resolveLogoUrl = (url, baseUrl = 'https://dev.veyu.cc') => {
+export const resolveLogoUrl = (url, baseUrl = API_ORIGIN) => {
   console.log('BusinessUtils: Resolving logo URL:', { url, baseUrl });
   
   if (!url || typeof url !== 'string') {

@@ -296,9 +296,10 @@ export const RentListing = ({ props }) => {
   }
 
   async function getData(url = `/listings/rentals/`) {
-    console.error(`Fetching rentals... ${"https://dev.veyu.cc/api/v1/".url}`);
     try {
-      const res = await axios.get(`https://dev.veyu.cc/api/v1${url}`);
+      // Relative path so this goes through the shared apiClient (and the Vite
+      // dev proxy) rather than a hardcoded host.
+      const res = await axios.get(url);
       const parsed = objectifyJSON(res?.data);
       const payload = parsed?.data;
 
