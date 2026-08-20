@@ -11,10 +11,31 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
+const REQUIRED_KEYS = ['apiKey', 'authDomain', 'projectId', 'appId'];
 
-// Get a reference to the authentication service
-const auth = firebase.auth();
+/** Firebase here only powers Google sign-in, so the rest of auth must work without it. */
+export const isFirebaseConfigured = REQUIRED_KEYS.every((key) => Boolean(firebaseConfig[key]));
+
+let auth = null;
+
+if (isFirebaseConfigured) {
+  try {
+    // Reuse the existing app when one is already registered, otherwise a hot
+    // reload re-runs this module and Firebase throws on duplicate init.
+    const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth(app);
+  } catch (error) {
+    // firebase.auth() throws synchronously on a bad key. Login and Signup import
+    // this module at the top level, so letting it escape unmounts the whole page.
+    console.error('Firebase auth is unavailable — Google sign-in is disabled.', error);
+    auth = null;
+  }
+} else if (import.meta.env.DEV) {
+  console.warn(
+    '[firebase] VITE_FIREBASE_* env vars are missing, so Google sign-in is disabled. ' +
+    'Copy .env.example to .env and fill in your Firebase web app config to enable it. ' +
+    'Email/password sign-in is unaffected.'
+  );
+}
 
 export { auth };

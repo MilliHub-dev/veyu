@@ -12,6 +12,7 @@ export { default as feedbackService } from './feedbackService';
 export { default as boostService } from './boostService';
 export { default as orderService } from './orderService';
 export { default as locationService } from './locationService';
+export { default as vinService } from './vinService';
 export { apiClient, handleApiResponse, handleApiError } from './api';
 
 // Service status constants

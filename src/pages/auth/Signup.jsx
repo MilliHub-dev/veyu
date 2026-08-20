@@ -71,7 +71,7 @@ import {
   Wrench,
   Car
 } from 'lucide-react';
-import { auth } from "../../firebase";
+import { auth, isFirebaseConfigured } from "../../firebase";
 import firebase from 'firebase/compat/app';
 import BusinessProfile from './BusinessProfile';
 
@@ -119,6 +119,15 @@ export const SignupView = ({ ...props }) => {
   };
 
   const signUpWithGoogle = async () => {
+    if (!auth) {
+      notify({
+        title: 'Google sign-up unavailable',
+        body: 'Google sign-up is not configured right now. Please sign up with your email instead.',
+        color: 'orange'
+      });
+      return;
+    }
+
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
       const result = await auth.signInWithPopup(provider);
@@ -146,6 +155,14 @@ export const SignupView = ({ ...props }) => {
       }
     } catch (error) {
       console.error("Signup with google error", error);
+      // auth/popup-closed-by-user is the visitor changing their mind, not a fault.
+      if (error?.code !== 'auth/popup-closed-by-user' && error?.code !== 'auth/cancelled-popup-request') {
+        notify({
+          title: 'Google sign-up failed',
+          body: error?.message || 'Something went wrong. Please try again or use your email.',
+          color: 'red'
+        });
+      }
     }
   };
 
@@ -154,7 +171,7 @@ export const SignupView = ({ ...props }) => {
       title: `Create ${type === 'business' ? 'a business' : 'your'} account`,
       description: 'Start Today!',
       key: 'signup',
-      component: <EmailStep type={type} signUpWithGoogle={signUpWithGoogle} />
+      component: <EmailStep type={type} signUpWithGoogle={signUpWithGoogle} googleEnabled={Boolean(auth)} />
     },
     {
       title: 'Complete your profile',
@@ -612,7 +629,7 @@ export const SignupView = ({ ...props }) => {
   );
 };
 
-const EmailStep = ({ type, signUpWithGoogle }) => {
+const EmailStep = ({ type, signUpWithGoogle, googleEnabled = true }) => {
   const [email, setEmail] = useState('');
   const [params] = useSearchParams();
   const [password, setPassword] = useState('');
@@ -907,7 +924,10 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
             variant="outline"
             leftIcon={<FaGoogle />}
             onClick={signUpWithGoogle}
-            isDisabled={type === 'business' && !['dealer', 'mechanic'].includes(user_type)}
+            isDisabled={
+              !googleEnabled ||
+              (type === 'business' && !['dealer', 'mechanic'].includes(user_type))
+            }
             border="2px solid"
             borderColor="gray.200"
             _hover={{
@@ -921,6 +941,12 @@ const EmailStep = ({ type, signUpWithGoogle }) => {
           >
             Continue with Google
           </Button>
+
+          {!googleEnabled && (
+            <Text fontSize="xs" color="gray.500" textAlign="center" mt={-2}>
+              Google sign-up is unavailable — please use your email address.
+            </Text>
+          )}
 
           <Divider />
 

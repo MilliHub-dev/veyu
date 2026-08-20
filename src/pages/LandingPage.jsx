@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect } from 'react';
+import { Fragment, useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -11,17 +11,17 @@ import {
   SimpleGrid,
   VStack,
   HStack,
-  InputLeftElement,
-  InputGroup,
   Image,
   Accordion,
   AccordionItem,
   AccordionPanel,
   AccordionButton,
-  Tabs,
-  TabList,
-  Tab,
+  AccordionIcon,
   Input,
+  InputGroup,
+  InputRightElement,
+  IconButton,
+  Spinner,
   Avatar,
   useToast,
   useColorModeValue,
@@ -45,6 +45,14 @@ import {
   Award,
   Zap,
   Quote,
+  ChevronDown,
+  AlertTriangle,
+  ShieldCheck,
+  Store,
+  MousePointerClick,
+  GraduationCap,
+  Copy,
+  X,
   MapPin,
   Phone,
   Mail
@@ -56,6 +64,21 @@ import '../assets/Home.css';
 import { ListingItemCard } from '../components';
 import { objectifyJSON } from '../utils';
 import listingsService from '../services/listingsService';
+import {
+  normalizeVin,
+  validateVin,
+  hasValidCheckDigit,
+  decodeVin,
+  fetchRecalls,
+  groupDecodedFields,
+  extraDecodedFields,
+  buildVehicleTitle,
+  buildVinSummary,
+  titleCase,
+  getRecentVins,
+  rememberVin,
+  clearRecentVins
+} from '../services/vinService';
 
 /* ────────────────────────────────────────────────────────────────────────────
    Shared layout tokens — one rhythm for every section on the page.
@@ -66,6 +89,11 @@ const SHELL_PX = { base: 5, md: 8 };
 const marqueeScroll = keyframes`
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
+`;
+
+const nudge = keyframes`
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50%      { transform: translateY(5px); opacity: 1; }
 `;
 
 const shimmer = keyframes`
@@ -194,6 +222,55 @@ export default HomePage;
 
 /* ──────────────────────────────── HERO ─────────────────────────────────── */
 
+const HERO_TYPES = [
+  { key: 'cars', label: 'Cars' },
+  { key: 'aircraft', label: 'Aircraft' },
+  { key: 'bikes', label: 'Bikes' },
+  { key: 'boats', label: 'Boats' },
+  { key: 'mechanics', label: 'Mechanics' }
+];
+
+function HeroField({ icon, label, children, ...inputProps }) {
+  return (
+    <Flex
+      flex={1}
+      minW={0}
+      align="center"
+      gap={3}
+      px={{ base: 4, md: 5 }}
+      py={2.5}
+      borderRadius="full"
+      transition="background 0.2s ease"
+      _hover={{ bg: 'gray.50' }}
+      _focusWithin={{ bg: 'gray.50' }}
+    >
+      <Icon as={icon} boxSize="18px" color="gray.400" flexShrink={0} />
+      <Box flex={1} minW={0} textAlign="left">
+        <Text
+          fontSize="10px"
+          fontWeight="700"
+          textTransform="uppercase"
+          letterSpacing="0.12em"
+          color="gray.400"
+          lineHeight={1.4}
+        >
+          {label}
+        </Text>
+        <Input
+          variant="unstyled"
+          fontSize="sm"
+          fontWeight="600"
+          color="gray.900"
+          h="22px"
+          _placeholder={{ color: 'gray.400', fontWeight: 500 }}
+          {...inputProps}
+        />
+      </Box>
+      {children}
+    </Flex>
+  );
+}
+
 function SearchHero() {
   const navigate = useNavigate();
   const [type, setType] = useState('cars');
@@ -210,14 +287,15 @@ function SearchHero() {
     mechanics: []
   };
 
-  const placeholderByType = {
-    cars: 'Make (e.g., Toyota)',
-    aircraft: 'Manufacturer (e.g., Cessna)',
-    bikes: 'Brand (e.g., Yamaha)',
-    boats: 'Brand (e.g., Bayliner)',
-    mechanics: 'Service or workshop name'
+  const fieldLabelByType = {
+    cars: { label: 'Make', placeholder: 'Any make, e.g. Toyota' },
+    aircraft: { label: 'Manufacturer', placeholder: 'Any manufacturer, e.g. Cessna' },
+    bikes: { label: 'Brand', placeholder: 'Any brand, e.g. Yamaha' },
+    boats: { label: 'Brand', placeholder: 'Any brand, e.g. Bayliner' },
+    mechanics: { label: 'Service', placeholder: 'Service or workshop name' }
   };
 
+  const field = fieldLabelByType[type];
   const suggestions = (makesByType[type] || []).filter(
     (m) => !make || m.toLowerCase().includes(make.toLowerCase())
   );
@@ -257,68 +335,98 @@ function SearchHero() {
 
   return (
     <Box
-      as={motion.section}
+      as="section"
       id="welcome"
       position="relative"
       overflow="hidden"
-      py={{ base: 24, md: 32 }}
-      minH={{ base: 'auto', md: '100vh' }}
       display="flex"
       alignItems="center"
+      minH={{ base: 'auto', md: '100vh' }}
+      pt={{ base: 28, md: 32 }}
+      pb={{ base: 20, md: 28 }}
     >
+      {/* Photographic base */}
       <Box
         position="absolute"
         inset={0}
-        bgImage={`url('/assets/veyu/land1.jpg')`}
+        bgImage="url('/assets/veyu/land1.jpg')"
         bgSize="cover"
         bgPos="center"
-        transform="scale(1.04)"
+        transform="scale(1.05)"
       />
-      {/* Layered scrim: keeps the photo readable and anchors the copy to the left */}
+      {/* Scrims: darken globally, then deepen top and bottom so the fixed navbar
+          and the section seam both have something solid to sit against. */}
+      <Box position="absolute" inset={0} bg="rgba(12, 15, 20, 0.72)" />
       <Box
         position="absolute"
         inset={0}
-        bgGradient="linear(to-r, blackAlpha.900, blackAlpha.700 45%, blackAlpha.500)"
+        bgGradient="linear(to-b, rgba(12,15,20,0.92), transparent 28%, transparent 62%, rgba(12,15,20,0.95))"
       />
+      {/* Brand-orange bloom behind the headline */}
       <Box
         position="absolute"
-        inset={0}
-        bgGradient="linear(to-t, blackAlpha.800, transparent 35%)"
+        top="18%"
+        left="50%"
+        transform="translateX(-50%)"
+        w={{ base: '520px', md: '900px' }}
+        h={{ base: '320px', md: '460px' }}
+        bg="primary"
+        opacity={0.16}
+        filter="blur(120px)"
+        borderRadius="full"
+        pointerEvents="none"
       />
 
       <Container position="relative" zIndex={1} maxW="7xl" px={SHELL_PX}>
-        <VStack align="start" spacing={{ base: 7, md: 9 }} color="white">
-          <Eyebrow colorScheme="blue" dark>
-            🚀 Africa's #1 Vehicle Marketplace
-          </Eyebrow>
+        <VStack spacing={{ base: 6, md: 8 }} textAlign="center" color="white">
+          {/* Eyebrow */}
+          <HStack
+            spacing={2.5}
+            px={4}
+            py={2}
+            borderRadius="full"
+            bg="whiteAlpha.100"
+            border="1px solid"
+            borderColor="whiteAlpha.200"
+            backdropFilter="blur(12px)"
+          >
+            <Text
+              fontSize="xs"
+              fontWeight="700"
+              textTransform="uppercase"
+              letterSpacing="0.14em"
+              whiteSpace="nowrap"
+            >
+               Africa's #1 Vehicle Marketplace
+            </Text>
+          </HStack>
 
+          {/* Headline */}
           <Heading
             as="h1"
-            fontSize={{ base: '2.75rem', sm: '3.5rem', md: '5rem' }}
+            fontSize={{ base: '2.75rem', sm: '4rem', md: '5.5rem', lg: '6rem' }}
             fontWeight="800"
-            letterSpacing="-0.04em"
-            lineHeight="0.98"
-            maxW="5xl"
+            letterSpacing="-0.045em"
+            lineHeight="0.95"
+            maxW="6xl"
             sx={{ '& span': { lineHeight: 'inherit' } }}
           >
-            {/* Explicit block spans so each line is its own box and the gradient
-                clip applies per line. */}
+            <Box as="span" display="block">
+              Find Your Next Vehicle
+            </Box>
             <Box
               as="span"
               display="block"
-              bgGradient="linear(to-r, white, blue.200)"
+              bgGradient="linear(to-r, #FDD153, #F4A950)"
               bgClip="text"
             >
-              Find Your Next Vehicle
-            </Box>
-            <Box as="span" display="block" color="blue.300">
               or Service
             </Box>
           </Heading>
 
           <Text
-            maxW={{ base: '100%', md: '60%' }}
-            fontSize={{ base: 'md', md: 'xl' }}
+            maxW="2xl"
+            fontSize={{ base: 'md', md: 'lg' }}
             lineHeight="tall"
             color="whiteAlpha.800"
           >
@@ -326,89 +434,61 @@ function SearchHero() {
             Compare prices, explore deals, and book with verified partners across Africa.
           </Text>
 
-          {/* Search panel */}
-          <Box
-            bg="whiteAlpha.100"
-            backdropFilter="blur(24px)"
-            borderRadius="2xl"
-            p={{ base: 3, md: 4 }}
-            w="100%"
-            maxW="1000px"
-            border="1px solid"
-            borderColor="whiteAlpha.200"
-            shadow="0 24px 60px -20px rgba(0,0,0,0.6)"
-          >
-            <Tabs
-              variant="unstyled"
-              onChange={(i) =>
-                setType(['cars', 'aircraft', 'bikes', 'boats', 'mechanics'][i])
-              }
-              mb={3}
-            >
-              <TabList
-                flexWrap="wrap"
-                gap={1}
-                bg="blackAlpha.400"
-                p={1}
-                borderRadius="full"
-                w="fit-content"
-                maxW="full"
-              >
-                {['cars', 'Aircraft', 'Bikes', 'Boats', 'Mechanics'].map((label) => (
-                  <Tab
-                    key={label}
-                    px={{ base: 3.5, md: 5 }}
-                    py={2}
-                    fontSize="sm"
-                    fontWeight="600"
-                    borderRadius="full"
-                    color="whiteAlpha.700"
-                    textTransform="capitalize"
-                    transition="all 0.2s"
-                    _hover={{ color: 'white' }}
-                    _selected={{ bg: 'blue.500', color: 'white', shadow: 'md' }}
-                  >
-                    {label}
-                  </Tab>
-                ))}
-              </TabList>
-            </Tabs>
+          {/* Search command bar */}
+          <Box w="full" maxW="4xl" pt={{ base: 2, md: 4 }}>
+            <Flex justify="center" gap={2} mb={4} flexWrap="wrap">
+              {HERO_TYPES.map((t) => (
+                <Box
+                  key={t.key}
+                  as="button"
+                  type="button"
+                  onClick={() => setType(t.key)}
+                  px={4}
+                  py={2}
+                  borderRadius="full"
+                  fontSize="sm"
+                  fontWeight="600"
+                  border="1px solid"
+                  transition="all 0.2s ease"
+                  bg={type === t.key ? 'primary' : 'whiteAlpha.100'}
+                  color={type === t.key ? 'secondary' : 'whiteAlpha.800'}
+                  borderColor={type === t.key ? 'primary' : 'whiteAlpha.200'}
+                  backdropFilter="blur(12px)"
+                  _hover={type === t.key ? {} : { bg: 'whiteAlpha.200', color: 'white' }}
+                >
+                  {t.label}
+                </Box>
+              ))}
+            </Flex>
 
-            <Flex direction={{ base: 'column', md: 'row' }} gap={2.5}>
-              <Box position="relative" flex={1}>
-                <InputGroup size="lg">
-                  <InputLeftElement pointerEvents="none" h="full">
-                    <Icon as={Search} boxSize={5} color="whiteAlpha.600" />
-                  </InputLeftElement>
-                  <Input
-                    value={make}
-                    onChange={(e) => {
-                      setMake(e.target.value);
-                      setShowMakeSug(true);
-                    }}
-                    onFocus={() => setShowMakeSug(true)}
-                    onBlur={() => setTimeout(() => setShowMakeSug(false), 150)}
-                    onKeyDown={(e) => e.key === 'Enter' && onSearch()}
-                    placeholder={placeholderByType[type]}
-                    bg="whiteAlpha.200"
-                    border="1px solid"
-                    borderColor="whiteAlpha.300"
-                    borderRadius="xl"
-                    color="white"
-                    _placeholder={{ color: 'whiteAlpha.600' }}
-                    _hover={{ borderColor: 'whiteAlpha.400' }}
-                    _focus={{
-                      borderColor: 'blue.400',
-                      bg: 'whiteAlpha.300',
-                      boxShadow: '0 0 0 1px var(--chakra-colors-blue-400)'
-                    }}
-                  />
-                </InputGroup>
+            <Flex
+              direction={{ base: 'column', md: 'row' }}
+              align="stretch"
+              gap={{ base: 2, md: 1 }}
+              bg="white"
+              p={2}
+              borderRadius={{ base: '2xl', md: 'full' }}
+              boxShadow="0 24px 60px -20px rgba(0,0,0,0.6)"
+            >
+              <Box position="relative" flex={1} minW={0}>
+                <HeroField
+                  icon={Search}
+                  label={field.label}
+                  value={make}
+                  onChange={(e) => {
+                    setMake(e.target.value);
+                    setShowMakeSug(true);
+                  }}
+                  onFocus={() => setShowMakeSug(true)}
+                  onBlur={() => setTimeout(() => setShowMakeSug(false), 150)}
+                  onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+                  placeholder={field.placeholder}
+                />
 
                 {showMakeSug && suggestions.length > 0 && (
                   <VStack
                     position="absolute"
-                    top="calc(100% + 8px)"
+                    top="calc(100% + 12px)"
                     left={0}
                     right={0}
                     zIndex={3}
@@ -432,7 +512,7 @@ function SearchHero() {
                         fontSize="sm"
                         fontWeight="500"
                         color="gray.700"
-                        _hover={{ bg: 'blue.50', color: 'blue.700' }}
+                        _hover={{ bg: 'orange.50', color: 'orange.700' }}
                         transition="all 0.15s"
                         onMouseDown={() => {
                           setMake(suggestion);
@@ -446,80 +526,111 @@ function SearchHero() {
                 )}
               </Box>
 
+              <Box
+                w="1px"
+                bg="gray.200"
+                my={2}
+                display={{ base: 'none', md: 'block' }}
+                flexShrink={0}
+              />
+
+              <HeroField
+                icon={MapPin}
+                label="Location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+                placeholder="Anywhere"
+              >
+                <Button
+                  onClick={useMyLocation}
+                  variant="link"
+                  size="xs"
+                  color="orange.600"
+                  fontWeight="700"
+                  flexShrink={0}
+                  _hover={{ color: 'orange.700' }}
+                >
+                  Use mine
+                </Button>
+              </HeroField>
+
               <Button
                 onClick={onSearch}
-                colorScheme="blue"
                 size="lg"
-                px={10}
-                borderRadius="xl"
+                bg="secondary"
+                color="white"
+                borderRadius="full"
+                px={8}
+                h={{ base: '52px', md: '56px' }}
+                flexShrink={0}
                 rightIcon={<ArrowRight size={18} />}
-                _hover={{ transform: 'translateY(-2px)', shadow: 'xl' }}
+                _hover={{ bg: 'dark.600', transform: 'translateY(-1px)', shadow: 'xl' }}
                 _active={{ transform: 'translateY(0)' }}
-                transition="all 0.2s"
-                minW={{ base: 'full', md: '160px' }}
+                transition="all 0.2s ease"
               >
                 Search
               </Button>
             </Flex>
 
-            <Flex
-              mt={3.5}
-              align="center"
-              justify="space-between"
-              gap={3}
-              flexWrap="wrap"
-            >
-              <Text fontSize="sm" color="whiteAlpha.700">
-                🔥 Popular: Toyota, Honda, BMW • Motorbikes • Boats
-              </Text>
-              <Button
-                onClick={useMyLocation}
-                variant="link"
-                size="sm"
-                color="blue.200"
-                fontWeight="600"
-                leftIcon={<MapPin size={14} />}
-                _hover={{ color: 'white' }}
-              >
-                Use my location
-              </Button>
-            </Flex>
+            <Text mt={4} fontSize="sm" color="whiteAlpha.700">
+               Popular: Toyota, Honda, BMW • Motorbikes • Boats
+            </Text>
           </Box>
 
-          {/* Trust strip — plain Flex rather than Stack's `divider` prop, which
-              overwrites the divider's own margins with the stack spacing (0). */}
-          <Flex
-            pt={2}
-            align="center"
-            flexWrap="wrap"
-            columnGap={{ base: 6, md: 0 }}
-            rowGap={2}
-          >
-            {trustPoints.map(({ icon, label }, i) => (
-              <Fragment key={label}>
-                {i > 0 && (
-                  <Box
-                    w="1px"
-                    h="14px"
-                    bg="whiteAlpha.400"
-                    mx={5}
-                    display={{ base: 'none', md: 'block' }}
-                  />
-                )}
-                <HStack spacing={2.5} py={1} color="whiteAlpha.900">
-                  <Icon as={icon} boxSize={4} color="blue.300" />
-                  <Text fontSize="sm" fontWeight="600">
-                    {label}
-                  </Text>
-                </HStack>
-              </Fragment>
+          {/* Trust chips */}
+          <Flex justify="center" flexWrap="wrap" gap={2.5} pt={{ base: 2, md: 4 }}>
+            {trustPoints.map(({ icon, label }) => (
+              <HStack
+                key={label}
+                spacing={2}
+                px={4}
+                py={2}
+                borderRadius="full"
+                bg="whiteAlpha.100"
+                border="1px solid"
+                borderColor="whiteAlpha.200"
+                backdropFilter="blur(12px)"
+                transition="all 0.2s ease"
+                _hover={{ bg: 'whiteAlpha.200', borderColor: 'whiteAlpha.400' }}
+              >
+                <Icon as={icon} boxSize={4} color="primary" />
+                <Text fontSize="sm" fontWeight="600" whiteSpace="nowrap">
+                  {label}
+                </Text>
+              </HStack>
             ))}
           </Flex>
         </VStack>
       </Container>
+
+      {/* Scroll cue */}
+      <VStack
+        position="absolute"
+        bottom={6}
+        left="50%"
+        transform="translateX(-50%)"
+        spacing={1.5}
+        color="whiteAlpha.600"
+        display={{ base: 'none', md: 'flex' }}
+        pointerEvents="none"
+      >
+        <Text fontSize="10px" fontWeight="700" textTransform="uppercase" letterSpacing="0.2em">
+          Scroll
+        </Text>
+        <Icon
+          as={ChevronDown}
+          boxSize={4}
+          sx={{
+            animation: `${nudge} 1.8s ease-in-out infinite`,
+            '@media (prefers-reduced-motion: reduce)': { animation: 'none' }
+          }}
+        />
+      </VStack>
     </Box>
   );
 }
+
 
 /* ──────────────────────────────── STATS ────────────────────────────────── */
 
@@ -659,7 +770,7 @@ function FeaturedDeals() {
     <Box py={SECTION_PY} bg="gray.50">
       <Container maxW="7xl" px={SHELL_PX}>
         <SectionHeader
-          eyebrow="🚗 Latest Listings"
+          eyebrow=" Latest Listings"
           colorScheme="blue"
           title="Recently Added Vehicles"
           subtitle="Browse through our latest vehicle listings from trusted sellers."
@@ -799,7 +910,7 @@ function HowItWorks() {
     <Box py={SECTION_PY} bg="white">
       <Container maxW="7xl" px={SHELL_PX}>
         <SectionHeader
-          eyebrow="⚡ Simple Process"
+          eyebrow=" Simple Process"
           colorScheme="purple"
           title="How Veyu Works"
           subtitle="Get started in minutes with our streamlined process designed for your convenience."
@@ -985,25 +1096,25 @@ function TrustedBy() {
 function Features() {
   const features = [
     {
-      icon: '🏪',
+      icon: Store,
       title: 'All-in-One Marketplace',
       description: 'Veyu offers you the best experience by providing solutions to your vehicle needs all in one place.',
       color: 'blue'
     },
     {
-      icon: '🛡️',
+      icon: ShieldCheck,
       title: 'Trust & Transparency',
       description: 'Have peace of mind when dealing on Veyu with our secure technology and verified partners.',
       color: 'green'
     },
     {
-      icon: '⚡',
+      icon: MousePointerClick,
       title: 'Ease of Use',
       description: 'Veyu makes it easy for users to find vehicles and mechanics with our intuitive interface.',
       color: 'purple'
     },
     {
-      icon: '📚',
+      icon: GraduationCap,
       title: 'Educational Content',
       description: 'Learn about vehicles, maintenance, and smart buying decisions with Veyu Reels - all under 60 seconds.',
       color: 'orange'
@@ -1014,7 +1125,7 @@ function Features() {
     <Box py={SECTION_PY} bg="white">
       <Container maxW="7xl" px={SHELL_PX}>
         <SectionHeader
-          eyebrow="✨ Why Choose Us"
+          eyebrow=" Why Choose Us"
           colorScheme="green"
           title={
             <>
@@ -1061,7 +1172,6 @@ function Features() {
 
               <Flex
                 boxSize={14}
-                fontSize="2xl"
                 borderRadius="2xl"
                 bg="white"
                 border="1px solid"
@@ -1071,7 +1181,7 @@ function Features() {
                 shadow="sm"
                 position="relative"
               >
-                {feature.icon}
+                <Icon as={feature.icon} boxSize={6} color={`${feature.color}.600`} strokeWidth={1.75} />
               </Flex>
 
               <VStack spacing={2.5} align="flex-start" position="relative">
@@ -1092,51 +1202,251 @@ function Features() {
 
 /* ───────────────────────────── VIN DECODER ─────────────────────────────── */
 
+function VinSpecRow({ label, value }) {
+  return (
+    <Flex
+      justify="space-between"
+      align="baseline"
+      py={2.5}
+      borderBottom="1px solid"
+      borderColor="gray.100"
+      gap={4}
+    >
+      <Text color="gray.500" fontSize="sm" flexShrink={0}>
+        {label}
+      </Text>
+      <Text fontWeight="600" color="gray.900" fontSize="sm" textAlign="right">
+        {value}
+      </Text>
+    </Flex>
+  );
+}
+
+function RecallPanel({ state }) {
+  if (state.status === 'loading') {
+    return (
+      <HStack spacing={3} px={{ base: 5, md: 7 }} py={4} bg="gray.50" borderTop="1px solid" borderColor="gray.100">
+        <Spinner size="sm" color="gray.400" />
+        <Text fontSize="sm" color="gray.500">Checking NHTSA safety recalls…</Text>
+      </HStack>
+    );
+  }
+
+  if (state.status === 'error') {
+    return (
+      <HStack spacing={2.5} px={{ base: 5, md: 7 }} py={4} bg="gray.50" borderTop="1px solid" borderColor="gray.100">
+        <Icon as={AlertTriangle} boxSize={4} color="gray.400" />
+        <Text fontSize="sm" color="gray.500">Recall lookup unavailable right now.</Text>
+      </HStack>
+    );
+  }
+
+  if (state.status !== 'done') return null;
+
+  if (state.count === 0) {
+    return (
+      <HStack spacing={2.5} px={{ base: 5, md: 7 }} py={4} bg="green.50" borderTop="1px solid" borderColor="green.100">
+        <Icon as={ShieldCheck} boxSize={4} color="green.600" />
+        <Text fontSize="sm" fontWeight="600" color="green.800">
+          No open safety recalls reported for this year, make and model.
+        </Text>
+      </HStack>
+    );
+  }
+
+  // parkIt / parkOutSide are NHTSA's "stop driving" and "fire risk" flags.
+  const urgent = state.recalls.filter((r) => r.parkIt || r.parkOutSide).length;
+
+  return (
+    <Box borderTop="1px solid" borderColor="red.100" bg="red.50">
+      <HStack spacing={2.5} px={{ base: 5, md: 7 }} pt={4} pb={urgent ? 2 : 4} align="flex-start">
+        <Icon as={AlertTriangle} boxSize={4} color="red.500" mt="2px" />
+        <Box>
+          <Text fontSize="sm" fontWeight="700" color="red.800">
+            {state.count} safety recall{state.count === 1 ? '' : 's'} reported for this year, make and model
+          </Text>
+          {urgent > 0 && (
+            <Text fontSize="xs" fontWeight="600" color="red.700" mt={1}>
+              {urgent} carries a “do not drive” or “park outside” warning.
+            </Text>
+          )}
+        </Box>
+      </HStack>
+
+      <Accordion allowToggle px={{ base: 3, md: 5 }} pb={4}>
+        {state.recalls.slice(0, 8).map((recall) => (
+          <AccordionItem key={recall.NHTSACampaignNumber} border="none" mb={2}>
+            <AccordionButton
+              bg="white"
+              borderRadius="lg"
+              border="1px solid"
+              borderColor="red.100"
+              _hover={{ borderColor: 'red.200' }}
+              px={4}
+              py={3}
+            >
+              <Box flex={1} textAlign="left">
+                <Text fontSize="sm" fontWeight="600" color="gray.900" noOfLines={1}>
+                  {/* NHTSA packs components as "AIR BAGS:FRONTAL:DRIVER SIDE" */}
+                  {titleCase(recall.Component || 'Safety recall').replace(/\s*:\s*/g, ' · ')}
+                </Text>
+                <Text fontSize="xs" color="gray.500" mt={0.5}>
+                  Campaign {recall.NHTSACampaignNumber}
+                  {recall.ReportReceivedDate ? ` · ${recall.ReportReceivedDate}` : ''}
+                </Text>
+              </Box>
+              <AccordionIcon color="gray.400" />
+            </AccordionButton>
+
+            <AccordionPanel px={4} pt={3} pb={4}>
+              <VStack align="stretch" spacing={3}>
+                {[
+                  ['Summary', recall.Summary],
+                  ['Risk', recall.Consequence],
+                  ['Remedy', recall.Remedy]
+                ]
+                  .filter(([, body]) => body)
+                  .map(([heading, body]) => (
+                    <Box key={heading}>
+                      <Text
+                        fontSize="10px"
+                        fontWeight="700"
+                        textTransform="uppercase"
+                        letterSpacing="0.1em"
+                        color="red.600"
+                        mb={1}
+                      >
+                        {heading}
+                      </Text>
+                      <Text fontSize="sm" color="gray.700" lineHeight="tall">
+                        {body}
+                      </Text>
+                    </Box>
+                  ))}
+              </VStack>
+            </AccordionPanel>
+          </AccordionItem>
+        ))}
+      </Accordion>
+
+      {state.count > 8 && (
+        <Text fontSize="xs" color="red.700" px={{ base: 5, md: 7 }} pb={4}>
+          Showing the 8 most recent of {state.count} recalls.
+        </Text>
+      )}
+    </Box>
+  );
+}
+
 function VinCheckSection() {
   const [vin, setVin] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
+  const [recalls, setRecalls] = useState({ status: 'idle' });
+  const [showAllFields, setShowAllFields] = useState(false);
+  const [recentVins, setRecentVins] = useState([]);
+  const requestRef = useRef(null);
   const toast = useToast();
+  const navigate = useNavigate();
 
-  async function onCheckVin() {
-    setError('');
-    setResult(null);
-    const clean = vin.trim().toUpperCase();
-    if (!/^[A-HJ-NPR-Z0-9]{11,17}$/.test(clean)) {
-      setError('Enter a valid VIN (11-17 characters, excluding I, O, Q)');
+  useEffect(() => {
+    setRecentVins(getRecentVins());
+    // Abort any in-flight lookup if the visitor navigates away mid-request.
+    return () => requestRef.current?.abort();
+  }, []);
+
+  const checkDigitOk = hasValidCheckDigit(vin);
+
+  async function onCheckVin(rawVin = vin) {
+    const candidate = normalizeVin(rawVin);
+    setVin(candidate);
+
+    const { valid, message, warning: checkWarning } = validateVin(candidate);
+    setError(valid ? '' : message);
+    setWarning(valid ? checkWarning || '' : '');
+    if (!valid) {
+      setResult(null);
+      setRecalls({ status: 'idle' });
       return;
     }
+
+    // Supersede any lookup still in flight so responses can't land out of order.
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+
     setLoading(true);
+    setResult(null);
+    setShowAllFields(false);
+    setRecalls({ status: 'idle' });
+
     try {
-      const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvaluesextended/${clean}?format=json`);
-      const data = await res.json();
-      const first = Array.isArray(data?.Results) ? data.Results[0] : null;
-      if (!first) {
-        setError('No result found for this VIN');
-      } else {
-        setResult(first);
-        toast({
-          title: 'VIN decoded',
-          description: `Found ${first?.Make || ''} ${first?.Model || ''} ${first?.ModelYear || ''}`,
-          status: 'success'
-        });
+      const { record, notes, partial } = await decodeVin(candidate, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+
+      setResult({ vin: candidate, record, notes, partial });
+      setRecentVins(rememberVin(candidate));
+      toast({
+        title: 'VIN decoded',
+        description: buildVehicleTitle(record),
+        status: 'success',
+        duration: 3000
+      });
+
+      // Recalls are a bonus — a failure here must not sink the decode result.
+      setRecalls({ status: 'loading' });
+      try {
+        const found = await fetchRecalls(
+          { make: record.Make, model: record.Model, modelYear: record.ModelYear },
+          { signal: controller.signal }
+        );
+        if (controller.signal.aborted) return;
+        setRecalls(found ? { status: 'done', ...found } : { status: 'idle' });
+      } catch (recallError) {
+        if (!controller.signal.aborted) setRecalls({ status: 'error' });
       }
     } catch (e) {
+      if (controller.signal.aborted || e?.name === 'AbortError') return;
       setError(e?.message || 'Failed to decode VIN');
     } finally {
-      setLoading(false);
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+        setLoading(false);
+      }
     }
   }
 
-  const fields = [
-    { label: 'Make', key: 'Make' },
-    { label: 'Model', key: 'Model' },
-    { label: 'Year', key: 'ModelYear' },
-    { label: 'Body Class', key: 'BodyClass' },
-    { label: 'Vehicle Type', key: 'VehicleType' },
-    { label: 'Trim', key: 'Trim' }
-  ];
+  function onClear() {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setVin('');
+    setResult(null);
+    setError('');
+    setWarning('');
+    setRecalls({ status: 'idle' });
+    setLoading(false);
+  }
+
+  async function onCopy() {
+    try {
+      await navigator.clipboard.writeText(buildVinSummary(result.vin, result.record));
+      toast({ title: 'Copied to clipboard', status: 'success', duration: 2000 });
+    } catch {
+      toast({ title: "Couldn't copy", status: 'error', duration: 2500 });
+    }
+  }
+
+  function onSearchListings() {
+    const params = new URLSearchParams({ type: 'cars' });
+    if (result?.record?.Make) params.set('make', titleCase(result.record.Make));
+    if (result?.record?.Model) params.set('model', result.record.Model);
+    navigate(`/search/cars/?${params.toString()}`);
+  }
+
+  const groups = result ? groupDecodedFields(result.record) : [];
+  const extras = result && showAllFields ? extraDecodedFields(result.record) : [];
 
   return (
     <Box py={SECTION_PY} bg="gray.50">
@@ -1149,6 +1459,7 @@ function VinCheckSection() {
         />
 
         <VStack spacing={6} maxW="900px" mx="auto">
+          {/* Input */}
           <Box
             w="full"
             bg="white"
@@ -1159,29 +1470,53 @@ function VinCheckSection() {
             shadow="sm"
           >
             <Flex direction={{ base: 'column', md: 'row' }} gap={3}>
-              <Input
-                value={vin}
-                onChange={(e) => setVin(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && onCheckVin()}
-                placeholder="Enter VIN e.g. 1HGCM82633A004352"
-                bg="gray.50"
-                textTransform="uppercase"
-                size="lg"
-                borderRadius="xl"
-                border="1px solid"
-                borderColor="gray.200"
-                fontFamily="mono"
-                letterSpacing="0.05em"
-                _hover={{ borderColor: 'gray.300' }}
-                _focus={{
-                  borderColor: 'blue.400',
-                  bg: 'white',
-                  boxShadow: '0 0 0 1px var(--chakra-colors-blue-400)'
-                }}
-                flex={1}
-              />
+              <InputGroup size="lg" flex={1}>
+                <Input
+                  value={vin}
+                  onChange={(e) => {
+                    setVin(normalizeVin(e.target.value));
+                    setError('');
+                    setWarning('');
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && onCheckVin()}
+                  placeholder="Enter VIN e.g. 1HGCM82633A004352"
+                  bg="gray.50"
+                  borderRadius="xl"
+                  border="1px solid"
+                  borderColor={error ? 'red.300' : 'gray.200'}
+                  fontFamily="mono"
+                  letterSpacing="0.08em"
+                  pr="4.5rem"
+                  _hover={{ borderColor: error ? 'red.400' : 'gray.300' }}
+                  _focus={{
+                    borderColor: error ? 'red.400' : 'blue.400',
+                    bg: 'white',
+                    boxShadow: `0 0 0 1px var(--chakra-colors-${error ? 'red' : 'blue'}-400)`
+                  }}
+                />
+                <InputRightElement w="4.5rem" h="full" pr={2} justifyContent="flex-end">
+                  {vin ? (
+                    <HStack spacing={1}>
+                      <Text fontSize="xs" fontWeight="600" color={vin.length === 17 ? 'green.500' : 'gray.400'}>
+                        {vin.length}/17
+                      </Text>
+                      <IconButton
+                        onClick={onClear}
+                        size="xs"
+                        variant="ghost"
+                        borderRadius="full"
+                        color="gray.400"
+                        _hover={{ bg: 'gray.100', color: 'gray.600' }}
+                        icon={<Icon as={X} boxSize={3.5} />}
+                        aria-label="Clear VIN"
+                      />
+                    </HStack>
+                  ) : null}
+                </InputRightElement>
+              </InputGroup>
+
               <Button
-                onClick={onCheckVin}
+                onClick={() => onCheckVin()}
                 colorScheme="blue"
                 isLoading={loading}
                 loadingText="Decoding"
@@ -1195,65 +1530,233 @@ function VinCheckSection() {
               </Button>
             </Flex>
 
+            {/* Validation feedback */}
             {error && (
+              <HStack mt={3} spacing={2} px={1} align="flex-start">
+                <Icon as={AlertTriangle} boxSize={3.5} color="red.500" mt="3px" />
+                <Text color="red.600" fontSize="sm" fontWeight="500">{error}</Text>
+              </HStack>
+            )}
+            {!error && warning && (
+              <HStack mt={3} spacing={2} px={1} align="flex-start">
+                <Icon as={AlertTriangle} boxSize={3.5} color="orange.500" mt="3px" />
+                <Text color="orange.700" fontSize="sm" fontWeight="500">{warning}</Text>
+              </HStack>
+            )}
+            {!error && !warning && vin.length === 17 && checkDigitOk && (
               <HStack mt={3} spacing={2} px={1}>
-                <Box boxSize="6px" borderRadius="full" bg="red.500" />
-                <Text color="red.500" fontSize="sm" fontWeight="500">
-                  {error}
+                <Icon as={CheckCircle} boxSize={3.5} color="green.500" />
+                <Text color="green.600" fontSize="sm" fontWeight="500">
+                  Check digit valid.
                 </Text>
               </HStack>
             )}
+
+            {/* Recent lookups */}
+            {recentVins.length > 0 && (
+              <Flex mt={4} pt={4} borderTop="1px solid" borderColor="gray.100" align="center" gap={2} flexWrap="wrap">
+                <Text fontSize="xs" fontWeight="700" textTransform="uppercase" letterSpacing="0.1em" color="gray.400">
+                  Recent
+                </Text>
+                {recentVins.map((recent) => (
+                  <Box
+                    key={recent}
+                    as="button"
+                    type="button"
+                    onClick={() => onCheckVin(recent)}
+                    px={3}
+                    py={1.5}
+                    borderRadius="full"
+                    border="1px solid"
+                    borderColor="gray.200"
+                    fontFamily="mono"
+                    fontSize="xs"
+                    color="gray.600"
+                    _hover={{ bg: 'blue.50', borderColor: 'blue.300', color: 'blue.700' }}
+                    transition="all 0.2s"
+                  >
+                    {recent}
+                  </Box>
+                ))}
+                <Button
+                  onClick={() => setRecentVins(clearRecentVins())}
+                  variant="link"
+                  size="xs"
+                  color="gray.400"
+                  fontWeight="600"
+                  _hover={{ color: 'gray.600' }}
+                >
+                  Clear
+                </Button>
+              </Flex>
+            )}
           </Box>
 
+          {/* Result */}
           {result && (
             <Box
               w="full"
               bg="white"
               borderWidth="1px"
-              borderColor="green.200"
+              borderColor="gray.200"
               borderRadius="2xl"
               overflow="hidden"
               shadow="lg"
             >
-              <HStack spacing={2.5} px={7} py={4} bg="green.50" borderBottom="1px solid" borderColor="green.100">
-                <Icon as={CheckCircle} color="green.500" boxSize={5} />
-                <Text fontSize="sm" fontWeight="700" color="green.700" letterSpacing="0.02em">
-                  VIN Successfully Decoded
-                </Text>
-              </HStack>
+              <Flex
+                px={{ base: 5, md: 7 }}
+                py={5}
+                bg="gray.50"
+                borderBottom="1px solid"
+                borderColor="gray.100"
+                justify="space-between"
+                align={{ base: 'flex-start', md: 'center' }}
+                direction={{ base: 'column', md: 'row' }}
+                gap={4}
+              >
+                <Box minW={0}>
+                  <HStack spacing={2} mb={1}>
+                    <Icon as={CheckCircle} color="green.500" boxSize={4} />
+                    <Text
+                      fontSize="xs"
+                      fontWeight="700"
+                      color="green.700"
+                      textTransform="uppercase"
+                      letterSpacing="0.1em"
+                    >
+                      VIN Decoded
+                    </Text>
+                  </HStack>
+                  <Heading as="h3" fontSize={{ base: 'xl', md: '2xl' }} color="gray.900" {...displayHeading}>
+                    {buildVehicleTitle(result.record)}
+                  </Heading>
+                  <Text fontFamily="mono" fontSize="xs" color="gray.500" letterSpacing="0.08em" mt={1}>
+                    {result.vin}
+                  </Text>
+                </Box>
+
+                <HStack spacing={2} flexShrink={0}>
+                  <Button
+                    onClick={onCopy}
+                    size="sm"
+                    variant="outline"
+                    borderRadius="full"
+                    leftIcon={<Copy size={14} />}
+                    _hover={{ bg: 'white' }}
+                  >
+                    Copy
+                  </Button>
+                  <Button
+                    onClick={onSearchListings}
+                    size="sm"
+                    colorScheme="blue"
+                    borderRadius="full"
+                    rightIcon={<ArrowRight size={14} />}
+                  >
+                    Find similar
+                  </Button>
+                </HStack>
+              </Flex>
+
+              {/* NHTSA caveats for partially decoded VINs */}
+              {result.notes.length > 0 && (
+                <VStack
+                  align="stretch"
+                  spacing={1.5}
+                  px={{ base: 5, md: 7 }}
+                  py={4}
+                  bg="orange.50"
+                  borderBottom="1px solid"
+                  borderColor="orange.100"
+                >
+                  <Text fontSize="xs" fontWeight="700" textTransform="uppercase" letterSpacing="0.1em" color="orange.700">
+                    Notes from NHTSA
+                  </Text>
+                  {result.notes.map((note) => (
+                    <Text key={note} fontSize="sm" color="orange.800" lineHeight="tall">
+                      {note}
+                    </Text>
+                  ))}
+                </VStack>
+              )}
 
               <Box p={{ base: 5, md: 7 }}>
-                <SimpleGrid columns={{ base: 1, sm: 2 }} spacingX={8} spacingY={0} w="full">
-                  {fields.map((field) => (
-                    <Flex
-                      key={field.key}
-                      justify="space-between"
-                      align="center"
-                      py={3.5}
-                      borderBottom="1px solid"
-                      borderColor="gray.100"
-                      gap={4}
-                    >
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacingX={10} spacingY={7}>
+                  {groups.map((group) => (
+                    <Box key={group.title}>
                       <Text
-                        color="gray.500"
                         fontSize="xs"
                         fontWeight="700"
                         textTransform="uppercase"
-                        letterSpacing="0.08em"
+                        letterSpacing="0.1em"
+                        color="blue.600"
+                        mb={2}
                       >
-                        {field.label}
+                        {group.title}
                       </Text>
-                      <Text fontWeight="600" color="gray.900" textAlign="right" noOfLines={1}>
-                        {result?.[field.key] || '—'}
-                      </Text>
-                    </Flex>
+                      {group.rows.map((row) => (
+                        <VinSpecRow key={row.key} label={row.label} value={row.value} />
+                      ))}
+                    </Box>
                   ))}
                 </SimpleGrid>
 
-                <Text fontSize="xs" color="gray.500" textAlign="center" mt={6}>
-                  Data provided by NHTSA. Always verify details with the seller.
-                </Text>
+                {showAllFields && extras.length > 0 && (
+                  <Box mt={7}>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="700"
+                      textTransform="uppercase"
+                      letterSpacing="0.1em"
+                      color="blue.600"
+                      mb={2}
+                    >
+                      Everything else NHTSA returned
+                    </Text>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacingX={10}>
+                      {extras.map((row) => (
+                        <VinSpecRow key={row.key} label={row.label} value={row.value} />
+                      ))}
+                    </SimpleGrid>
+                  </Box>
+                )}
+
+                <Flex justify="center" mt={6}>
+                  <Button
+                    onClick={() => setShowAllFields((open) => !open)}
+                    variant="ghost"
+                    size="sm"
+                    colorScheme="blue"
+                    borderRadius="full"
+                    rightIcon={
+                      <Icon
+                        as={ChevronDown}
+                        boxSize={4}
+                        transform={showAllFields ? 'rotate(180deg)' : 'none'}
+                        transition="transform 0.2s"
+                      />
+                    }
+                  >
+                    {showAllFields
+                      ? 'Show fewer details'
+                      : `Show all ${extraDecodedFields(result.record).length} additional fields`}
+                  </Button>
+                </Flex>
               </Box>
+
+              <RecallPanel state={recalls} />
+
+              <Text
+                fontSize="xs"
+                color="gray.500"
+                textAlign="center"
+                px={5}
+                py={4}
+                borderTop="1px solid"
+                borderColor="gray.100"
+              >
+                Data provided by NHTSA. Always verify details with the seller.
+              </Text>
             </Box>
           )}
         </VStack>
@@ -1261,6 +1764,7 @@ function VinCheckSection() {
     </Box>
   );
 }
+
 
 /* ─────────────────────────── POPULAR BRANDS ────────────────────────────── */
 
@@ -1317,7 +1821,7 @@ function PopularBrands() {
     <Box py={SECTION_PY} bg="white">
       <Container maxW="7xl" px={SHELL_PX}>
         <SectionHeader
-          eyebrow="🏆 Popular Brands"
+          eyebrow=" Popular Brands"
           colorScheme="purple"
           title="Browse All Vehicle Categories"
           subtitle="Discover top brands across cars, bikes, boats, aircraft, and more."
@@ -1562,7 +2066,7 @@ function Testimonials() {
     <Box py={SECTION_PY} bg="gray.50">
       <Container maxW="7xl" px={SHELL_PX}>
         <SectionHeader
-          eyebrow="⭐ Customer Stories"
+          eyebrow=" Customer Stories"
           colorScheme="yellow"
           title="What Our Clients Say"
           subtitle="Real experiences from thousands of satisfied customers across Africa."
@@ -1650,7 +2154,7 @@ function Partnership() {
       <Container position="relative" zIndex={1} maxW="7xl" px={SHELL_PX}>
         <VStack spacing={8} textAlign="center">
           <Eyebrow colorScheme="yellow" dark>
-            🤝 Partner With Us
+             Partner With Us
           </Eyebrow>
 
           <Heading
@@ -1760,7 +2264,7 @@ function FAQSection() {
     <Box bg="white" py={SECTION_PY}>
       <Container maxW="7xl" px={SHELL_PX}>
         <SectionHeader
-          eyebrow="❓ Got Questions?"
+          eyebrow=" Got Questions?"
           colorScheme="blue"
           title="Frequently Asked Questions"
           subtitle={

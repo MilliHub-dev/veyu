@@ -53,7 +53,7 @@ import {
 } from 'lucide-react';
 import { CenteredLayout } from "../../components";
 import { useNavigate, Link } from "react-router-dom";
-import { auth } from "../../firebase";
+import { auth, isFirebaseConfigured } from "../../firebase";
 import firebase from 'firebase/compat/app';
 import authService from '../../services/authService';
 import { formatErrorForUser, createErrorNotification, logError } from '../../utils/errorHandling';
@@ -218,6 +218,15 @@ export const LoginView = ({ ...props }) => {
   }
 
   const signInWithGoogle = async () => {
+    if (!auth) {
+      notify({
+        title: 'Google sign-in unavailable',
+        body: 'Google sign-in is not configured right now. Please sign in with your email and password.',
+        color: 'orange'
+      });
+      return;
+    }
+
     setIsGoogleLoading(true);
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
@@ -644,6 +653,7 @@ export const LoginView = ({ ...props }) => {
                         leftIcon={<FaGoogle />}
                         onClick={signInWithGoogle}
                         isLoading={isGoogleLoading}
+                        isDisabled={!isFirebaseConfigured}
                         loadingText="Connecting..."
                         border="2px solid"
                         borderColor="gray.200"
@@ -658,6 +668,12 @@ export const LoginView = ({ ...props }) => {
                       >
                         Continue with Google
                       </Button>
+
+                      {!isFirebaseConfigured && (
+                        <Text fontSize="xs" color="gray.500" textAlign="center">
+                          Google sign-in is unavailable — please use your email and password.
+                        </Text>
+                      )}
 
                       {/* Sign Up Link */}
                       <Box textAlign="center" pt={4}>

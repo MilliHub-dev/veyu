@@ -54,7 +54,7 @@ import { FiBell } from 'react-icons/fi';
 import { MdOutlineAccountCircle } from 'react-icons/md';
 import { BsTools } from 'react-icons/bs';
 import { LuWallet, LuChartLine } from 'react-icons/lu';
-import { NavLink, Link as RLink, useNavigate } from 'react-router-dom';
+import { NavLink, Link as RLink, useNavigate, useLocation } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Linkedin, Youtube, ArrowLeft, ArrowRight } from 'lucide-react';
 import {
   LayoutDashboard, Wallet, Clock,
@@ -62,6 +62,7 @@ import {
   Settings, Share2, MoreVertical, TrendingUp,
   MessageCircle as MessageCircleIcon, Bell as BellIcon, ShoppingCart as ShoppingCartIcon, User as UserIcon
 } from 'lucide-react';
+import { Menu as MenuGlyph, X as CloseGlyph } from 'lucide-react';
 import { GiHomeGarage } from "react-icons/gi";
 import { GrUserWorker } from "react-icons/gr";
 import {
@@ -165,162 +166,240 @@ export const Paginator = ({ onNext, onPrevious, onClick, pagination }) => {
 }
 
 
-export const UnauthenticatedNavbar = (props = {}) => {
+const PUBLIC_NAV_LINKS = [
+  { label: 'Home', to: '/' },
+  { label: 'Buy', to: '/buy' },
+  { label: 'Rent', to: '/rent' },
+  { label: 'About', to: '/about' },
+  { label: 'Services', to: '/services' },
+  { label: 'Contact', to: '/contact' },
+];
+
+export const UnauthenticatedNavbar = ({ transparent, ...props }) => {
   const [navIsOpen, setNavState] = useState(false);
-  const [searchIsOpen, setSearchState] = useState(false);
-  const { authUser, onLogout } = useContext(GlobalStore);
-  const [isMobile] = useMediaQuery('(max-width: 768px)');
-  const isLoggedIn = Boolean(authUser);
+  const [scrolled, setScrolled] = useState(false);
+  const { pathname } = useLocation();
 
-  window.onscroll = (ev) => {
-    const navbar = document.getElementById('navbar');
-    if (navbar) {
-      if (window.scrollY > 1000) {
-        navbar.classList.add('scrolled');
-      } else {
-        navbar.classList.remove('scrolled');
-      }
-    }
-  }
+  // Overlay the hero on the landing route only; every other public page sits on
+  // a light background and needs a solid bar from the first pixel.
+  const overlay = transparent === undefined ? pathname === '/' : transparent;
+  const onGlass = overlay && !scrolled;
 
-  function toggleSearch() {
-    setSearchState(!searchIsOpen);
-  }
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
-  function hideNav() {
-    setNavState(false)
-  }
+  // Close the mobile sheet whenever the route changes
+  useEffect(() => setNavState(false), [pathname]);
 
-  function showNav() {
-    setNavState(true)
-  }
+  const isActive = (to) => (to === '/' ? pathname === '/' : pathname.startsWith(to));
 
   return (
     <Box
-      className="navbar"
-      position="sticky"
+      as="header"
+      position={overlay ? 'fixed' : 'sticky'}
       top="0"
-      bg="#F4A950"
-      color="white"
+      left="0"
+      right="0"
       zIndex="30"
-      boxShadow="lg"
+      transition="background-color 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease"
+      bg={onGlass ? 'transparent' : 'rgba(20, 24, 30, 0.82)'}
+      backdropFilter={onGlass ? 'none' : 'saturate(180%) blur(16px)'}
+      borderBottom="1px solid"
+      borderColor={onGlass ? 'transparent' : 'whiteAlpha.200'}
+      boxShadow={onGlass ? 'none' : '0 8px 30px -12px rgba(0,0,0,0.5)'}
+      color="white"
+      {...props}
     >
-      <Container maxW="container.xl">
-        <Flex
-          alignItems="center"
-          py={4}
-          justifyContent="space-between"
-          w="100%"
-        >
-          {/* Logo */}
-          <Box as={Flex} alignItems="center" justifyContent="center" width={isMobile ? '50px' : '60px'} height={isMobile ? '40px' : '50px'}>
-            <RLink to="/">
-              <Image
-                loading="eager"
-                src="/assets/images/VEYU MOBILE APP ICON1.jpg"
-                alt="Veyu Logo"
-                width="100%"
-                borderRadius="lg"
-                _hover={{ transform: 'scale(1.05)' }}
-                transition="transform 0.2s"
-              />
-            </RLink>
-          </Box>
+      <Container maxW="container.xl" px={{ base: 4, md: 6 }}>
+        <Flex align="center" justify="space-between" h={{ base: '64px', md: '76px' }} gap={4}>
+          {/* Brand */}
+          <HStack as={RLink} to="/" spacing={2.5} flexShrink={0} _hover={{ '& img': { transform: 'scale(1.06)' } }}>
+            <Image
+              loading="eager"
+              src="/assets/images/VEYU MOBILE APP ICON1.jpg"
+              alt="Veyu"
+              boxSize={{ base: '34px', md: '38px' }}
+              borderRadius="10px"
+              objectFit="cover"
+              transition="transform 0.2s ease"
+            />
+            <Text
+              fontSize={{ base: 'lg', md: 'xl' }}
+              fontWeight="800"
+              letterSpacing="-0.02em"
+              display={{ base: 'none', sm: 'block' }}
+            >
+              Veyu
+            </Text>
+          </HStack>
 
-          {/* Desktop Navigation Links */}
-          {!isMobile && (
-            <HStack spacing={8} flex={1} justify="center">
-              <Button
-                as={RLink}
-                to="/"
-                variant="ghost"
-                color="white"
-                fontWeight="semibold"
-                _hover={{ bg: 'whiteAlpha.200', transform: 'translateY(-1px)' }}
-                _active={{ transform: 'translateY(0)' }}
-                size="md"
-                borderRadius="lg"
-              >
-                Home
-              </Button>
-              <Button
-                as={RLink}
-                to="/about"
-                variant="ghost"
-                color="white"
-                fontWeight="semibold"
-                _hover={{ bg: 'whiteAlpha.200', transform: 'translateY(-1px)' }}
-                _active={{ transform: 'translateY(0)' }}
-                size="md"
-                borderRadius="lg"
-              >
-                About
-              </Button>
-              <Button
-                as={RLink}
-                to="/services"
-                variant="ghost"
-                color="white"
-                fontWeight="semibold"
-                _hover={{ bg: 'whiteAlpha.200', transform: 'translateY(-1px)' }}
-                _active={{ transform: 'translateY(0)' }}
-                size="md"
-                borderRadius="lg"
-              >
-                Services
-              </Button>
-              <Button
-                as={RLink}
-                to="/contact"
-                variant="ghost"
-                color="white"
-                fontWeight="semibold"
-                _hover={{ bg: 'whiteAlpha.200', transform: 'translateY(-1px)' }}
-                _active={{ transform: 'translateY(0)' }}
-                size="md"
-                borderRadius="lg"
-              >
-                Contact
-              </Button>
-            </HStack>
-          )}
+          {/* Desktop links */}
+          <HStack as="nav" spacing={1} display={{ base: 'none', lg: 'flex' }}>
+            {PUBLIC_NAV_LINKS.map((link) => {
+              const active = isActive(link.to);
+              return (
+                <Box
+                  key={link.to}
+                  as={RLink}
+                  to={link.to}
+                  px={3.5}
+                  py={2}
+                  fontSize="sm"
+                  fontWeight="600"
+                  borderRadius="full"
+                  position="relative"
+                  color={active ? 'white' : 'whiteAlpha.700'}
+                  bg={active ? 'whiteAlpha.200' : 'transparent'}
+                  _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+                  transition="all 0.2s ease"
+                >
+                  {link.label}
+                </Box>
+              );
+            })}
+          </HStack>
 
-          {/* Action Buttons */}
-          <HStack spacing={4}>
+          {/* Actions */}
+          <HStack spacing={{ base: 2, md: 3 }} flexShrink={0}>
             <Button
               as={RLink}
               to="/login"
-              variant="solid"
-              bg="white"
-              color="#F4A950"
-              _hover={{ bg: 'gray.100', transform: 'translateY(-1px)' }}
-              _active={{ transform: 'translateY(0)' }}
-              fontWeight="bold"
+              variant="ghost"
+              size="sm"
+              color="white"
+              fontWeight="600"
               borderRadius="full"
-              px={6}
-              size="md"
+              px={4}
+              display={{ base: 'none', sm: 'inline-flex' }}
+              _hover={{ bg: 'whiteAlpha.200' }}
+              _active={{ bg: 'whiteAlpha.300' }}
             >
-              Login
+              Log in
             </Button>
 
-            {/* Mobile Menu Toggle */}
-            {isMobile && (
-              <IconButton
-                onClick={navIsOpen ? hideNav : showNav}
-                variant="ghost"
-                color="white"
-                _hover={{ bg: 'whiteAlpha.200' }}
-                icon={<Icon as={FcMenu} boxSize={6} />}
-                aria-label="Menu"
-                size="lg"
-              />
-            )}
+            <Button
+              as={RLink}
+              to="/signup"
+              size="sm"
+              bg="primary"
+              color="secondary"
+              fontWeight="700"
+              borderRadius="full"
+              px={{ base: 4, md: 5 }}
+              h={{ base: '36px', md: '40px' }}
+              rightIcon={<ArrowRight size={15} />}
+              _hover={{ bg: 'tertiary', transform: 'translateY(-1px)', shadow: 'lg' }}
+              _active={{ transform: 'translateY(0)' }}
+              transition="all 0.2s ease"
+            >
+              Get Started
+            </Button>
+
+            <IconButton
+              onClick={() => setNavState((open) => !open)}
+              display={{ base: 'inline-flex', lg: 'none' }}
+              variant="ghost"
+              color="white"
+              borderRadius="full"
+              _hover={{ bg: 'whiteAlpha.200' }}
+              _active={{ bg: 'whiteAlpha.300' }}
+              icon={<Icon as={navIsOpen ? CloseGlyph : MenuGlyph} boxSize={5} />}
+              aria-label={navIsOpen ? 'Close menu' : 'Open menu'}
+              size="sm"
+            />
           </HStack>
         </Flex>
       </Container>
 
-      {/* Mobile Sidebar */}
-      <Sidebar onClose={hideNav} show={navIsOpen} />
+      {/* Mobile sheet */}
+      <Drawer isOpen={navIsOpen} onClose={() => setNavState(false)} placement="right" size="full">
+        <DrawerContent bg="secondary" color="white">
+          <Flex align="center" justify="space-between" px={5} h="64px" borderBottom="1px solid" borderColor="whiteAlpha.200">
+            <HStack spacing={2.5}>
+              <Image
+                src="/assets/images/VEYU MOBILE APP ICON1.jpg"
+                alt="Veyu"
+                boxSize="34px"
+                borderRadius="10px"
+                objectFit="cover"
+              />
+              <Text fontSize="lg" fontWeight="800" letterSpacing="-0.02em">Veyu</Text>
+            </HStack>
+            <IconButton
+              onClick={() => setNavState(false)}
+              variant="ghost"
+              color="white"
+              borderRadius="full"
+              _hover={{ bg: 'whiteAlpha.200' }}
+              icon={<Icon as={CloseGlyph} boxSize={5} />}
+              aria-label="Close menu"
+              size="sm"
+            />
+          </Flex>
+
+          <DrawerBody px={5} py={8}>
+            <Stack spacing={1}>
+              {PUBLIC_NAV_LINKS.map((link) => (
+                <Box
+                  key={link.to}
+                  as={RLink}
+                  to={link.to}
+                  onClick={() => setNavState(false)}
+                  py={3.5}
+                  px={4}
+                  borderRadius="xl"
+                  fontSize="2xl"
+                  fontWeight="700"
+                  letterSpacing="-0.02em"
+                  color={isActive(link.to) ? 'primary' : 'white'}
+                  bg={isActive(link.to) ? 'whiteAlpha.100' : 'transparent'}
+                  _hover={{ bg: 'whiteAlpha.100' }}
+                  transition="all 0.2s ease"
+                >
+                  {link.label}
+                </Box>
+              ))}
+            </Stack>
+          </DrawerBody>
+
+          <DrawerFooter as={Stack} spacing={3} px={5} pb={8} borderTop="1px solid" borderColor="whiteAlpha.200">
+            <Button
+              as={RLink}
+              to="/signup"
+              onClick={() => setNavState(false)}
+              w="100%"
+              size="lg"
+              bg="primary"
+              color="secondary"
+              fontWeight="700"
+              borderRadius="full"
+              rightIcon={<ArrowRight size={18} />}
+              _hover={{ bg: 'tertiary' }}
+            >
+              Get Started
+            </Button>
+            <Button
+              as={RLink}
+              to="/login"
+              onClick={() => setNavState(false)}
+              w="100%"
+              size="lg"
+              variant="outline"
+              color="white"
+              borderColor="whiteAlpha.400"
+              fontWeight="600"
+              borderRadius="full"
+              _hover={{ bg: 'whiteAlpha.100', borderColor: 'whiteAlpha.700' }}
+            >
+              Log in
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </Box>
   )
 }
