@@ -142,11 +142,20 @@ export default function AddListing() {
       }
     } catch (error) {
       console.error('Video upload failed:', error);
+      // Surface the server's reason (unsupported format, too large, storage
+      // failure) instead of a generic message the dealer cannot act on.
+      const serverMessage =
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message;
       toast({
         title: "Video upload failed",
-        description: "Your listing was created but the video could not be uploaded.",
+        description: serverMessage
+          ? `Your listing was created, but the video could not be uploaded: ${serverMessage}`
+          : "Your listing was created but the video could not be uploaded.",
         status: "warning",
-        duration: 5000,
+        duration: 8000,
+        isClosable: true,
       });
     } finally {
       setCurrentStep(currentStep + 1);
